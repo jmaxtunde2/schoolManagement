@@ -1,0 +1,3 @@
+<?php
+use Illuminate\Database\Migrations\Migration; use Illuminate\Database\Schema\Blueprint; use Illuminate\Support\Facades\Schema;
+return new class extends Migration { public function up(): void { Schema::table('parents',function(Blueprint $t){$t->foreignId('user_id')->nullable()->unique()->after('school_id')->constrained('users')->nullOnDelete();$t->string('address')->nullable();$t->string('photo_path')->nullable();$t->boolean('is_active')->default(true);}); } public function down(): void { Schema::table('parents',function(Blueprint $t){$t->dropConstrainedForeignId('user_id');$t->dropColumn(['address','photo_path','is_active']);}); } };

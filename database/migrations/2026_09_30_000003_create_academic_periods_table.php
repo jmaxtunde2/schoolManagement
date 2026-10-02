@@ -1,0 +1,3 @@
+<?php
+use Illuminate\Database\Migrations\Migration; use Illuminate\Database\Schema\Blueprint; use Illuminate\Support\Facades\Schema;
+return new class extends Migration { public function up(): void { Schema::create('academic_periods',function(Blueprint $t){$t->id();$t->foreignId('school_id')->constrained()->cascadeOnDelete();$t->foreignId('academic_year_id')->constrained()->cascadeOnDelete();$t->string('name');$t->unsignedTinyInteger('position')->default(1);$t->date('starts_at')->nullable();$t->date('ends_at')->nullable();$t->boolean('is_closed')->default(false);$t->timestamps();$t->unique(['academic_year_id','position']);}); } public function down(): void { Schema::dropIfExists('academic_periods');} };

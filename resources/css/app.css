@@ -1,0 +1,32 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../**/*.blade.php';
+@source '../**/*.jsx';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /*
+     * Design tokens : ces couleurs sont définies par établissement (voir resources/views/app.blade.php,
+     * qui pose --school-primary/--school-secondary/--school-accent sur :root selon l'école connectée).
+     * Les composants utilisent bg-primary / text-primary / border-primary, jamais bg-blue-600 en dur,
+     * afin que l'interface change automatiquement d'identité visuelle selon l'établissement.
+     */
+    --color-primary: var(--school-primary, #1E40AF);
+    --color-primary-contrast: var(--school-primary-contrast, #FFFFFF);
+    --color-secondary: var(--school-secondary, #0F766E);
+    --color-accent: var(--school-accent, #D97706);
+}
+
+@layer utilities {
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}
