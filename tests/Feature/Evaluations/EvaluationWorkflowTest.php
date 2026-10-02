@@ -84,8 +84,8 @@ class EvaluationWorkflowTest extends TestCase
 
         $this->actingAs($this->teacher->user)->put("/teacher/evaluations/{$evaluation->id}/grades", [
             'results' => [
-                ['student_id' => $students[0]->id, 'score' => 15],
-                ['student_id' => $students[1]->id, 'score' => 12],
+                ['student_id' => $students[0]->id, 'score' => 15, 'is_absent' => false],
+                ['student_id' => $students[1]->id, 'score' => 12, 'is_absent' => false],
             ],
         ])->assertSessionHasNoErrors();
 
@@ -113,7 +113,7 @@ class EvaluationWorkflowTest extends TestCase
         $this->actingAs($this->teacher->user)->post('/teacher/evaluations', $this->payload());
         $evaluation = Evaluation::firstOrFail();
         $this->actingAs($this->teacher->user)->put("/teacher/evaluations/{$evaluation->id}/grades", [
-            'results' => [['student_id' => $student->id, 'score' => 14]],
+            'results' => [['student_id' => $student->id, 'score' => 14, 'is_absent' => false]],
         ]);
 
         $this->teacher->user->forceFill(['google_reauthenticated_at'=>now()])->save();
@@ -126,7 +126,7 @@ class EvaluationWorkflowTest extends TestCase
         $this->assertSame($this->teacher->user->id, $evaluation->submitted_by);
 
         $this->actingAs($this->teacher->user)->put("/teacher/evaluations/{$evaluation->id}/grades", [
-            'results' => [['student_id' => $student->id, 'score' => 18]],
+            'results' => [['student_id' => $student->id, 'score' => 18, 'is_absent' => false]],
         ])->assertForbidden();
     }
 
@@ -140,7 +140,7 @@ class EvaluationWorkflowTest extends TestCase
         $this->actingAs($this->teacher->user)->post('/teacher/evaluations', $this->payload());
         $evaluation = Evaluation::firstOrFail();
         $this->actingAs($this->teacher->user)->put("/teacher/evaluations/{$evaluation->id}/grades", [
-            'results' => [['student_id' => $student->id, 'score' => 14]],
+            'results' => [['student_id' => $student->id, 'score' => 14, 'is_absent' => false]],
         ]);
         $this->teacher->user->forceFill(['google_reauthenticated_at'=>now()])->save();
         $this->actingAs($this->teacher->user)->post("/teacher/evaluations/{$evaluation->id}/submit");

@@ -34,6 +34,14 @@ class TotpService
         return str_pad((string) ($value % 1000000), 6, '0', STR_PAD_LEFT);
     }
 
+    /**
+     * Code TOTP correspondant au compteur temporel courant.
+     */
+    public function currentCode(string $secret): string
+    {
+        return $this->code($secret, intdiv(time(), 30));
+    }
+
     public function otpauthUri(string $secret, string $account, string $issuer): string
     {
         return 'otpauth://totp/' . rawurlencode($issuer . ':' . $account)

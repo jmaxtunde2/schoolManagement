@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import {
     LayoutDashboard, Building2, CalendarRange, School as SchoolIcon, BookOpen, Users, UserRound,
-    GraduationCap, ClipboardList, BellRing, Globe2, ClipboardCheck, Menu, X, LogOut, ChevronDown, CheckCheck,
+    GraduationCap, ClipboardList, BellRing, Globe2, ClipboardCheck, BookOpenCheck, FileText, Menu, X, LogOut, ChevronDown, CheckCheck,
 } from 'lucide-react';
 import Dropdown from '@/Components/UI/Dropdown';
 import Toast from '@/Components/UI/Toast';
@@ -13,6 +13,8 @@ const adminNav = [
     { href: 'admin.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
     { href: 'admin.evaluations.index', label: 'Évaluations', icon: ClipboardList },
     { href: 'admin.attendance.index', label: 'Absences & retards', icon: ClipboardCheck },
+    { href: 'admin.academic.results.index', label: 'Résultats académiques', icon: BookOpenCheck },
+    { href: 'admin.report-cards.index', label: 'Bulletins', icon: FileText },
     { href: 'admin.notifications.index', label: 'Notifications', icon: BellRing },
     { href: 'admin.students.index', label: 'Élèves', icon: GraduationCap },
     { href: 'admin.guardians.index', label: 'Parents', icon: UserRound },
@@ -31,6 +33,8 @@ const censeurNav = [
     { href: 'censeur.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
     { href: 'censeur.evaluations.index', label: 'Évaluations à contrôler', icon: ClipboardList },
     { href: 'censeur.attendance.index', label: 'Absences & retards', icon: ClipboardCheck },
+    { href: 'censeur.academic.results.index', label: 'Résultats académiques', icon: BookOpenCheck },
+    { href: 'censeur.report-cards.index', label: 'Bulletins', icon: FileText },
     { href: 'censeur.students.index', label: 'Élèves', icon: GraduationCap },
     { href: 'censeur.guardians.index', label: 'Parents', icon: UserRound },
     { href: 'censeur.teachers.index', label: 'Enseignants', icon: Users },
@@ -43,12 +47,20 @@ const secretaryNav = [
     { href: 'teacher.evaluations.index', label: 'Évaluations', icon: ClipboardList },
     { href: 'teacher.evaluations.create', label: 'Saisir une évaluation', icon: ClipboardList },
     { href: 'teacher.attendance.index', label: 'Absences & retards', icon: ClipboardCheck },
+    { href: 'teacher.academic.results.index', label: 'Résultats académiques', icon: BookOpenCheck },
+    { href: 'teacher.report-cards.index', label: 'Bulletins', icon: FileText },
 ];
 
 const teacherNav = [
     { href: 'teacher.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
     { href: 'teacher.evaluations.index', label: 'Mes évaluations', icon: ClipboardList },
     { href: 'teacher.attendance.index', label: 'Assiduité des classes', icon: ClipboardCheck },
+    { href: 'teacher.academic.results.index', label: 'Résultats académiques', icon: BookOpenCheck },
+    { href: 'teacher.report-cards.index', label: 'Bulletins', icon: FileText },
+];
+
+const parentNav = [
+    { href: 'parent.dashboard', label: 'Mes enfants', icon: LayoutDashboard },
 ];
 
 export default function AuthenticatedLayout({ children, title }) {
@@ -59,7 +71,15 @@ export default function AuthenticatedLayout({ children, title }) {
     const unreadCount = auth.user.unread_notifications_count ?? 0;
     const notifications = auth.user.notifications ?? [];
 
-    const nav = auth.user.role === 'admin' ? adminNav : auth.user.role === 'censeur' ? censeurNav : auth.user.role === 'secretary' ? secretaryNav : teacherNav;
+    const nav = auth.user.role === 'admin'
+        ? adminNav
+        : auth.user.role === 'censeur'
+            ? censeurNav
+            : auth.user.role === 'secretary'
+                ? secretaryNav
+                : auth.user.role === 'parent'
+                    ? parentNav
+                    : teacherNav;
 
     function logout() {
         router.post(route('logout'));

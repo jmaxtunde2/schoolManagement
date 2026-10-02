@@ -163,6 +163,50 @@ class AttendanceWorkflowTest extends TestCase
         $this->assertDatabaseCount('attendance_records', 0);
     }
 
+    public function test_admin_attendance_list_and_statistics_are_school_scoped(): void
+    {
+        $studentA = $this->student('Afi');
+        $recordA = AttendanceRecord::create([
+            'school_id' => $this->school->id,
+            'student_id' => $studentA->id,
+            'class_room_id' => $this->classRoom->id,
+            'attendance_date' => now()->toDateString(),
+            'status' => AttendanceStatus::Absent,
+        ]);
+
+        $schoolB = School::factory()->create();
+        $classB = ClassRoom::factory()->create(['school_id' => $schoolB->id]);
+        $studentB = Student::factory()->create([
+            'school_id' => $schoolB->id,
+            'class_id' => $classB->id,
+        ]);
+        $recordB = AttendanceRecord::withoutGlobalScopes()->create([
+            'school_id' => $schoolB->id,
+            'student_id' => $studentB->id,
+            'class_room_id' => $classB->id,
+            'attendance_date' => now()->toDateString(),
+            'status' => AttendanceStatus::Absent,
+        ]);
+        $admin = User::factory()->admin()->forSchool($this->school)->create();
+
+        $this->actingAsVerified($admin)
+            ->get('/admin/attendance')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Staff/Attendance/Index')
+                ->where('records.total', 1)
+                ->where('stats.absent_today', 1)
+                ->where('records.data.0.id', $recordA->id));
+
+        $this->actingAsVerified($admin)
+            ->put("/admin/attendance/{$recordB->id}", [
+                'status' => 'present',
+            ])
+            ->assertNotFound();
+
+        $this->assertSame(AttendanceStatus::Absent, $recordB->fresh()->status);
+    }
+
     public function test_negative_delay_is_rejected_and_parent_only_sees_own_child(): void
     {
         $child = $this->student('Mina');
@@ -242,5 +286,15 @@ class AttendanceWorkflowTest extends TestCase
         $this->assertSame(AttendanceJustificationStatus::Approved, $justification->fresh()->status);
         $this->assertNotNull($record->fresh()->justified_at);
         $this->assertDatabaseHas('audit_logs', ['action' => 'attendance.justified']);
+
+        $this->actingAsVerified($guardianUser)
+            ->post("/parent/attendance/{$record->id}/justification", [
+                'reason' => 'Nouvelle demande après approbation.',
+            ])
+            ->assertForbidden();
+
+        $this->actingAsVerified($guardianUser)
+            ->put("/parent/attendance/{$record->id}", ['status' => 'present'])
+            ->assertNotFound();
     }
 }

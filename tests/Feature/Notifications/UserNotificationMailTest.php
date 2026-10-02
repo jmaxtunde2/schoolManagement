@@ -49,7 +49,7 @@ class UserNotificationMailTest extends TestCase
         Mail::assertSent(function (\Illuminate\Mail\Mailable $mail) {
             return $mail->hasTo('teacher@alpha.example', 'Prof Alpha')
                 && $mail->hasFrom('noreply@alpha.example', 'École Alpha')
-                && $mail->replyTo[0]->address === 'contact@alpha.example';
+                && $mail->hasReplyTo('contact@alpha.example');
         });
     }
 

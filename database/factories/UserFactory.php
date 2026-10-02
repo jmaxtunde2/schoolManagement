@@ -26,12 +26,18 @@ class UserFactory extends Factory
         ];
     }
 
-    // role / is_active ne sont pas fillable : on les pose via forceFill après création.
+    // role / is_active / two_factor_confirmed_at ne sont pas fillable :
+    // on les pose sur l'instance avant l'insertion.
     public function configure(): static
     {
         return $this->afterMaking(function (User $user) {
             $user->role ??= Role::Teacher;
             $user->is_active ??= true;
+
+            // La 2FA TOTP est obligatoire en production : un compte
+            // construit par la factory est donc déjà configuré, et il
+            // faut `->withoutTwoFactor()` pour exercer la page de setup.
+            $user->two_factor_confirmed_at ??= now();
         });
     }
 
@@ -58,5 +64,12 @@ class UserFactory extends Factory
     public function withoutSchool(): static
     {
         return $this->state(['school_id' => null]);
+    }
+
+    public function withoutTwoFactor(): static
+    {
+        return $this->afterMaking(function (User $user) {
+            $user->two_factor_confirmed_at = null;
+        });
     }
 }

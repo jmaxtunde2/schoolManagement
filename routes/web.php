@@ -466,6 +466,48 @@ Route::middleware([
                 'store',
             ])->name('evaluations.return');
 
+            Route::get('/academic/results', [
+                Admin\AcademicResultController::class,
+                'index',
+            ])->name('academic.results.index');
+
+            Route::post('/academic/report-cards/generate', [
+                Admin\AcademicResultController::class,
+                'generate',
+            ])->name('academic.report-cards.generate');
+
+            Route::get('/report-cards', [
+                Admin\ReportCardController::class,
+                'index',
+            ])->name('report-cards.index');
+
+            Route::get('/report-cards/{reportCard}', [
+                Admin\ReportCardController::class,
+                'show',
+            ])->name('report-cards.show');
+
+            Route::put('/report-cards/{reportCard}/comments', [
+                Admin\ReportCardController::class,
+                'updateComments',
+            ])->name('report-cards.comments.update');
+
+            Route::post('/report-cards/{reportCard}/publish', [
+                Admin\ReportCardController::class,
+                'publish',
+            ])->middleware('2fa.fresh:publish_report_card')
+                ->name('report-cards.publish');
+
+            Route::post('/report-cards/{reportCard}/regenerate', [
+                Admin\ReportCardController::class,
+                'regenerate',
+            ])->middleware('2fa.fresh:regenerate_report_card')
+                ->name('report-cards.regenerate');
+
+            Route::get('/report-cards/{reportCard}/pdf', [
+                Admin\ReportCardController::class,
+                'download',
+            ])->name('report-cards.pdf');
+
             Route::get('/attendance', [
                 \App\Http\Controllers\Staff\AttendanceController::class,
                 'index',
@@ -535,6 +577,48 @@ Route::middleware([
                 StaffEvaluationController::class,
                 'grades',
             ])->name('evaluations.grades');
+
+            Route::get('/academic/results', [
+                Admin\AcademicResultController::class,
+                'index',
+            ])->name('academic.results.index');
+
+            Route::post('/academic/report-cards/generate', [
+                Admin\AcademicResultController::class,
+                'generate',
+            ])->name('academic.report-cards.generate');
+
+            Route::get('/report-cards', [
+                Admin\ReportCardController::class,
+                'index',
+            ])->name('report-cards.index');
+
+            Route::get('/report-cards/{reportCard}', [
+                Admin\ReportCardController::class,
+                'show',
+            ])->name('report-cards.show');
+
+            Route::put('/report-cards/{reportCard}/comments', [
+                Admin\ReportCardController::class,
+                'updateComments',
+            ])->name('report-cards.comments.update');
+
+            Route::post('/report-cards/{reportCard}/publish', [
+                Admin\ReportCardController::class,
+                'publish',
+            ])->middleware('2fa.fresh:publish_report_card')
+                ->name('report-cards.publish');
+
+            Route::post('/report-cards/{reportCard}/regenerate', [
+                Admin\ReportCardController::class,
+                'regenerate',
+            ])->middleware('2fa.fresh:regenerate_report_card')
+                ->name('report-cards.regenerate');
+
+            Route::get('/report-cards/{reportCard}/pdf', [
+                Admin\ReportCardController::class,
+                'download',
+            ])->name('report-cards.pdf');
 
             Route::get('/attendance', [
                 \App\Http\Controllers\Staff\AttendanceController::class,
@@ -644,6 +728,36 @@ Route::middleware([
                 'index',
             ])->name('evaluations.index');
 
+            Route::get('/academic/results', [
+                Admin\AcademicResultController::class,
+                'index',
+            ])->name('academic.results.index');
+
+            Route::get('/report-cards', [
+                Admin\ReportCardController::class,
+                'index',
+            ])->name('report-cards.index');
+
+            Route::get('/report-cards/{reportCard}', [
+                Admin\ReportCardController::class,
+                'show',
+            ])->name('report-cards.show');
+
+            Route::put('/report-cards/{reportCard}/comments', [
+                Admin\ReportCardController::class,
+                'updateComments',
+            ])->name('report-cards.comments.update');
+
+            Route::post('/academic/report-cards/generate', [
+                Admin\AcademicResultController::class,
+                'generate',
+            ])->name('academic.report-cards.generate');
+
+            Route::get('/report-cards/{reportCard}/pdf', [
+                Admin\ReportCardController::class,
+                'download',
+            ])->name('report-cards.pdf');
+
             Route::get('/attendance', [
                 \App\Http\Controllers\Staff\AttendanceController::class,
                 'index',
@@ -734,6 +848,21 @@ Route::middleware([
                 \App\Http\Controllers\Parent\ChildController::class,
                 'attendance',
             ])->name('children.attendance');
+
+            Route::get('/children/{student}/report-cards', [
+                \App\Http\Controllers\Parent\ChildController::class,
+                'reportCards',
+            ])->name('children.report-cards');
+
+            Route::get('/report-cards/{reportCard}', [
+                Admin\ReportCardController::class,
+                'show',
+            ])->name('report-cards.show');
+
+            Route::get('/report-cards/{reportCard}/pdf', [
+                Admin\ReportCardController::class,
+                'download',
+            ])->name('report-cards.pdf');
 
             Route::post('/attendance/{attendance}/justification', [
                 \App\Http\Controllers\Parent\ChildController::class,

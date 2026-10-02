@@ -58,4 +58,4 @@
 <?php unset($__componentOriginal2a45ee13943eadc15ee63d255f492356); ?>
 <?php endif; ?>
 </div>
-<?php /**PATH /home/jmaxtunde/Documents/schoolManagement/vendor/laravel/framework/src/Illuminate/Foundation/Providers/../resources/exceptions/renderer/components/laravel-ascii-spotlight.blade.php ENDPATH**/ ?>
+<?php /**PATH /home/jmaxtunde/Documents/schoolManagement/vendor/laravel/framework/src/Illuminate/Foundation/resources/exceptions/renderer/components/laravel-ascii-spotlight.blade.php ENDPATH**/ ?>

@@ -3,4 +3,4 @@
     <path d="M12 16v-4"/>
     <path d="M12 8h.01"/>
 </svg>
-<?php /**PATH /home/jmaxtunde/Documents/schoolManagement/vendor/laravel/framework/src/Illuminate/Foundation/Providers/../resources/exceptions/renderer/components/icons/info.blade.php ENDPATH**/ ?>
+<?php /**PATH /home/jmaxtunde/Documents/schoolManagement/vendor/laravel/framework/src/Illuminate/Foundation/resources/exceptions/renderer/components/icons/info.blade.php ENDPATH**/ ?>

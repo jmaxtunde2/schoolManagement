@@ -7,6 +7,7 @@ use App\Enums\AttendanceStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceJustification;
 use App\Models\AttendanceRecord;
+use App\Models\ReportCard;
 use App\Models\Student;
 use App\Services\AuditService;
 use Illuminate\Http\RedirectResponse;
@@ -101,6 +102,41 @@ class ChildController extends Controller
                 'late' => (clone $baseQuery)->where('status', AttendanceStatus::Late->value)->count(),
                 'delay_minutes' => (clone $baseQuery)->sum('delay_minutes'),
             ],
+        ]);
+    }
+
+    public function reportCards(Request $request, Student $student): Response
+    {
+        $student = $this->child($request, $student);
+        $reportCards = ReportCard::withoutGlobalScopes()
+            ->where('school_id', $request->user()->school_id)
+            ->where('student_id', $student->id)
+            ->where('status', 'published')
+            ->with(['academicYear:id,name', 'period:id,name', 'classRoom:id,name'])
+            ->orderByDesc('academic_year_id')
+            ->orderByDesc('academic_period_id')
+            ->orderByDesc('version')
+            ->get()
+            ->map(fn (ReportCard $reportCard) => [
+                'id' => $reportCard->id,
+                'version' => $reportCard->version,
+                'academic_year' => $reportCard->academicYear?->name,
+                'period' => $reportCard->period?->name,
+                'class_name' => $reportCard->classRoom?->name,
+                'general_average' => (float) $reportCard->general_average,
+                'rank' => $reportCard->rank,
+                'total_students' => $reportCard->total_students,
+                'published_at' => $reportCard->published_at?->format('d/m/Y'),
+            ]);
+
+        return Inertia::render('Parent/ReportCards/Index', [
+            'student' => [
+                'id' => $student->id,
+                'name' => $student->full_name,
+                'class_name' => $student->classRoom?->name,
+                'matricule' => $student->matricule,
+            ],
+            'reportCards' => $reportCards,
         ]);
     }
 
