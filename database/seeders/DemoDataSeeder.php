@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\AcademicPeriod;
 use App\Models\AcademicYear;
 use App\Models\ClassRoom;
 use App\Models\Evaluation;
@@ -32,6 +33,24 @@ class DemoDataSeeder extends Seeder
             ['school_id' => $school->id, 'name' => now()->year.'-'.(now()->year + 1)],
             ['starts_on' => now()->startOfYear(), 'ends_on' => now()->endOfYear(), 'is_current' => true],
         );
+
+        /*
+         * L'année est découpée en trois trimestres, le premier en cours.
+         * Les périodes portent les évaluations, les absences et les bulletins :
+         * sans elles, les écrans de résultats ne sont pas démontrables.
+         */
+        $trimesters = [
+            1 => ['Trimestre 1', now()->startOfYear(), now()->startOfYear()->addMonths(3)->endOfMonth()],
+            2 => ['Trimestre 2', now()->startOfYear()->addMonths(4)->startOfMonth(), now()->startOfYear()->addMonths(7)->endOfMonth()],
+            3 => ['Trimestre 3', now()->startOfYear()->addMonths(8)->startOfMonth(), now()->endOfYear()],
+        ];
+
+        $periods = collect($trimesters)->map(fn (array $data, int $position) => AcademicPeriod::withoutGlobalScopes()->updateOrCreate(
+            ['school_id' => $school->id, 'academic_year_id' => $year->id, 'position' => $position],
+            ['name' => $data[0], 'starts_at' => $data[1], 'ends_at' => $data[2], 'is_closed' => $position > 1],
+        ));
+
+        $currentPeriod = $periods->first();
 
         $classNames = ['6ème A', '5ème A', '4ème A', '3ème A', '3ème B'];
         $classes = collect($classNames)->map(fn ($name) => ClassRoom::withoutGlobalScopes()->updateOrCreate(
@@ -123,6 +142,7 @@ class DemoDataSeeder extends Seeder
                 ],
                 [
                     'academic_year_id' => $year->id,
+                    'academic_period_id' => $currentPeriod->id,
                     'type' => 'devoir',
                     'evaluation_date' => now()->subDays(3),
                     'max_score' => 20,
@@ -153,6 +173,7 @@ class DemoDataSeeder extends Seeder
                 ],
                 [
                     'academic_year_id' => $year->id,
+                    'academic_period_id' => $currentPeriod->id,
                     'type' => 'interrogation',
                     'evaluation_date' => now()->subDays(10),
                     'max_score' => 20,

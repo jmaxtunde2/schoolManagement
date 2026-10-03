@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import {
     LayoutDashboard, Building2, CalendarRange, School as SchoolIcon, BookOpen, Users, UserRound,
-    GraduationCap, ClipboardList, BellRing, Globe2, ClipboardCheck, BookOpenCheck, FileText, Menu, X, LogOut, ChevronDown, CheckCheck,
+    GraduationCap, ClipboardList, BellRing, Globe2, ClipboardCheck, BookOpenCheck, FileText, Menu, X, LogOut, ChevronDown, CheckCheck, Layers, UserCircle,
 } from 'lucide-react';
 import Dropdown from '@/Components/UI/Dropdown';
 import Toast from '@/Components/UI/Toast';
@@ -22,6 +22,7 @@ const adminNav = [
     { href: 'admin.classes.index', label: 'Classes', icon: SchoolIcon },
     { href: 'admin.subjects.index', label: 'Matières', icon: BookOpen },
     { href: 'admin.academic-years.index', label: 'Années scolaires', icon: CalendarRange },
+    { href: 'admin.academic-periods.index', label: 'Périodes scolaires', icon: Layers },
     { href: 'admin.billing.index', label: 'Services & contributions', icon: Building2 },
     { href: 'admin.users.index', label: 'Utilisateurs', icon: Users },
     { href: 'admin.settings.edit', label: 'Établissement', icon: Building2 },
@@ -201,6 +202,12 @@ export default function AuthenticatedLayout({ children, title }) {
                                 <p className="text-sm font-medium text-slate-800">{auth.user.name}</p>
                                 <p className="text-xs text-slate-500">{auth.user.role_label}</p>
                             </div>
+                            <Link
+                                href={route('profile.edit')}
+                                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                                <UserCircle className="h-4 w-4" /> Mon profil
+                            </Link>
                             <Dropdown.Item onClick={logout}>
                                 <LogOut className="h-4 w-4" /> Déconnexion
                             </Dropdown.Item>

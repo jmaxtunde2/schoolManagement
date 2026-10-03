@@ -55,9 +55,30 @@ l'interface et ajustez `App\Providers\SmsServiceProvider`.
 php artisan test
 ```
 
-La suite couvre : l'authentification, l'isolation stricte des données entre établissements,
-les paramètres d'établissement (upload de logo, couleurs, permissions), le workflow complet
-évaluation → saisie → validation → notification, et le renvoi des SMS en échec.
+La suite couvre : l'authentification et le challenge TOTP obligatoire, l'isolation stricte des données
+entre établissements, les paramètres d'établissement (upload de logo, couleurs, permissions), le référentiel
+(classes, élèves, parents, périodes scolaires), le workflow complet évaluation → saisie → validation →
+notification, le renvoi des SMS en échec, la saisie des absences et leur justification, et le cycle de vie
+des bulletins (génération, publication, versioning, PDF).
+
+## Fonctionnalités
+
+- **Multi-établissements** : `school_id` isole strictement les données (`app/Models/Concerns/BelongsToSchool.php`),
+  chaque école dispose de son propre branding (couleurs, logo) appliqué via variables CSS.
+- **Référentiel** : années scolaires, classes, matières (avec coefficients par classe), enseignants, élèves, parents.
+- **Périodes scolaires** : chaque année est découpée en trimestres ou semestres (`position`, dates, clôture).
+  Voir `Admin/AcademicPeriodController` et la page *Périodes scolaires*. Une période close n'accepte plus
+  la génération de bulletins ; une période rattachée à des notes, des absences ou des bulletins ne peut pas
+  être supprimée (clôturez-la plutôt).
+- **Évaluations** : workflow `Saisie → Soumission → Validation → Notifications`, avec conservation de la
+  provenance (`entered_by`, `submitted_by`, `validated_by`).
+- **Absences et retards** : saisie quotidienne par classe, justification par les parents, validation par le
+  personnel, statistiques par période.
+- **Résultats et bulletins** : moyennes pondérées, classement avec ex æquo, snapshot figé par version de
+  bulletin, export PDF, notification des parents à la publication.
+- **Notifications** : SMS (fournisseur abstrait) et notifications internes par email, avec plusieurs
+  niveaux de journalisation et de reprise sur échec.
+- **Site public** : page de présentation par établissement, avec domaine vérifié.
 
 ## Structure
 
@@ -66,18 +87,24 @@ les paramètres d'établissement (upload de logo, couleurs, permissions), le wor
 - `app/Support/SchoolBranding.php` — résout l'identité visuelle (couleurs, logo) de l'école
   connectée, partagée à React via Inertia et injectée en variables CSS (`--school-primary`, etc.).
 - `app/Actions/Evaluations/` — création, saisie des notes, validation.
+- `app/Actions/Academic/` — génération et publication des bulletins.
+- `app/Services/Academic/AcademicCalculationService.php` — moyennes pondérées, classement, synthèse des absences.
+- `app/Services/Academic/ReportCardPdfService.php` — rendu PDF d'un bulletin depuis son snapshot.
 - `app/Services/Sms/` et `app/Services/Notifications/` — abstraction SMS et service de notification.
 - `resources/js/Components/UI/` — kit de composants réutilisables (Button, Table responsive,
   Modal, ColorPicker, FileUpload, etc.), tous thémés via les variables CSS de l'établissement.
 - `resources/js/Pages/` — pages Inertia, organisées par rôle (`Admin/`, `Teacher/`) et par
   domaine.
 
-## Hors périmètre V1
+## Hors périmètre
 
-Volontairement non développés à ce stade (voir le cahier des charges) : bulletins, calcul de
-moyennes, classement, présence, paiements, espace parent/élève, WhatsApp, application mobile.
-L'architecture (isolation par établissement, abstraction SMS, design system) est conçue pour
-permettre leur ajout ultérieur sans réécriture majeure.
+Volontairement non développés à ce stade (voir le cahier des charges) : paiements en ligne,
+application mobile, WhatsApp. L'architecture (isolation par établissement, abstraction SMS, design system)
+est conçue pour permettre leur ajout ultérieur sans réécriture majeure.
+
+La **vérification publique d'un bulletin** par token n'est pas encore exposée : le token est
+bien généré et stocké sur chaque bulletin, mais aucune route publique ne le consomme encore.
+
 
 
 ## Évolution SaaS multi-établissements
@@ -109,9 +136,9 @@ Les paramètres par établissement sont stockés dans `school_billing_settings` 
 - Configuration initiale par QR code, clé manuelle et codes de récupération.
 - Vérification TOTP à la connexion et revalidation pour les actions sensibles.
 - Comptes parents liés à un ou plusieurs élèves.
-- Espace parent : enfants, résultats validés, absences et retards.
+- Espace parent : enfants, résultats validés, absences et retards, bulletins publiés.
 - Années/périodes scolaires, présences et justifications.
-- Modèle de bulletin versionné et token de vérification publique.
+- Modèle de bulletin versionné (voir « Hors périmètre » pour la vérification publique).
 
 ### Installation frontend
 Après extraction, installer les dépendances avec `npm install`, puis lancer `npm run build` ou `npm run dev`.

@@ -163,6 +163,34 @@ Route::middleware([
 
     /*
     |--------------------------------------------------------------------------
+    | Profil personnel
+    |--------------------------------------------------------------------------
+    |
+    | Accessible à tous les rôles, y compris à l'administrateur Coriyase.
+    | Le changement de mot de passe est une action sensible : il exige une
+    | vérification 2FA récente, comme la gestion des utilisateurs.
+    |
+    */
+
+    Route::get('/profile', [
+        \App\Http\Controllers\ProfileController::class,
+        'edit',
+    ])->name('profile.edit');
+
+    Route::put('/profile', [
+        \App\Http\Controllers\ProfileController::class,
+        'update',
+    ])->name('profile.update');
+
+    Route::put('/profile/password', [
+        \App\Http\Controllers\ProfileController::class,
+        'updatePassword',
+    ])
+        ->middleware('2fa.fresh:change_password')
+        ->name('profile.password.update');
+
+    /*
+    |--------------------------------------------------------------------------
     | Platform Administration
     |--------------------------------------------------------------------------
     */
@@ -319,6 +347,35 @@ Route::middleware([
                 Admin\AcademicYearController::class,
                 'destroy',
             ])->name('academic-years.destroy');
+
+            /*
+            | Academic Periods
+            */
+
+            Route::get('/academic-periods', [
+                Admin\AcademicPeriodController::class,
+                'index',
+            ])->name('academic-periods.index');
+
+            Route::post('/academic-periods', [
+                Admin\AcademicPeriodController::class,
+                'store',
+            ])->name('academic-periods.store');
+
+            Route::put('/academic-periods/{academic_period}', [
+                Admin\AcademicPeriodController::class,
+                'update',
+            ])->name('academic-periods.update');
+
+            Route::delete('/academic-periods/{academic_period}', [
+                Admin\AcademicPeriodController::class,
+                'destroy',
+            ])->name('academic-periods.destroy');
+
+            Route::post('/academic-periods/{academic_period}/toggle', [
+                Admin\AcademicPeriodController::class,
+                'toggle',
+            ])->name('academic-periods.toggle');
 
             /*
             | Classes

@@ -22,6 +22,10 @@ class LoginTest extends TestCase
     {
         $user = User::factory()->admin()->create();
 
+        // Une connexion réelle démarre une session vierge :
+        // la 2FA doit être validée avant tout accès.
+        $this->flushSession();
+
         // La 2FA étant obligatoire, la connexion ne donne pas
         // directement accès au tableau de bord.
         $this->post('/login', ['email' => $user->email, 'password' => 'password'])
@@ -47,6 +51,8 @@ class LoginTest extends TestCase
     public function test_teacher_lands_on_own_dashboard_after_the_two_factor_challenge(): void
     {
         $user = User::factory()->teacher()->create();
+
+        $this->flushSession();
 
         $this->post('/login', ['email' => $user->email, 'password' => 'password'])
             ->assertRedirect(route('two-factor.challenge', [

@@ -50,7 +50,7 @@ abstract class TestCase extends BaseTestCase
     protected function markSensitiveTwoFactorVerified(string $purpose): static
     {
         $this->withSession([
-            'two_factor_sensitive.' . $purpose => now()->timestamp,
+            'two_factor_sensitive.'.$purpose => now()->timestamp,
         ]);
 
         return $this;
@@ -78,8 +78,16 @@ abstract class TestCase extends BaseTestCase
         ?TwoFactorService $twoFactor = null,
         ?TotpService $totp = null
     ): TestResponse {
-        return $this->post(route('two-factor.verify'), [
-            'code' => $this->enrolInTwoFactor($user, $twoFactor, $totp),
-        ]);
+        $code = $this->enrolInTwoFactor($user, $twoFactor, $totp);
+
+        /*
+         * Le secret vient d'être écrit en base. Le guard a pu résoudre
+         * une instance de User avant cet enregistrement (par exemple
+         * pendant une connexion), encore dépourvue du secret : on
+         * recharge l'utilisateur pour ne pas vérifier un secret périmé.
+         */
+        $this->actingAs($user->fresh());
+
+        return $this->post(route('two-factor.verify'), ['code' => $code]);
     }
 }

@@ -50,6 +50,7 @@ export default function Login() {
                         <Input
                             type="email"
                             autoFocus
+                            placeholder="Votre adresse email"
                             autoComplete="username"
                             value={data.email}
                             onChange={(e) =>
@@ -73,6 +74,7 @@ export default function Login() {
                                         ? 'text'
                                         : 'password'
                                 }
+                                placeholder="••••••••"
                                 autoComplete="current-password"
                                 value={data.password}
                                 onChange={(e) =>

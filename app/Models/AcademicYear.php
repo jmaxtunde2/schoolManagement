@@ -33,4 +33,9 @@ class AcademicYear extends Model
     {
         return $this->hasMany(Evaluation::class);
     }
+
+    public function periods(): HasMany
+    {
+        return $this->hasMany(AcademicPeriod::class)->orderBy('position');
+    }
 }

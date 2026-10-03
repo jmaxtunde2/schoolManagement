@@ -41,6 +41,14 @@ class GenerateReportCards
             throw new InvalidArgumentException('Classe, période et école incompatibles.');
         }
 
+        /*
+         * Une période close est définitive : on ne produit plus de bulletin
+         * pour elle tant qu'elle n'a pas été rouverte par un administrateur.
+         */
+        if ($period->is_closed) {
+            throw new InvalidArgumentException('La période est close : rouvrez-la avant de générer des bulletins.');
+        }
+
         $calculation = $this->calculator->calculateClassResults($classRoom, $period, (int) $school->id);
         $rows = collect($calculation['students']);
         if ($studentId !== null) {

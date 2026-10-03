@@ -75,6 +75,17 @@ class EvaluationWorkflowTest extends TestCase
         ])->actingAs($user);
     }
 
+    /**
+     * La soumission est une action sensible : elle exige une
+     * revalidation 2FA récente en plus de la session vérifiée.
+     */
+    private function actingAsTwoFactorVerifiedFor(string $purpose, User $user): static
+    {
+        $this->actingAsTwoFactorVerified($user);
+
+        return $this->markSensitiveTwoFactorVerified($purpose);
+    }
+
     public function test_teacher_can_create_and_save_a_draft(): void
     {
         $students = Student::factory()->count(2)->create(['school_id' => $this->school->id, 'class_id' => $this->class->id]);
@@ -117,7 +128,7 @@ class EvaluationWorkflowTest extends TestCase
         ]);
 
         $this->teacher->user->forceFill(['google_reauthenticated_at'=>now()])->save();
-        $this->actingAs($this->teacher->user)
+        $this->actingAsTwoFactorVerifiedFor('submit_evaluation', $this->teacher->user)
             ->post("/teacher/evaluations/{$evaluation->id}/submit")
             ->assertSessionHasNoErrors();
 
@@ -143,11 +154,12 @@ class EvaluationWorkflowTest extends TestCase
             'results' => [['student_id' => $student->id, 'score' => 14, 'is_absent' => false]],
         ]);
         $this->teacher->user->forceFill(['google_reauthenticated_at'=>now()])->save();
-        $this->actingAs($this->teacher->user)->post("/teacher/evaluations/{$evaluation->id}/submit");
+        $this->actingAsTwoFactorVerifiedFor('submit_evaluation', $this->teacher->user)
+            ->post("/teacher/evaluations/{$evaluation->id}/submit");
 
         $censeur = User::factory()->forSchool($this->school)->create(['role' => 'censeur']);
         $censeur->forceFill(['google_reauthenticated_at'=>now()])->save();
-        $this->actingAs($censeur)
+        $this->actingAsTwoFactorVerifiedFor('validate_evaluation', $censeur)
             ->post("/censeur/evaluations/{$evaluation->id}/validate")
             ->assertSessionHasNoErrors();
 

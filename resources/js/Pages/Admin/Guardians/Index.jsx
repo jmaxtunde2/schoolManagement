@@ -314,21 +314,6 @@ export default function GuardiansIndex({
                     </div>
                     <Table
                         rows={filteredGuardians}
-                        emptyState={
-                            <EmptyState
-                                icon={UserRound}
-                                title="Aucun parent enregistré"
-                                description="Ajoutez un parent pour pouvoir l'associer à un élève."
-                                action={!isCenseur && (
-                                    <Button
-                                        onClick={openCreate}
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                        Ajouter un parent
-                                    </Button>
-                                )}
-                            />
-                        }
                         columns={[
                             {
                                 key: 'name',
@@ -496,9 +481,17 @@ export default function GuardiansIndex({
                                     title="Aucun parent enregistré"
                                     description="Ajoutez un parent pour pouvoir l'associer à un élève."
                                     action={
-                                        <Button onClick={openCreate}>
-                                            Ajouter un parent
-                                        </Button>
+                                        !isCenseur && (
+                                            <Button
+                                                onClick={
+                                                    openCreate
+                                                }
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                                Ajouter un
+                                                parent
+                                            </Button>
+                                        )
                                     }
                                 />
                             )
