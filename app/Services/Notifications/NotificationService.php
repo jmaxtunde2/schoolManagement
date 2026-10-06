@@ -2,6 +2,7 @@
 
 namespace App\Services\Notifications;
 
+use App\Enums\NotificationStatus;
 use App\Jobs\SendEmailNotificationJob;
 use App\Jobs\SendSmsNotificationJob;
 use App\Models\Evaluation;
@@ -168,7 +169,7 @@ class NotificationService
         }
 
         $notification->recordStatus(
-            \App\Enums\NotificationStatus::Pending,
+            NotificationStatus::Pending,
             'Notification créée après validation.'
         );
 
@@ -234,7 +235,7 @@ class NotificationService
             : number_format(
                 (float) $result->score,
                 1
-            ) . '/' . number_format(
+            ).'/'.number_format(
                 (float) $evaluation->max_score,
                 0
             );

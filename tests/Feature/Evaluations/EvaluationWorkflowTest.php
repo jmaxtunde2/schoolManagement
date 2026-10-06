@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Evaluations;
 
+use App\Jobs\SendSmsNotificationJob;
 use App\Models\AcademicYear;
 use App\Models\ClassRoom;
 use App\Models\Evaluation;
-use App\Models\Notification;
 use App\Models\ParentGuardian;
 use App\Models\School;
 use App\Models\Student;
@@ -14,7 +14,6 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Services\TwoFactor\TwoFactorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -23,8 +22,11 @@ class EvaluationWorkflowTest extends TestCase
     use RefreshDatabase;
 
     private School $school;
+
     private Teacher $teacher;
+
     private ClassRoom $class;
+
     private Subject $subject;
 
     protected function setUp(): void
@@ -110,7 +112,7 @@ class EvaluationWorkflowTest extends TestCase
         $this->actingAs($this->teacher->user)->post('/teacher/evaluations', $this->payload());
         $evaluation = Evaluation::firstOrFail();
 
-        $this->teacher->user->forceFill(['google_reauthenticated_at'=>now()])->save();
+        $this->teacher->user->forceFill(['google_reauthenticated_at' => now()])->save();
         $this->actingAs($this->teacher->user)
             ->post("/teacher/evaluations/{$evaluation->id}/submit")
             ->assertSessionHas('error');
@@ -127,7 +129,7 @@ class EvaluationWorkflowTest extends TestCase
             'results' => [['student_id' => $student->id, 'score' => 14, 'is_absent' => false]],
         ]);
 
-        $this->teacher->user->forceFill(['google_reauthenticated_at'=>now()])->save();
+        $this->teacher->user->forceFill(['google_reauthenticated_at' => now()])->save();
         $this->actingAsTwoFactorVerifiedFor('submit_evaluation', $this->teacher->user)
             ->post("/teacher/evaluations/{$evaluation->id}/submit")
             ->assertSessionHasNoErrors();
@@ -153,19 +155,19 @@ class EvaluationWorkflowTest extends TestCase
         $this->actingAs($this->teacher->user)->put("/teacher/evaluations/{$evaluation->id}/grades", [
             'results' => [['student_id' => $student->id, 'score' => 14, 'is_absent' => false]],
         ]);
-        $this->teacher->user->forceFill(['google_reauthenticated_at'=>now()])->save();
+        $this->teacher->user->forceFill(['google_reauthenticated_at' => now()])->save();
         $this->actingAsTwoFactorVerifiedFor('submit_evaluation', $this->teacher->user)
             ->post("/teacher/evaluations/{$evaluation->id}/submit");
 
         $censeur = User::factory()->forSchool($this->school)->create(['role' => 'censeur']);
-        $censeur->forceFill(['google_reauthenticated_at'=>now()])->save();
+        $censeur->forceFill(['google_reauthenticated_at' => now()])->save();
         $this->actingAsTwoFactorVerifiedFor('validate_evaluation', $censeur)
             ->post("/censeur/evaluations/{$evaluation->id}/validate")
             ->assertSessionHasNoErrors();
 
         $this->assertSame('validated', $evaluation->fresh()->status->value);
         $this->assertSame($censeur->id, $evaluation->fresh()->validated_by);
-        Queue::assertPushed(\App\Jobs\SendSmsNotificationJob::class);
+        Queue::assertPushed(SendSmsNotificationJob::class);
     }
 
     public function test_teacher_cannot_validate_own_evaluation(): void
@@ -235,12 +237,10 @@ class EvaluationWorkflowTest extends TestCase
 
         $this->mock(TwoFactorService::class, function ($twoFactor) {
             $twoFactor->shouldReceive('loginVerified')
-                ->andReturnUsing(fn ($request) =>
-                    $request->session()->has('two_factor_verified_at')
+                ->andReturnUsing(fn ($request) => $request->session()->has('two_factor_verified_at')
                 );
             $twoFactor->shouldReceive('sensitiveVerified')
-                ->andReturnUsing(fn ($request, $purpose) =>
-                    $request->session()->has('two_factor_sensitive.'.$purpose)
+                ->andReturnUsing(fn ($request, $purpose) => $request->session()->has('two_factor_sensitive.'.$purpose)
                 );
             $twoFactor->shouldReceive('verify')->once()->andReturnTrue();
             $twoFactor->shouldReceive('markSensitiveVerified')

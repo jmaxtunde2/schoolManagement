@@ -11,13 +11,13 @@ use App\Models\AcademicPeriod;
 use App\Models\AttendanceJustification;
 use App\Models\AttendanceRecord;
 use App\Models\ClassRoom;
-use App\Models\School;
 use App\Models\Student;
+use App\Models\User;
 use App\Services\AuditService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -332,7 +332,7 @@ class AttendanceController extends Controller
         ]);
     }
 
-    private function classesFor(\App\Models\User $user)
+    private function classesFor(User $user)
     {
         $classes = ClassRoom::query()->orderBy('name');
         $classIds = $this->classIdsFor($user);
@@ -344,7 +344,7 @@ class AttendanceController extends Controller
         return $classes->get();
     }
 
-    private function classIdsFor(\App\Models\User $user): ?\Illuminate\Support\Collection
+    private function classIdsFor(User $user): ?Collection
     {
         if (! $user->isTeacher()) {
             return null;

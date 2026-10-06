@@ -2,14 +2,15 @@
 
 namespace Tests\Feature\Notifications;
 
+use App\Jobs\SendUserNotificationEmailJob;
 use App\Models\School;
 use App\Models\SchoolMailSetting;
 use App\Models\User;
 use App\Models\UserNotification;
-use App\Jobs\SendUserNotificationEmailJob;
 use App\Services\Mail\SchoolMailService;
 use App\Services\UserNotifications\UserNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -46,7 +47,7 @@ class UserNotificationMailTest extends TestCase
             'Bonjour depuis l\'école Alpha.'
         );
 
-        Mail::assertSent(function (\Illuminate\Mail\Mailable $mail) {
+        Mail::assertSent(function (Mailable $mail) {
             return $mail->hasTo('teacher@alpha.example', 'Prof Alpha')
                 && $mail->hasFrom('noreply@alpha.example', 'École Alpha')
                 && $mail->hasReplyTo('contact@alpha.example');

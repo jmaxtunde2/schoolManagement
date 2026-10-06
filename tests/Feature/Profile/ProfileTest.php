@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Profile;
 
+use App\Enums\Role;
 use App\Models\School;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -213,7 +214,7 @@ class ProfileTest extends TestCase
     public function test_the_new_password_needs_letters_numbers_and_eight_characters(): void
     {
         $weak = [
-            ['court123', 'Trop court'],
+            ['court1', 'Trop court'],
             ['uniquementdeslettres', 'Aucune lettre'],
             ['12345678901', 'Aucun chiffre'],
         ];
@@ -235,24 +236,60 @@ class ProfileTest extends TestCase
 
     public function test_changing_a_password_disconnects_other_sessions_but_keeps_the_current_one(): void
     {
-        $currentSessionId = Str::random(40);
+        /*
+         * Le comportement testé concerne le pilote de session `database` :
+         * `ProfileController` préserve la ligne de session de l'appareil courant et
+         * supprime les autres. Les tests tournent par défaut avec le pilote `array`,
+         * où aucune ligne de `sessions` n'est utilisée : on bascule donc sur
+         * `database` pour que la session réellement employée soit une ligne de la table.
+         */
+        config(['session.driver' => 'database']);
+
+        $otherUserId = User::factory()->forSchool($this->school)->create()->id;
 
         DB::table('sessions')->insert([
-            ['id' => $currentSessionId, 'user_id' => $this->user->id, 'ip_address' => '127.0.0.1', 'user_agent' => 'test', 'payload' => '', 'last_activity' => now()->timestamp],
             ['id' => 'session-autre-appareil-1', 'user_id' => $this->user->id, 'ip_address' => '127.0.0.1', 'user_agent' => 'mobile', 'payload' => '', 'last_activity' => now()->timestamp],
             ['id' => 'session-autre-appareil-2', 'user_id' => $this->user->id, 'ip_address' => '127.0.0.1', 'user_agent' => 'tablet', 'payload' => '', 'last_activity' => now()->timestamp],
-            ['id' => 'session-dun-autre-utilisateur', 'user_id' => User::factory()->forSchool($this->school)->create()->id, 'ip_address' => '127.0.0.1', 'user_agent' => 'x', 'payload' => '', 'last_activity' => now()->timestamp],
+            ['id' => 'session-dun-autre-utilisateur', 'user_id' => $otherUserId, 'ip_address' => '127.0.0.1', 'user_agent' => 'x', 'payload' => '', 'last_activity' => now()->timestamp],
         ]);
 
-        $this->markSensitiveTwoFactorVerified('change_password');
         $this->actingAs($this->user);
-        $this->app['session']->setId($currentSessionId);
 
-        $this->put(route('profile.password.update'), [
-            'current_password' => 'ancien-mot-de-passe',
-            'password' => 'nouveau-mot-de-passe-9',
-            'password_confirmation' => 'nouveau-mot-de-passe-9',
-        ])->assertSessionHasNoErrors();
+        /*
+         * Une requête inoffensive crée la ligne de session de l'appareil courant.
+         * Elle est redirigée vers le challenge 2FA (cette session n'est pas encore
+         * vérifiée), ce qui n'a aucune incidence : la ligne est bien écrite.
+         * `withSession` ne convient pas ensuite : la session est relue depuis la base
+         * par le middleware `StartSession`, on écrit donc le payload directement.
+         */
+        $this->get(route('profile.edit'));
+
+        $currentSessionId = DB::table('sessions')
+            ->whereNotIn('id', ['session-autre-appareil-1', 'session-autre-appareil-2', 'session-dun-autre-utilisateur'])
+            ->value('id');
+
+        $this->assertNotNull($currentSessionId, 'La requête courante doit avoir créé une ligne de session.');
+
+        // Vérification 2FA à la connexion et revalidation de l'action sensible.
+        DB::table('sessions')->where('id', $currentSessionId)->update([
+            'payload' => base64_encode(serialize([
+                '_token' => Str::random(40),
+                'two_factor_verified_at' => now()->timestamp,
+                'two_factor_sensitive' => ['change_password' => now()->timestamp],
+            ])),
+        ]);
+
+        // Le driver de session est mémoïsé : on le vide pour que la requête
+        // suivante relise bien le payload ci-dessus.
+        $this->app['session']->forgetDrivers();
+
+        $this->withCookie(config('session.cookie'), $currentSessionId)
+            ->put(route('profile.password.update'), [
+                'current_password' => 'ancien-mot-de-passe',
+                'password' => 'nouveau-mot-de-passe-9',
+                'password_confirmation' => 'nouveau-mot-de-passe-9',
+            ])
+            ->assertSessionHasNoErrors();
 
         $remaining = DB::table('sessions')->pluck('id')->all();
 
@@ -268,6 +305,7 @@ class ProfileTest extends TestCase
     {
         // Session vérifiée, mais sans revalidation sensible : c'est l'état
         // normal d'un utilisateur qui n'est pas en train de changer son mot de passe.
+        // Sans en-tête Referer, le middleware renvoie vers la page d'accueil du rôle.
         $this->actingAs($this->user)
             ->put(route('profile.password.update'), [
                 'current_password' => 'ancien-mot-de-passe',
@@ -276,7 +314,7 @@ class ProfileTest extends TestCase
             ])
             ->assertRedirect(route('two-factor.challenge', [
                 'purpose' => 'change_password',
-                'return' => route('home') !== '' ? route('home') : route('profile.edit'),
+                'return' => route(Role::Teacher->homeRoute(), [], false),
             ]));
 
         $this->assertTrue(Hash::check('ancien-mot-de-passe', $this->user->refresh()->password));

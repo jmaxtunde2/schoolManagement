@@ -22,7 +22,7 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
         $request->session()->regenerate();
 
-        return redirect()->route('two-factor.challenge',['return'=>route($request->user()->role->homeRoute())]);
+        return redirect()->route('two-factor.challenge', ['return' => route($request->user()->role->homeRoute())]);
     }
 
     public function destroy(Request $request): RedirectResponse

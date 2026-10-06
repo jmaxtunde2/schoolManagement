@@ -29,9 +29,9 @@ class DashboardController extends Controller
         ]);
 
         $evaluations = Evaluation::with([
-                'classRoom:id,name',
-                'subject:id,name',
-            ])
+            'classRoom:id,name',
+            'subject:id,name',
+        ])
             ->where('teacher_id', $teacher->id)
             ->latest('evaluation_date')
             ->take(5)

@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use Database\Factories\EvaluationFactory;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Enums\EvaluationStatus;
 use App\Enums\EvaluationType;
 use App\Models\Concerns\BelongsToSchool;
+use Database\Factories\EvaluationFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Evaluation extends Model
 {
     /** @use HasFactory<EvaluationFactory> */
-    use HasFactory, BelongsToSchool;
+    use BelongsToSchool, HasFactory;
 
     protected $fillable = [
         'academic_year_id', 'academic_period_id', 'class_id', 'subject_id', 'teacher_id',
@@ -37,7 +37,10 @@ class Evaluation extends Model
         ];
     }
 
-    public function academicPeriod(): BelongsTo { return $this->belongsTo(AcademicPeriod::class); }
+    public function academicPeriod(): BelongsTo
+    {
+        return $this->belongsTo(AcademicPeriod::class);
+    }
 
     public function academicYear(): BelongsTo
     {
@@ -59,11 +62,20 @@ class Evaluation extends Model
         return $this->belongsTo(Teacher::class);
     }
 
-    public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 
-    public function enteredBy(): BelongsTo { return $this->belongsTo(User::class, 'entered_by'); }
+    public function enteredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'entered_by');
+    }
 
-    public function submitter(): BelongsTo { return $this->belongsTo(User::class, 'submitted_by'); }
+    public function submitter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'submitted_by');
+    }
 
     public function validator(): BelongsTo
     {

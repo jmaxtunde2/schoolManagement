@@ -9,9 +9,9 @@ use App\Models\Evaluation;
 use App\Models\ParentGuardian;
 use App\Models\School;
 use App\Models\Student;
+use App\Models\StudentContribution;
 use App\Models\Subject;
 use App\Models\Teacher;
-use App\Models\StudentContribution;
 use App\Models\User;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Database\Seeder;
@@ -126,7 +126,7 @@ class DemoDataSeeder extends Seeder
 
             $students->push($student);
 
-            StudentContribution::withoutGlobalScopes()->updateOrCreate(['student_id'=>$student->id,'academic_year_id'=>$year->id], ['school_id'=>$school->id,'parent_id'=>$guardian->id,'amount_due'=>1000,'amount_paid'=>1000,'status'=>'paid','paid_at'=>now()]);
+            StudentContribution::withoutGlobalScopes()->updateOrCreate(['student_id' => $student->id, 'academic_year_id' => $year->id], ['school_id' => $school->id, 'parent_id' => $guardian->id, 'amount_due' => 1000, 'amount_paid' => 1000, 'status' => 'paid', 'paid_at' => now()]);
         }
 
         // Une évaluation par binôme classe/matière affecté, en brouillon.

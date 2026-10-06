@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSchool;
 use Database\Factories\AcademicYearFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AcademicYear extends Model
 {
     /** @use HasFactory<AcademicYearFactory> */
-    use HasFactory, BelongsToSchool;
+    use BelongsToSchool, HasFactory;
 
     protected $fillable = ['name', 'starts_on', 'ends_on', 'is_current'];
 

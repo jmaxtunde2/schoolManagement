@@ -138,8 +138,7 @@ class NotificationTest extends TestCase
         $this->assertTrue($response->success);
         $this->assertSame('message-123', $response->externalId);
 
-        Http::assertSent(fn (HttpRequest $request) =>
-            $request->url() === 'https://sms.esmsafrica.io/api/messages/send'
+        Http::assertSent(fn (HttpRequest $request) => $request->url() === 'https://sms.esmsafrica.io/api/messages/send'
             && $request->hasHeader('Authorization', 'Bearer fake-esms-token')
             && $request->hasHeader('Content-Type', 'application/json')
             && $request['to'] === '+254712432109'

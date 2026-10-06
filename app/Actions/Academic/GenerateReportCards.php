@@ -9,7 +9,6 @@ use App\Models\ReportCard;
 use App\Models\School;
 use App\Services\Academic\AcademicCalculationService;
 use App\Services\AuditService;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -19,8 +18,7 @@ class GenerateReportCards
     public function __construct(
         private AcademicCalculationService $calculator,
         private AuditService $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{generated: int, skipped: int, report_cards: array<int, ReportCard>}

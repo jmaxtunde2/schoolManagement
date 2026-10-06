@@ -11,8 +11,7 @@ class TwoFactorService
     public function __construct(
         private TotpService $totp,
         private RecoveryCodeService $recovery
-    ) {
-    }
+    ) {}
 
     /**
      * Commence la configuration de la 2FA.
@@ -209,7 +208,7 @@ class TwoFactorService
         string $purpose
     ): void {
         $request->session()->put(
-            'two_factor_sensitive.' . $purpose,
+            'two_factor_sensitive.'.$purpose,
             now()->timestamp
         );
     }
@@ -225,7 +224,7 @@ class TwoFactorService
         string $purpose
     ): bool {
         $verifiedAt = (int) $request->session()->get(
-            'two_factor_sensitive.' . $purpose,
+            'two_factor_sensitive.'.$purpose,
             0
         );
 

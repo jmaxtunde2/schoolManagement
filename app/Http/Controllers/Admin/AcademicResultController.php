@@ -6,7 +6,6 @@ use App\Actions\Academic\GenerateReportCards;
 use App\Http\Controllers\Controller;
 use App\Models\AcademicPeriod;
 use App\Models\ClassRoom;
-use App\Models\Evaluation;
 use App\Models\ReportCard;
 use App\Services\Academic\AcademicCalculationService;
 use Illuminate\Http\RedirectResponse;

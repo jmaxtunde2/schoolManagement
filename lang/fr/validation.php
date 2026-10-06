@@ -28,7 +28,7 @@ return [
     'required_if' => 'Le champ :attribute est obligatoire quand :other vaut :value.',
     'string' => 'Le champ :attribute doit être une chaîne de caractères.',
     'unique' => 'Cette valeur de :attribute est déjà utilisée.',
-    'uploaded' => "Le téléversement de :attribute a échoué.",
+    'uploaded' => 'Le téléversement de :attribute a échoué.',
     'url' => 'Le champ :attribute doit être une URL valide.',
     'attributes' => [],
 ];

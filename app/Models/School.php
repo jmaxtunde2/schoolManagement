@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Role;
 use Database\Factories\SchoolFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -40,9 +41,15 @@ class School extends Model
         return $this->hasMany(AcademicYear::class);
     }
 
-    public function domains(): HasMany { return $this->hasMany(SchoolDomain::class); }
+    public function domains(): HasMany
+    {
+        return $this->hasMany(SchoolDomain::class);
+    }
 
-    public function billingSettings(): HasOne { return $this->hasOne(SchoolBillingSetting::class); }
+    public function billingSettings(): HasOne
+    {
+        return $this->hasOne(SchoolBillingSetting::class);
+    }
 
     public function settings(): HasOne
     {
@@ -62,6 +69,34 @@ class School extends Model
     public function attendanceRecords(): HasMany
     {
         return $this->hasMany(AttendanceRecord::class);
+    }
+
+    public function timetables(): HasMany
+    {
+        return $this->hasMany(Timetable::class);
+    }
+
+    public function students(): HasMany
+    {
+        return $this->hasMany(Student::class);
+    }
+
+    public function teachers(): HasMany
+    {
+        return $this->hasMany(Teacher::class);
+    }
+
+    /** Membres du personnel rattachés à cet établissement. */
+    public function staff(): HasMany
+    {
+        return $this->hasMany(User::class)->whereIn('role', [
+            Role::Admin->value,
+            Role::Director->value,
+            Role::Accountant->value,
+            Role::Censeur->value,
+            Role::Secretary->value,
+            Role::Teacher->value,
+        ]);
     }
 
     public function mailSettings(): HasOne

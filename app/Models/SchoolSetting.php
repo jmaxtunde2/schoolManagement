@@ -25,7 +25,7 @@ class SchoolSetting extends Model
     // barrière de sécurité est UpdateSchoolSettingsRequest, jamais alimenté par le client.
     protected $fillable = [
         'school_name', 'short_name', 'slogan', 'description', 'school_type', 'founded_year',
-        'address', 'city', 'country', 'phone', 'phone_secondary', 'email', 'website', 'contact_name',
+        'address', 'city', 'department', 'country', 'phone', 'phone_secondary', 'email', 'website', 'contact_name',
         'logo_path', 'primary_color', 'secondary_color', 'accent_color', 'options',
     ];
 

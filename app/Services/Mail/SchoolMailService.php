@@ -4,6 +4,7 @@ namespace App\Services\Mail;
 
 use App\Models\School;
 use App\Models\SchoolMailSetting;
+use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Mail;
 use RuntimeException;
 
@@ -81,7 +82,8 @@ class SchoolMailService
         config()->set('mail.default', $mailerName);
 
         try {
-            $mailable = new class($subject, $message) extends \Illuminate\Mail\Mailable {
+            $mailable = new class($subject, $message) extends Mailable
+            {
                 public function __construct(
                     public string $subjectLine,
                     public string $bodyText

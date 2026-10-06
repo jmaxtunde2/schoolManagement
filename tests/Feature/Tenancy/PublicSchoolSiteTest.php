@@ -11,7 +11,6 @@ use App\Models\SchoolSetting;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
-use App\Support\SchoolBranding;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;

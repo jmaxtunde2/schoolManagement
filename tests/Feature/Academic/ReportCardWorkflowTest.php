@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Academic;
 
+use App\Actions\Academic\GenerateReportCards;
 use App\Enums\EvaluationStatus;
 use App\Enums\ReportCardStatus;
 use App\Jobs\SendUserNotificationEmailJob;
@@ -18,7 +19,6 @@ use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
-use App\Actions\Academic\GenerateReportCards;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -30,11 +30,17 @@ class ReportCardWorkflowTest extends TestCase
     use RefreshDatabase;
 
     private School $school;
+
     private AcademicYear $year;
+
     private AcademicPeriod $period;
+
     private ClassRoom $classRoom;
+
     private Subject $subject;
+
     private Teacher $teacher;
+
     private Student $student;
 
     protected function setUp(): void

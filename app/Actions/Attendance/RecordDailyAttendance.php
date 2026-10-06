@@ -11,9 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class RecordDailyAttendance
 {
-    public function __construct(private AuditService $audit)
-    {
-    }
+    public function __construct(private AuditService $audit) {}
 
     public function handle(
         School $school,

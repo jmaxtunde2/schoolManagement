@@ -71,7 +71,7 @@ class UserNotificationService
     /**
      * Send the same notification to several users.
      *
-     * @param iterable<User> $users
+     * @param  iterable<User>  $users
      */
     public function sendToMany(
         iterable $users,

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Attendance;
 
 use App\Enums\AttendanceStatus;
+use App\Models\AcademicPeriod;
 use App\Models\AttendanceRecord;
 use App\Models\ClassRoom;
 use Illuminate\Foundation\Http\FormRequest;
@@ -61,7 +62,7 @@ class StoreAttendanceRequest extends FormRequest
         $validator->after(function (Validator $validator): void {
             $periodId = $this->input('academic_period_id');
             if ($periodId) {
-                $period = \App\Models\AcademicPeriod::withoutGlobalScopes()
+                $period = AcademicPeriod::withoutGlobalScopes()
                     ->where('school_id', $this->user()->school_id)
                     ->find($periodId);
 

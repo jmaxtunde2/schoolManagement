@@ -48,7 +48,7 @@ class StudentRequest extends FormRequest
             'birth_date' => [
                 'nullable',
                 'date',
-                'before_or_equal:' . now()->subYears(4)->toDateString(),
+                'before_or_equal:'.now()->subYears(4)->toDateString(),
             ],
 
             'gender' => [
@@ -59,6 +59,13 @@ class StudentRequest extends FormRequest
             'is_active' => [
                 'boolean',
             ],
+
+            'photo' => [
+                'nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:2048',
+                'dimensions:min_width=64,min_height=64,max_width=2000,max_height=2000',
+            ],
+
+            'remove_photo' => ['nullable', 'boolean'],
 
             'guardian_ids' => [
                 'nullable',
@@ -77,8 +84,10 @@ class StudentRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'birth_date.before_or_equal' =>
-                'L’élève doit avoir au moins 4 ans.',
+            'birth_date.before_or_equal' => 'L’élève doit avoir au moins 4 ans.',
+            'photo.mimes' => 'La photo doit être une image JPG, PNG ou WebP.',
+            'photo.max' => 'La photo ne doit pas dépasser 2 Mo.',
+            'photo.dimensions' => 'La photo doit mesurer entre 64×64 et 2000×2000 pixels.',
         ];
     }
 }

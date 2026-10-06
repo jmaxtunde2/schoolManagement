@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSchool;
 use Database\Factories\AcademicPeriodFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class AcademicPeriod extends Model
 {
     /** @use HasFactory<AcademicPeriodFactory> */
-    use HasFactory, BelongsToSchool;
+    use BelongsToSchool, HasFactory;
 
     protected $fillable = [
         'academic_year_id',

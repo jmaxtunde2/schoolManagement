@@ -19,4 +19,9 @@ class AcademicYearFactory extends Factory
             'is_current' => true,
         ];
     }
+
+    public function forSchool(School $school): static
+    {
+        return $this->state(['school_id' => $school->id]);
+    }
 }

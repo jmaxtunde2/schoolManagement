@@ -28,6 +28,7 @@ import Checkbox from '@/Components/UI/Checkbox';
 const empty = {
     name: '',
     phone: '',
+    phone_secondary: '',
     email: '',
     password: '',
     student_ids: [],
@@ -123,6 +124,7 @@ export default function GuardiansIndex({
         setData({
             name: row.name,
             phone: row.phone,
+            phone_secondary: row.phone_secondary ?? '',
             email: row.email ?? '',
             password: '',
             student_ids: row.students.map(
@@ -344,13 +346,21 @@ export default function GuardiansIndex({
                                 header: 'Téléphone',
                                 render: (row) => (
                                     <div className="flex items-center gap-2">
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                                             <Phone className="h-4 w-4" />
                                         </div>
 
-                                        <span className="text-sm font-medium text-slate-700">
-                                            {row.phone}
-                                        </span>
+                                        <div className="min-w-0">
+                                            <span className="block text-sm font-medium text-slate-700">
+                                                {row.phone}
+                                            </span>
+
+                                            {row.phone_secondary && (
+                                                <span className="block text-xs text-slate-400">
+                                                    {row.phone_secondary}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 ),
                             },
@@ -654,6 +664,27 @@ export default function GuardiansIndex({
                                     onChange={(e) =>
                                         setData(
                                             'phone',
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="+22901*********"
+                                />
+                            </Field>
+
+                            <Field
+                                label="Téléphone secondaire"
+                                error={errors.phone_secondary}
+                                hint="Second numéro du responsable. Les SMS continuent d'être envoyés au numéro principal."
+                            >
+                                <Input
+                                    type="tel"
+                                    value={
+                                        data.phone_secondary ??
+                                        ''
+                                    }
+                                    onChange={(e) =>
+                                        setData(
+                                            'phone_secondary',
                                             e.target.value
                                         )
                                     }

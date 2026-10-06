@@ -3,6 +3,7 @@ import { Link, usePage, router } from '@inertiajs/react';
 import {
     LayoutDashboard, Building2, CalendarRange, School as SchoolIcon, BookOpen, Users, UserRound,
     GraduationCap, ClipboardList, BellRing, Globe2, ClipboardCheck, BookOpenCheck, FileText, Menu, X, LogOut, ChevronDown, CheckCheck, Layers, UserCircle,
+    CalendarDays, UserCog,
 } from 'lucide-react';
 import Dropdown from '@/Components/UI/Dropdown';
 import Toast from '@/Components/UI/Toast';
@@ -24,7 +25,9 @@ const adminNav = [
     { href: 'admin.academic-years.index', label: 'Années scolaires', icon: CalendarRange },
     { href: 'admin.academic-periods.index', label: 'Périodes scolaires', icon: Layers },
     { href: 'admin.billing.index', label: 'Services & contributions', icon: Building2 },
+    { href: 'admin.staff.index', label: 'Personnel', icon: UserCog },
     { href: 'admin.users.index', label: 'Utilisateurs', icon: Users },
+    { href: 'admin.timetables.index', label: 'Emploi du temps', icon: CalendarDays },
     { href: 'admin.settings.edit', label: 'Établissement', icon: Building2 },
     { href: 'admin.settings.public-site.edit', label: 'Site public', icon: Globe2 },
 ];
@@ -41,6 +44,15 @@ const censeurNav = [
     { href: 'censeur.teachers.index', label: 'Enseignants', icon: Users },
     { href: 'censeur.classes.index', label: 'Classes', icon: SchoolIcon },
     { href: 'censeur.subjects.index', label: 'Matières', icon: BookOpen },
+    { href: 'censeur.timetables.index', label: 'Emploi du temps', icon: CalendarDays },
+];
+
+const directorNav = [
+    { href: 'director.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+];
+
+const accountantNav = [
+    { href: 'accountant.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
 ];
 
 const secretaryNav = [
@@ -58,6 +70,7 @@ const teacherNav = [
     { href: 'teacher.attendance.index', label: 'Assiduité des classes', icon: ClipboardCheck },
     { href: 'teacher.academic.results.index', label: 'Résultats académiques', icon: BookOpenCheck },
     { href: 'teacher.report-cards.index', label: 'Bulletins', icon: FileText },
+    { href: 'teacher.timetable', label: 'Mon emploi du temps', icon: CalendarDays },
 ];
 
 const parentNav = [
@@ -76,11 +89,15 @@ export default function AuthenticatedLayout({ children, title }) {
         ? adminNav
         : auth.user.role === 'censeur'
             ? censeurNav
-            : auth.user.role === 'secretary'
-                ? secretaryNav
-                : auth.user.role === 'parent'
-                    ? parentNav
-                    : teacherNav;
+            : auth.user.role === 'director'
+                ? directorNav
+                : auth.user.role === 'accountant'
+                    ? accountantNav
+                    : auth.user.role === 'secretary'
+                        ? secretaryNav
+                        : auth.user.role === 'parent'
+                            ? parentNav
+                            : teacherNav;
 
     function logout() {
         router.post(route('logout'));

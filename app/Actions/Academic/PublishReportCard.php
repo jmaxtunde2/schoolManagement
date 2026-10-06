@@ -7,7 +7,6 @@ use App\Models\ParentGuardian;
 use App\Models\ReportCard;
 use App\Services\AuditService;
 use App\Services\UserNotifications\UserNotificationService;
-use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class PublishReportCard
@@ -15,8 +14,7 @@ class PublishReportCard
     public function __construct(
         private AuditService $audit,
         private UserNotificationService $notifications,
-    ) {
-    }
+    ) {}
 
     public function handle(ReportCard $reportCard, int $publisherId): ReportCard
     {

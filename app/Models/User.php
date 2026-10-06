@@ -3,13 +3,13 @@
 namespace App\Models;
 
 use App\Enums\Role;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -67,6 +67,11 @@ class User extends Authenticatable
         return $this->hasOne(Teacher::class);
     }
 
+    public function photoUrl(): ?string
+    {
+        return $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null;
+    }
+
     public function parentGuardian(): HasOne
     {
         return $this->hasOne(
@@ -84,6 +89,22 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === Role::Admin;
+    }
+
+    public function isDirector(): bool
+    {
+        return $this->role === Role::Director;
+    }
+
+    public function isAccountant(): bool
+    {
+        return $this->role === Role::Accountant;
+    }
+
+    /** Membres du personnel de l'établissement (hors parents et hors plateforme). */
+    public function isStaff(): bool
+    {
+        return $this->role !== Role::Parent && $this->role->isSchoolStaff();
     }
 
     public function isTeacher(): bool

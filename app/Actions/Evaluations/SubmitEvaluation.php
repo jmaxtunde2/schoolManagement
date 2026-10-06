@@ -14,8 +14,7 @@ class SubmitEvaluation
     public function __construct(
         private AuditService $audit,
         private EvaluationNotificationService $notifications
-    ) {
-    }
+    ) {}
 
     public function handle(
         Evaluation $evaluation,

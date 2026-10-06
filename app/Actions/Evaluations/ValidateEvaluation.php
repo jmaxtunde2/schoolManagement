@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Actions\Evaluations;
 
 use App\Enums\EvaluationStatus;
@@ -14,8 +15,7 @@ class ValidateEvaluation
         private NotificationService $notifications,
         private AuditService $audit,
         private EvaluationNotificationService $evaluationNotifications
-    ) {
-    }
+    ) {}
 
     public function handle(Evaluation $evaluation, int $validatorId): Evaluation
     {

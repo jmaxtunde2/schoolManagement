@@ -1,0 +1,766 @@
+# MISSION — ÉVOLUTION DU PROJET CORISCHOOL
+
+Tu travailles directement sur le projet existant CoriSchool, une plateforme de gestion scolaire développée avec Laravel + Inertia React + Tailwind CSS.
+
+IMPORTANT :
+- Tu dois travailler sur le projet EXISTANT.
+- Ne recrée pas l'application depuis zéro.
+- Ne remplace pas inutilement les fonctionnalités déjà fonctionnelles.
+- Avant toute modification, analyse l'architecture et le code existant.
+- Réutilise les modèles, contrôleurs, middleware, routes, composants et layouts déjà présents lorsqu'ils sont adaptés.
+- Respecte les conventions existantes du projet.
+- Utilise Lucide pour les icônes lorsque cela est déjà utilisé dans le projet.
+- Conserve une interface professionnelle, moderne, responsive et adaptée au contexte des écoles béninoises.
+- Palette visuelle privilégiée : vert / teal / blanc, avec des cartes et états visuels clairs.
+- Ne demande pas de confirmation entre chaque étape : analyse, planifie puis implémente progressivement.
+- Ne détruis aucune donnée existante.
+- Avant les migrations destructives, vérifie les données et privilégie les migrations compatibles avec l'existant.
+
+==================================================
+1. CONTEXTE COMMERCIAL DE CORISCHOOL
+==================================================
+
+CoriSchool est une plateforme SaaS de gestion et de suivi scolaire.
+
+Le positionnement est :
+
+"CoriSchool — La gestion scolaire simple, connectée et intelligente."
+
+La plateforme doit couvrir :
+
+- gestion académique ;
+- gestion des élèves ;
+- gestion des enseignants et du personnel ;
+- notes ;
+- moyennes ;
+- bulletins ;
+- présences ;
+- emploi du temps ;
+- portail parents ;
+- notifications ;
+- SMS ;
+- sécurité 2FA ;
+- statistiques ;
+- suivi des performances ;
+- gestion financière ;
+- paiements ;
+- reçus ;
+- gestion multi-écoles ;
+- gestion multi-campus pour les offres Enterprise.
+
+==================================================
+2. MODÈLE COMMERCIAL À PRENDRE EN COMPTE
+==================================================
+
+CoriSchool possède trois offres.
+
+STARTER — 1 000 FCFA / élève / an
+
+Pour les petites écoles.
+
+Fonctionnalités :
+
+- élèves ;
+- classes ;
+- enseignants ;
+- matières ;
+- évaluations ;
+- notes ;
+- moyennes ;
+- bulletins ;
+- gestion des présences ;
+- emploi du temps ;
+- portail parent ;
+- notifications ;
+- SMS ;
+- authentification 2FA ;
+- tableau de bord direction ;
+- espace enseignant ;
+- historique académique de base ;
+- exports standards.
+
+PRO — 1 500 FCFA / élève / an
+
+Tout STARTER +
+
+- statistiques avancées ;
+- suivi des performances ;
+- historique académique complet ;
+- exports avancés ;
+- gestion des frais scolaires ;
+- paiements ;
+- reçus ;
+- tableaux de bord analytiques.
+
+ENTERPRISE — 2 500 FCFA / élève / an
+
+Tout PRO +
+
+- groupes scolaires ;
+- multi-écoles ;
+- multi-campus ;
+- administration centralisée ;
+- tableaux de bord consolidés ;
+- API ;
+- intégrations ;
+- domaine personnalisé ;
+- migration de données ;
+- personnalisation ;
+- tableaux de bord avancés ;
+- support prioritaire ;
+- SLA.
+
+IMPORTANT :
+Ne pas transformer automatiquement ces prix en logique de paiement si le projet ne possède pas encore de véritable module de facturation. Pour cette phase, ils doivent surtout être présentés sur la landing page et structurés dans le modèle commercial.
+
+Les coûts SMS doivent rester séparables de l'abonnement logiciel afin de ne pas créer une consommation illimitée non maîtrisée.
+
+==================================================
+3. OBJECTIF PRINCIPAL DE CETTE PHASE
+==================================================
+
+Nous devons faire évoluer le projet existant autour de six axes prioritaires :
+
+1. Landing page professionnelle CoriSchool avec présentation des offres.
+2. Véritable processus d'enregistrement d'une école.
+3. Gestion du personnel par l'école.
+4. Emploi du temps.
+5. Photo des élèves.
+6. Deux numéros de téléphone pour les responsables/parents.
+
+En plus, toutes les fonctionnalités existantes doivent continuer à fonctionner.
+
+==================================================
+4. ÉTAPE OBLIGATOIRE AVANT DE CODER
+==================================================
+
+Commence par analyser le projet.
+
+Inspecte notamment :
+
+- composer.json
+- package.json
+- routes/web.php
+- routes/auth.php s'il existe
+- app/Models
+- app/Http/Controllers
+- app/Http/Middleware
+- app/Enums
+- database/migrations
+- database/seeders
+- resources/js
+- resources/js/Pages
+- resources/js/Components
+- resources/js/Layouts
+- resources/css
+- les layouts existants
+- les dashboards
+- les politiques/permissions
+- les relations User / School / Teacher / Student / Parent
+- les fonctionnalités 2FA existantes
+- les fonctionnalités de notes existantes
+- les fonctionnalités de validation des évaluations existantes.
+
+Cherche également toute logique existante utilisant :
+
+school_id
+
+et vérifie comment le multi-tenant est actuellement implémenté.
+
+Ne suppose pas que les noms de fichiers ou modèles sont exactement ceux décrits dans ce prompt : vérifie le code réel.
+
+Après cette analyse, établis mentalement le plan d'implémentation et applique-le directement.
+
+==================================================
+5. MULTI-ÉCOLE / SCHOOL_ID
+==================================================
+
+Le système doit fonctionner comme une application multi-école.
+
+Une école est représentée par un enregistrement School.
+
+Toutes les données appartenant à une école doivent être isolées par :
+
+school_id
+
+Un utilisateur appartenant à une école ne doit jamais pouvoir :
+
+- voir les élèves d'une autre école ;
+- modifier les notes d'une autre école ;
+- voir les enseignants d'une autre école ;
+- consulter les parents d'une autre école ;
+- consulter les emplois du temps d'une autre école ;
+- consulter les données financières d'une autre école.
+
+Ne fais pas confiance uniquement au filtrage frontend.
+
+L'isolation doit être garantie côté serveur.
+
+Vérifie les controllers, queries, policies et middleware.
+
+Lorsque cela est pertinent, utilise le school_id de l'utilisateur authentifié plutôt qu'un school_id fourni librement par le frontend.
+
+==================================================
+6. ENREGISTREMENT D'UNE ÉCOLE
+==================================================
+
+Ajouter un véritable onboarding d'école.
+
+Le flux attendu :
+
+Landing page
+    ↓
+Créer mon école
+    ↓
+Formulaire d'inscription école
+    ↓
+Création de l'école
+    ↓
+Création du compte administrateur
+    ↓
+Association user.school_id
+    ↓
+Connexion / redirection
+    ↓
+Dashboard de l'école
+
+Le formulaire doit prévoir au minimum :
+
+- nom de l'école ;
+- sigle ou nom court ;
+- adresse ;
+- ville ;
+- département ;
+- téléphone principal ;
+- email ;
+- logo ;
+- site web si pertinent ;
+- type d'établissement ;
+- année scolaire ;
+- informations de contact.
+
+Après création :
+
+- l'école doit être créée ;
+- le premier utilisateur doit être correctement associé à cette école ;
+- le rôle doit être administrateur de l'école ;
+- school_id doit être renseigné ;
+- le dashboard doit afficher les données de cette école.
+
+Ne crée pas plusieurs bases de données.
+
+Le système doit continuer à utiliser la même base avec school_id.
+
+==================================================
+7. GESTION DU PERSONNEL
+==================================================
+
+L'administrateur de l'école doit pouvoir gérer son personnel depuis le dashboard.
+
+Créer ou améliorer une section :
+
+Administration → Personnel
+
+Le personnel peut comprendre :
+
+- administrateur ;
+- directeur ;
+- enseignant ;
+- secrétaire ;
+- censeur ;
+- comptable ;
+- autres rôles compatibles avec le système existant.
+
+Avant de créer un nouveau système de rôles, inspecte l'Enum Role existant.
+
+Réutilise-le si possible.
+
+Pour chaque membre du personnel :
+
+- prénom ;
+- nom ;
+- email ;
+- téléphone ;
+- rôle ;
+- statut actif/inactif ;
+- éventuellement photo ;
+- identifiants de connexion si le personnel possède un compte.
+
+L'administrateur doit pouvoir :
+
+- créer ;
+- modifier ;
+- activer/désactiver ;
+- consulter.
+
+Lorsqu'un membre du personnel possède un compte :
+
+user.school_id = school.id
+
+Il ne doit jamais être possible de créer depuis l'interface d'une école un utilisateur rattaché à une autre école.
+
+Les permissions doivent être respectées.
+
+==================================================
+8. EMPLOI DU TEMPS
+==================================================
+
+Ajouter un véritable module d'emploi du temps.
+
+Créer les migrations nécessaires seulement après avoir vérifié les modèles existants.
+
+Le système doit permettre d'associer :
+
+- école ;
+- année scolaire ;
+- classe ;
+- matière ;
+- enseignant ;
+- jour ;
+- heure de début ;
+- heure de fin ;
+- salle.
+
+Prévoir une structure équivalente à :
+
+timetables
+
+avec les relations nécessaires.
+
+L'emploi du temps doit être accessible selon les droits à :
+
+ADMINISTRATION
+- créer ;
+- modifier ;
+- supprimer ;
+- consulter.
+
+ENSEIGNANT
+- consulter son emploi du temps.
+
+PARENT
+- consulter l'emploi du temps de son enfant.
+
+ÉLÈVE
+- consulter son emploi du temps si le portail élève existe déjà.
+
+Interface souhaitée :
+
+- vue hebdomadaire ;
+- Lundi ;
+- Mardi ;
+- Mercredi ;
+- Jeudi ;
+- Vendredi ;
+- Samedi si nécessaire.
+
+Afficher clairement :
+
+heure + matière + enseignant + salle + classe.
+
+Prévoir les validations nécessaires pour éviter les incohérences.
+
+Par exemple :
+- heure de fin > heure de début ;
+- classe appartenant à la même école ;
+- enseignant appartenant à la même école ;
+- matière appartenant à la même école ;
+- année scolaire cohérente.
+
+==================================================
+9. PHOTO DES ÉLÈVES
+==================================================
+
+Ajouter la possibilité d'ajouter une photo à chaque élève.
+
+Avant de modifier la base, inspecte le modèle Student existant.
+
+Si nécessaire, ajouter un champ du type :
+
+photo_path
+
+Utiliser le stockage Laravel approprié.
+
+Éviter de stocker les images en Base64 dans la base de données.
+
+La photo doit être accessible dans :
+
+- fiche élève ;
+- liste élèves ;
+- profil parent ;
+- gestion des présences si pertinent ;
+- recherche élève ;
+- administration.
+
+Prévoir :
+
+- upload ;
+- validation du type MIME ;
+- taille maximale raisonnable ;
+- remplacement de la photo ;
+- suppression de l'ancienne photo lorsqu'elle est remplacée ;
+- suppression propre lorsque l'élève est supprimé si cela est approprié.
+
+Utiliser le système Storage Laravel existant.
+
+==================================================
+10. DEUX NUMÉROS DE TÉLÉPHONE POUR LES PARENTS
+==================================================
+
+Inspecte d'abord la structure actuelle des parents/tuteurs.
+
+Le système doit permettre de conserver deux numéros :
+
+phone_primary
+phone_secondary
+
+ou une nomenclature équivalente cohérente avec les modèles existants.
+
+Ne crée pas de doublon si la structure actuelle permet déjà de le faire proprement.
+
+L'interface parent/tuteur doit permettre :
+
+- numéro principal ;
+- numéro secondaire.
+
+Afficher clairement lequel est principal.
+
+Les deux numéros doivent être disponibles pour les fonctionnalités de communication/SMS lorsqu'elles seront utilisées.
+
+Ne mets pas de logique automatique de basculement SMS sans vérifier comment le système SMS existant fonctionne.
+
+==================================================
+11. LANDING PAGE PROFESSIONNELLE
+==================================================
+
+Créer ou remplacer la landing page publique de CoriSchool.
+
+Elle doit être moderne, responsive et professionnelle.
+
+Ne pas faire une simple page avec trois cartes.
+
+Structure recommandée :
+
+SECTION 1 — HERO
+
+CoriSchool
+
+"La gestion scolaire simple, connectée et intelligente."
+
+Texte :
+
+"Gérez votre établissement, suivez les performances de vos élèves et rapprochez l'école des familles depuis une seule plateforme."
+
+Boutons :
+
+- Créer mon école
+- Demander une démonstration
+
+Ajouter une illustration/dashboard mockup si le projet possède déjà des composants appropriés.
+
+SECTION 2 — PROBLÈMES
+
+Présenter les problèmes :
+
+- gestion manuelle des notes ;
+- difficulté de communication avec les parents ;
+- suivi compliqué des présences ;
+- bulletins difficiles à produire ;
+- manque de visibilité sur les performances ;
+- gestion financière dispersée.
+
+SECTION 3 — SOLUTION
+
+Présenter CoriSchool comme une plateforme unifiée.
+
+SECTION 4 — FONCTIONNALITÉS
+
+Cartes professionnelles :
+
+- Notes & bulletins
+- Présences
+- Emploi du temps
+- Portail parents
+- Notifications & SMS
+- Gestion du personnel
+- Statistiques
+- Gestion financière
+- Paiements
+
+SECTION 5 — COMMENT ÇA MARCHE
+
+1. Créez votre école
+2. Configurez vos classes et votre personnel
+3. Ajoutez vos élèves
+4. Gérez les activités scolaires
+5. Communiquez avec les parents
+6. Pilotez votre établissement
+
+SECTION 6 — TARIFS
+
+Afficher exactement :
+
+STARTER
+1 000 FCFA / élève / an
+
+PRO
+1 500 FCFA / élève / an
+
+ENTERPRISE
+2 500 FCFA / élève / an
+
+Présenter les différences de fonctionnalités.
+
+Ne pas utiliser de fausses promotions ou de faux compteurs.
+
+SECTION 7 — FAQ
+
+Questions pertinentes :
+
+- Combien coûte CoriSchool ?
+- Comment inscrire mon école ?
+- Mes enseignants ont-ils leur propre compte ?
+- Les parents peuvent-ils consulter les résultats ?
+- Les SMS sont-ils inclus ?
+- Mes données sont-elles séparées des autres écoles ?
+- CoriSchool fonctionne-t-il sur téléphone ?
+
+SECTION 8 — CTA FINAL
+
+"Prêt à connecter votre école ?"
+
+Bouton :
+
+"Créer mon école"
+
+==================================================
+12. DESIGN UI/UX
+==================================================
+
+Conserver le style professionnel déjà utilisé dans le projet.
+
+Préférences :
+
+- Tailwind CSS ;
+- Lucide ;
+- responsive mobile/tablette/desktop ;
+- cartes modernes ;
+- espaces généreux ;
+- typographie lisible ;
+- couleurs vert / teal ;
+- états success/error/warning clairement visibles.
+
+Ne pas surcharger l'interface avec trop d'animations.
+
+Le dashboard doit rester utilisable sur téléphone.
+
+==================================================
+13. COMPATIBILITÉ AVEC L'EXISTANT
+==================================================
+
+Attention particulière aux fonctionnalités déjà existantes :
+
+- authentification ;
+- 2FA Google Authenticator/TOTP ;
+- rôles ;
+- dashboard ;
+- gestion des écoles ;
+- gestion des enseignants ;
+- gestion des élèves ;
+- gestion des parents ;
+- notes ;
+- évaluations ;
+- validation des notes ;
+- bulletins ;
+- notifications ;
+- SMS ;
+- audit.
+
+Ne réécris pas une fonctionnalité existante uniquement parce qu'elle pourrait être améliorée.
+
+Si une fonctionnalité existe déjà mais nécessite une petite adaptation, modifie-la proprement.
+
+==================================================
+14. VALIDATION BACKEND
+==================================================
+
+Toutes les données reçues du frontend doivent être validées côté serveur.
+
+Notamment :
+
+- school_id ;
+- élève ;
+- parent ;
+- enseignant ;
+- classe ;
+- matière ;
+- emploi du temps ;
+- fichiers photos ;
+- numéros de téléphone.
+
+Ne jamais faire confiance aux IDs envoyés par le frontend sans vérifier leur appartenance à l'école courante.
+
+==================================================
+15. MIGRATIONS
+==================================================
+
+Avant chaque migration :
+
+- inspecter la structure actuelle ;
+- éviter les colonnes déjà existantes ;
+- éviter les doublons ;
+- respecter les conventions Laravel du projet.
+
+Après les migrations :
+
+- vérifier qu'elles s'exécutent proprement ;
+- vérifier les relations ;
+- vérifier les indexes ;
+- vérifier les contraintes.
+
+Ne supprime aucune colonne existante sans justification.
+
+==================================================
+16. TESTS
+==================================================
+
+Après l'implémentation, tester au minimum :
+
+A. ÉCOLE
+- création d'une école ;
+- création de son administrateur ;
+- association school_id.
+
+B. PERSONNEL
+- création d'un enseignant ;
+- création d'un secrétaire ;
+- modification ;
+- activation/désactivation ;
+- isolation par école.
+
+C. ÉLÈVES
+- création ;
+- ajout photo ;
+- remplacement photo ;
+- affichage photo.
+
+D. PARENTS
+- numéro principal ;
+- numéro secondaire ;
+- affichage correct.
+
+E. EMPLOI DU TEMPS
+- création ;
+- modification ;
+- suppression ;
+- affichage direction ;
+- affichage enseignant ;
+- affichage parent ;
+- isolation par école.
+
+F. SÉCURITÉ
+Tester qu'un utilisateur de l'école A ne peut pas accéder aux données de l'école B en modifiant manuellement les IDs dans les URLs ou requêtes.
+
+G. EXISTANT
+Vérifier que les notes, évaluations, validations, bulletins et 2FA existants continuent de fonctionner.
+
+==================================================
+17. COMMANDES ET OUTILS
+==================================================
+
+Utilise les outils disponibles dans le projet.
+
+Pour Laravel :
+
+- php artisan migrate
+- php artisan route:list
+- php artisan test
+- php artisan optimize:clear
+
+Pour frontend :
+
+- npm run build
+- npm run dev si nécessaire pour vérifier le développement.
+
+Avant de modifier un fichier, lis son contenu.
+
+Après modification, vérifie les erreurs de syntaxe et les imports.
+
+==================================================
+18. RÈGLE IMPORTANTE : NE PAS FAIRE SEMBLANT
+==================================================
+
+Ne dis jamais qu'une fonctionnalité est implémentée si elle ne l'est pas réellement.
+
+Si une fonctionnalité existe déjà :
+
+→ indique-la comme existante et adapte-la si nécessaire.
+
+Si elle n'existe pas :
+
+→ implémente-la.
+
+Si une dépendance manque :
+
+→ identifie-la clairement.
+
+Si une partie ne peut pas être finalisée :
+
+→ laisse le code dans un état cohérent et explique exactement ce qui reste.
+
+==================================================
+19. ORDRE D'EXÉCUTION
+==================================================
+
+Implémente dans cet ordre :
+
+PHASE 1
+Analyse complète du projet existant.
+
+PHASE 2
+Multi-école / onboarding école / administrateur.
+
+PHASE 3
+Gestion du personnel.
+
+PHASE 4
+Photo élèves + deux numéros parents.
+
+PHASE 5
+Emploi du temps.
+
+PHASE 6
+Landing page CoriSchool + tarifs.
+
+PHASE 7
+Tests et corrections.
+
+==================================================
+20. RAPPORT FINAL
+==================================================
+
+À la fin, donne un rapport clair comprenant :
+
+1. Fichiers créés.
+2. Fichiers modifiés.
+3. Migrations créées.
+4. Models créés/modifiés.
+5. Controllers créés/modifiés.
+6. Routes ajoutées/modifiées.
+7. Pages React créées/modifiées.
+8. Fonctionnalités réellement implémentées.
+9. Tests effectués.
+10. Problèmes éventuels restant à résoudre.
+
+Ne fournis pas seulement un résumé général.
+
+Je veux pouvoir vérifier précisément ce qui a été fait.
+
+==================================================
+
+COMMENCE MAINTENANT.
+
+Première étape obligatoire :
+analyse le projet existant avant toute modification.
+
+Ensuite implémente les changements demandés progressivement, en conservant toutes les fonctionnalités existantes de CoriSchool.

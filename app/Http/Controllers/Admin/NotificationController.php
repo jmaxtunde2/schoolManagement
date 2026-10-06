@@ -34,7 +34,11 @@ class NotificationController extends Controller
     {
         $notification->recordStatus(NotificationStatus::Pending, 'Relance manuelle par un administrateur.');
 
-        if ($notification->channel === 'email') { SendEmailNotificationJob::dispatch($notification->id); } else { SendSmsNotificationJob::dispatch($notification->id); }
+        if ($notification->channel === 'email') {
+            SendEmailNotificationJob::dispatch($notification->id);
+        } else {
+            SendSmsNotificationJob::dispatch($notification->id);
+        }
 
         return back()->with('success', 'SMS remis en file d\'envoi.');
     }

@@ -183,80 +183,61 @@ class EvaluationController extends Controller
 
                     'type' => $evaluation->type->label(),
 
-                    'evaluation_date' =>
-                        $evaluation->evaluation_date->format('Y-m-d'),
+                    'evaluation_date' => $evaluation->evaluation_date->format('Y-m-d'),
 
-                    'max_score' =>
-                        (float) $evaluation->max_score,
+                    'max_score' => (float) $evaluation->max_score,
 
-                    'coefficient' =>
-                        (float) $evaluation->coefficient,
+                    'coefficient' => (float) $evaluation->coefficient,
 
-                    'status' =>
-                        $evaluation->status->value,
+                    'status' => $evaluation->status->value,
 
-                    'status_label' =>
-                        $evaluation->status->label(),
+                    'status_label' => $evaluation->status->label(),
 
-                    'return_reason' =>
-                        $evaluation->return_reason,
+                    'return_reason' => $evaluation->return_reason,
 
-                    'class_name' =>
-                        $evaluation->classRoom->name,
+                    'class_name' => $evaluation->classRoom->name,
 
-                    'subject_name' =>
-                        $evaluation->subject->name,
+                    'subject_name' => $evaluation->subject->name,
 
-                    'teacher_name' =>
-                        $evaluation->teacher->user->name,
+                    'teacher_name' => $evaluation->teacher->user->name,
 
-                    'entered_by' =>
-                        $evaluation->enteredBy?->name,
+                    'entered_by' => $evaluation->enteredBy?->name,
 
-                    'submitted_by' =>
-                        $evaluation->submitter?->name,
+                    'submitted_by' => $evaluation->submitter?->name,
 
-                    'validated_by' =>
-                        $evaluation->validator?->name,
+                    'validated_by' => $evaluation->validator?->name,
 
-                    'is_validated' =>
-                        $evaluation->isValidated(),
+                    'is_validated' => $evaluation->isValidated(),
 
-                    'can_edit' =>
-                        Gate::allows(
-                            'update',
-                            $evaluation
-                        ),
+                    'can_edit' => Gate::allows(
+                        'update',
+                        $evaluation
+                    ),
 
-                    'can_submit' =>
-                        Gate::allows(
-                            'submit',
-                            $evaluation
-                        ),
+                    'can_submit' => Gate::allows(
+                        'submit',
+                        $evaluation
+                    ),
 
-                    'can_validate' =>
-                        Gate::allows(
-                            'validateEvaluation',
-                            $evaluation
-                        ),
+                    'can_validate' => Gate::allows(
+                        'validateEvaluation',
+                        $evaluation
+                    ),
 
-                    'can_return' =>
-                        Gate::allows(
-                            'returnEvaluation',
-                            $evaluation
-                        ),
+                    'can_return' => Gate::allows(
+                        'returnEvaluation',
+                        $evaluation
+                    ),
 
                     /*
                      * We use a relative route because the 2FA controller
                      * only accepts internal relative URLs.
                      */
-                    'validation_route' =>
-                        $request->user()->isCenseur()
+                    'validation_route' => $request->user()->isCenseur()
                             ? 'censeur.evaluations.validate'
                             : 'admin.evaluations.validate',
 
-                    'return_route' =>
-                        $request->user()->isCenseur()
+                    'return_route' => $request->user()->isCenseur()
                             ? 'censeur.evaluations.return'
                             : 'admin.evaluations.return',
                 ],
@@ -265,19 +246,15 @@ class EvaluationController extends Controller
                     fn ($result) => [
                         'id' => $result->id,
 
-                        'student_id' =>
-                            $result->student_id,
+                        'student_id' => $result->student_id,
 
-                        'student_name' =>
-                            $result->student->full_name,
+                        'student_name' => $result->student->full_name,
 
-                        'score' =>
-                            $result->score !== null
+                        'score' => $result->score !== null
                                 ? (float) $result->score
                                 : null,
 
-                        'is_absent' =>
-                            (bool) $result->is_absent,
+                        'is_absent' => (bool) $result->is_absent,
                     ]
                 ),
             ]
@@ -405,20 +382,15 @@ class EvaluationController extends Controller
         return $teacher->assignments
             ->map(
                 fn ($assignment) => [
-                    'class_id' =>
-                        $assignment->class_id,
+                    'class_id' => $assignment->class_id,
 
-                    'class_name' =>
-                        $assignment->classRoom->name,
+                    'class_name' => $assignment->classRoom->name,
 
-                    'subject_id' =>
-                        $assignment->subject_id,
+                    'subject_id' => $assignment->subject_id,
 
-                    'subject_name' =>
-                        $assignment->subject->name,
+                    'subject_name' => $assignment->subject->name,
 
-                    'teacher_id' =>
-                        $teacher->id,
+                    'teacher_id' => $teacher->id,
                 ]
             )
             ->values();
@@ -442,23 +414,17 @@ class EvaluationController extends Controller
             ->flatMap(
                 fn ($teacher) => $teacher->assignments->map(
                     fn ($assignment) => [
-                        'class_id' =>
-                            $assignment->class_id,
+                        'class_id' => $assignment->class_id,
 
-                        'class_name' =>
-                            $assignment->classRoom->name,
+                        'class_name' => $assignment->classRoom->name,
 
-                        'subject_id' =>
-                            $assignment->subject_id,
+                        'subject_id' => $assignment->subject_id,
 
-                        'subject_name' =>
-                            $assignment->subject->name,
+                        'subject_name' => $assignment->subject->name,
 
-                        'teacher_id' =>
-                            $teacher->id,
+                        'teacher_id' => $teacher->id,
 
-                        'teacher_name' =>
-                            $teacher->user->name,
+                        'teacher_name' => $teacher->user->name,
                     ]
                 )
             )

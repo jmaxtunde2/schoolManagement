@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClassRoom;
+use App\Models\School;
 use App\Models\SchoolPublicGalleryItem;
 use App\Models\SchoolPublicTestimonial;
 use App\Models\SchoolSetting;
@@ -21,7 +22,23 @@ class PublicSchoolController extends Controller
 {
     public function __invoke(Request $request, TenantResolver $resolver): Response|RedirectResponse
     {
-        return $this->renderSchool($request, $resolver->resolve($request));
+        $school = $resolver->resolve($request);
+
+        if ($school) {
+            return $this->renderSchool($request, $school);
+        }
+
+        /*
+         * Aucun établissement résolu. Deux cas distincts :
+         * - le domaine est revendiqué par une école mais pas encore vérifié : son site
+         *   public n'est pas prêt, on ne substitue donc pas la landing CoriSchool ;
+         * - on est sur l'hôte de la plateforme : c'est la page d'accueil de CoriSchool.
+         */
+        if ($resolver->hasSchoolDomain($request->getHost())) {
+            return redirect()->route('login');
+        }
+
+        return app(CoriSchoolLandingController::class)();
     }
 
     public function bySlug(
@@ -39,7 +56,7 @@ class PublicSchoolController extends Controller
         return $this->renderSchool($request, $school);
     }
 
-    private function renderSchool(Request $request, ?\App\Models\School $school): Response|RedirectResponse
+    private function renderSchool(Request $request, ?School $school): Response|RedirectResponse
     {
         if (! $school) {
             return redirect()->route('login');

@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
-use App\Services\Sms\LogSmsProvider;
 use App\Services\Sms\EsmsAfricaProvider;
+use App\Services\Sms\LogSmsProvider;
 use App\Services\Sms\SmsProviderInterface;
 use Illuminate\Support\ServiceProvider;
 

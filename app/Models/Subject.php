@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSchool;
 use Database\Factories\SubjectFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Subject extends Model
 {
     /** @use HasFactory<SubjectFactory> */
-    use HasFactory, BelongsToSchool;
+    use BelongsToSchool, HasFactory;
 
     protected $fillable = ['name', 'code'];
 

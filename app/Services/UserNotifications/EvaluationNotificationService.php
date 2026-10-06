@@ -2,7 +2,6 @@
 
 namespace App\Services\UserNotifications;
 
-use App\Enums\Role;
 use App\Models\Evaluation;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -11,8 +10,7 @@ class EvaluationNotificationService
 {
     public function __construct(
         private readonly UserNotificationService $userNotifications
-    ) {
-    }
+    ) {}
 
     public function notify(Evaluation $evaluation, string $event): int
     {

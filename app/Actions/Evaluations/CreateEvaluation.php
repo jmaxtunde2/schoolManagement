@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Actions\Evaluations;
 
 use App\Models\Evaluation;
@@ -12,8 +13,7 @@ class CreateEvaluation
 {
     public function __construct(
         private readonly EvaluationNotificationService $notifications
-    ) {
-    }
+    ) {}
 
     public function handle(Teacher $teacher, array $data, int $actorId): Evaluation
     {

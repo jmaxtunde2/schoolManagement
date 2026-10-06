@@ -13,7 +13,9 @@ class EnsureUserHasSchool
     {
         $user = $request->user();
 
-        if ($user?->isPlatformAdmin()) { return $next($request); }
+        if ($user?->isPlatformAdmin()) {
+            return $next($request);
+        }
 
         abort_if(! $user?->school_id || ! $user->school?->is_active, 403, 'Aucun établissement actif associé à ce compte.');
 

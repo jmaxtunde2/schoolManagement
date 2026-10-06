@@ -1,10 +1,24 @@
 <?php
 
 use App\Http\Controllers\Admin;
+use App\Http\Controllers\Admin\EmailSettingsController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleAuthController;
-use App\Http\Controllers\Teacher;
+use App\Http\Controllers\Auth\TwoFactorController;
+use App\Http\Controllers\Censeur\EvaluationController;
+use App\Http\Controllers\Parent\ChildController;
+use App\Http\Controllers\Parent\TimetableController;
+use App\Http\Controllers\Platform\DashboardController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicSchoolController;
+use App\Http\Controllers\SchoolRegistrationController;
+use App\Http\Controllers\Staff\AttendanceController;
 use App\Http\Controllers\Staff\EvaluationController as StaffEvaluationController;
+use App\Http\Controllers\Staff\ManagementDashboardController;
+use App\Http\Controllers\Teacher;
+use App\Http\Controllers\UserNotificationController;
+use App\Services\Tenancy\TenantResolver;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -13,24 +27,49 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', function (\Illuminate\Http\Request $request) {
+Route::get('/', function (Request $request) {
     $user = auth()->user();
 
     if ($user) {
         return redirect()->route($user->role->homeRoute());
     }
 
-    return app(\App\Http\Controllers\PublicSchoolController::class)
+    return app(PublicSchoolController::class)
         ->__invoke(
             $request,
-            app(\App\Services\Tenancy\TenantResolver::class)
+            app(TenantResolver::class)
         );
 })->name('public.school.home');
 
 Route::get('/ecole/{slug}', [
-    \App\Http\Controllers\PublicSchoolController::class,
+    PublicSchoolController::class,
     'bySlug',
 ])->name('public.school.slug');
+
+/*
+|--------------------------------------------------------------------------
+| Landing CoriSchool (plateforme)
+|--------------------------------------------------------------------------
+|
+| `/` affiche le site public de l'établissement résolu lorsqu'un domaine est
+| vérifié, sinon la landing CoriSchool (voir PublicSchoolController).
+| L'inscription d'un établissement est publique mais protégée par `guest` :
+| un utilisateur déjà connecté n'a pas à créer une seconde école depuis l'écran
+| de connexion.
+|
+*/
+
+Route::middleware('guest')->group(function () {
+    Route::get('/creer-mon-ecole', [
+        SchoolRegistrationController::class,
+        'create',
+    ])->name('school.register');
+
+    Route::post('/creer-mon-ecole', [
+        SchoolRegistrationController::class,
+        'store',
+    ])->middleware('throttle:10,1')->name('school.register.store');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -89,34 +128,34 @@ Route::middleware('auth')
 
         // Configuration initiale
         Route::get('/setup', [
-            \App\Http\Controllers\Auth\TwoFactorController::class,
+            TwoFactorController::class,
             'setup',
         ])->name('setup');
 
         Route::post('/setup', [
-            \App\Http\Controllers\Auth\TwoFactorController::class,
+            TwoFactorController::class,
             'confirm',
         ])->name('setup.confirm');
 
         // Codes de récupération
         Route::get('/recovery', [
-            \App\Http\Controllers\Auth\TwoFactorController::class,
+            TwoFactorController::class,
             'recovery',
         ])->name('recovery');
 
         // Vérification Authenticator
         Route::get('/challenge', [
-            \App\Http\Controllers\Auth\TwoFactorController::class,
+            TwoFactorController::class,
             'challenge',
         ])->name('challenge');
 
         Route::post('/challenge', [
-            \App\Http\Controllers\Auth\TwoFactorController::class,
+            TwoFactorController::class,
             'verify',
         ])->name('verify');
 
         Route::post('/challenge/cancel', [
-            \App\Http\Controllers\Auth\TwoFactorController::class,
+            TwoFactorController::class,
             'cancel',
         ])->name('cancel');
     });
@@ -142,17 +181,17 @@ Route::middleware([
 ])->group(function () {
 
     Route::get('/notifications', [
-        \App\Http\Controllers\UserNotificationController::class,
+        UserNotificationController::class,
         'index',
     ])->name('notifications.index');
 
     Route::post('/notifications/{notification}/read', [
-        \App\Http\Controllers\UserNotificationController::class,
+        UserNotificationController::class,
         'markAsRead',
     ])->name('notifications.read');
 
     Route::post('/notifications/read-all', [
-        \App\Http\Controllers\UserNotificationController::class,
+        UserNotificationController::class,
         'markAllAsRead',
     ])->name('notifications.read-all');
 
@@ -173,17 +212,17 @@ Route::middleware([
     */
 
     Route::get('/profile', [
-        \App\Http\Controllers\ProfileController::class,
+        ProfileController::class,
         'edit',
     ])->name('profile.edit');
 
     Route::put('/profile', [
-        \App\Http\Controllers\ProfileController::class,
+        ProfileController::class,
         'update',
     ])->name('profile.update');
 
     Route::put('/profile/password', [
-        \App\Http\Controllers\ProfileController::class,
+        ProfileController::class,
         'updatePassword',
     ])
         ->middleware('2fa.fresh:change_password')
@@ -200,8 +239,8 @@ Route::middleware([
         ->name('platform.')
         ->group(function () {
 
-            Route::get('/dashboard', 
-                \App\Http\Controllers\Platform\DashboardController::class
+            Route::get('/dashboard',
+                DashboardController::class
             )->name('dashboard');
         });
 
@@ -278,17 +317,17 @@ Route::middleware([
             ])->name('settings.public-site.gallery.destroy');
 
             Route::get('/settings/email', [
-                \App\Http\Controllers\Admin\EmailSettingsController::class,
+                EmailSettingsController::class,
                 'edit',
             ])->name('settings.email');
 
             Route::put('/settings/email', [
-                \App\Http\Controllers\Admin\EmailSettingsController::class,
+                EmailSettingsController::class,
                 'update',
             ])->name('settings.email.update');
 
             Route::post('/settings/email/test', [
-                \App\Http\Controllers\Admin\EmailSettingsController::class,
+                EmailSettingsController::class,
                 'sendTestEmail',
             ])->name('settings.email.test');
 
@@ -323,6 +362,68 @@ Route::middleware([
             ])
                 ->middleware('2fa.fresh:manage_users')
                 ->name('users.update');
+
+            /*
+            | Personnel
+            |
+            | Administration → Personnel : identité, rôle, téléphone, photo,
+            | statut actif/inactif et identifiants de connexion.
+            */
+
+            Route::get('/personnel', [
+                Admin\StaffController::class,
+                'index',
+            ])->name('staff.index');
+
+            Route::post('/personnel', [
+                Admin\StaffController::class,
+                'store',
+            ])
+                ->middleware('2fa.fresh:manage_users')
+                ->name('staff.store');
+
+            Route::put('/personnel/{staff}', [
+                Admin\StaffController::class,
+                'update',
+            ])
+                ->middleware('2fa.fresh:manage_users')
+                ->name('staff.update');
+
+            Route::post('/personnel/{staff}/toggle', [
+                Admin\StaffController::class,
+                'toggle',
+            ])->name('staff.toggle');
+
+            Route::delete('/personnel/{staff}', [
+                Admin\StaffController::class,
+                'destroy',
+            ])
+                ->middleware('2fa.fresh:manage_users')
+                ->name('staff.destroy');
+
+            /*
+            | Emploi du temps
+            */
+
+            Route::get('/timetables', [
+                Admin\TimetableController::class,
+                'index',
+            ])->name('timetables.index');
+
+            Route::post('/timetables', [
+                Admin\TimetableController::class,
+                'store',
+            ])->name('timetables.store');
+
+            Route::put('/timetables/{timetable}', [
+                Admin\TimetableController::class,
+                'update',
+            ])->name('timetables.update');
+
+            Route::delete('/timetables/{timetable}', [
+                Admin\TimetableController::class,
+                'destroy',
+            ])->name('timetables.destroy');
 
             /*
             | Academic Years
@@ -566,32 +667,32 @@ Route::middleware([
             ])->name('report-cards.pdf');
 
             Route::get('/attendance', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'index',
             ])->name('attendance.index');
 
             Route::get('/attendance/create', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'create',
             ])->name('attendance.create');
 
             Route::post('/attendance', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'store',
             ])->name('attendance.store');
 
             Route::get('/attendance/students/{student}', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'studentHistory',
             ])->name('attendance.students.show');
 
             Route::put('/attendance/{attendance}', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'update',
             ])->name('attendance.update');
 
             Route::post('/attendance/{attendance}/justify', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'reviewJustification',
             ])->name('attendance.justify');
 
@@ -622,11 +723,11 @@ Route::middleware([
         ->group(function () {
 
             Route::get('/dashboard',
-                \App\Http\Controllers\Censeur\DashboardController::class
+                App\Http\Controllers\Censeur\DashboardController::class
             )->name('dashboard');
 
             Route::get('/evaluations', [
-                \App\Http\Controllers\Censeur\EvaluationController::class,
+                EvaluationController::class,
                 'index',
             ])->name('evaluations.index');
 
@@ -678,32 +779,32 @@ Route::middleware([
             ])->name('report-cards.pdf');
 
             Route::get('/attendance', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'index',
             ])->name('attendance.index');
 
             Route::get('/attendance/create', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'create',
             ])->name('attendance.create');
 
             Route::post('/attendance', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'store',
             ])->name('attendance.store');
 
             Route::get('/attendance/students/{student}', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'studentHistory',
             ])->name('attendance.students.show');
 
             Route::put('/attendance/{attendance}', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'update',
             ])->name('attendance.update');
 
             Route::post('/attendance/{attendance}/justify', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'reviewJustification',
             ])->name('attendance.justify');
 
@@ -753,6 +854,34 @@ Route::middleware([
                 Admin\StudentController::class,
                 'index',
             ])->name('students.index');
+
+            /*
+            | Emploi du temps — lecture seule
+            |
+            | Le censeur contrôle l'emploi du temps mais ne le modifie pas :
+            | seule l'administration dispose des routes d'écriture.
+            */
+
+            Route::get('/timetables', [
+                Admin\TimetableController::class,
+                'index',
+            ])->name('timetables.index');
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Direction & Comptabilité — pilotage en lecture
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware('role:director,accountant')
+        ->group(function () {
+
+            Route::get('/direction/tableau-de-bord', ManagementDashboardController::class)
+                ->name('director.dashboard');
+
+            Route::get('/comptabilite/tableau-de-bord', ManagementDashboardController::class)
+                ->name('accountant.dashboard');
         });
 
     /*
@@ -775,6 +904,14 @@ Route::middleware([
             )
                 ->middleware('role:teacher')
                 ->name('dashboard');
+
+            /*
+            | Emploi du temps de l'enseignant
+            */
+
+            Route::get('/timetable', Teacher\TimetableController::class)
+                ->middleware('role:teacher')
+                ->name('timetable');
 
             /*
             | Evaluations
@@ -816,32 +953,32 @@ Route::middleware([
             ])->name('report-cards.pdf');
 
             Route::get('/attendance', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'index',
             ])->name('attendance.index');
 
             Route::get('/attendance/create', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'create',
             ])->name('attendance.create');
 
             Route::post('/attendance', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'store',
             ])->name('attendance.store');
 
             Route::get('/attendance/students/{student}', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'studentHistory',
             ])->name('attendance.students.show');
 
             Route::put('/attendance/{attendance}', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'update',
             ])->name('attendance.update');
 
             Route::post('/attendance/{attendance}/justify', [
-                \App\Http\Controllers\Staff\AttendanceController::class,
+                AttendanceController::class,
                 'reviewJustification',
             ])->name('attendance.justify');
 
@@ -885,7 +1022,7 @@ Route::middleware([
         ->group(function () {
 
             Route::get('/dashboard',
-                \App\Http\Controllers\Parent\DashboardController::class
+                App\Http\Controllers\Parent\DashboardController::class
             )->name('dashboard');
 
             /*
@@ -893,7 +1030,7 @@ Route::middleware([
             */
 
             Route::get('/children/{student}', [
-                \App\Http\Controllers\Parent\ChildController::class,
+                ChildController::class,
                 'show',
             ])->name('children.show');
 
@@ -902,14 +1039,21 @@ Route::middleware([
             */
 
             Route::get('/children/{student}/attendance', [
-                \App\Http\Controllers\Parent\ChildController::class,
+                ChildController::class,
                 'attendance',
             ])->name('children.attendance');
 
             Route::get('/children/{student}/report-cards', [
-                \App\Http\Controllers\Parent\ChildController::class,
+                ChildController::class,
                 'reportCards',
             ])->name('children.report-cards');
+
+            /*
+            | Emploi du temps de l'enfant
+            */
+
+            Route::get('/children/{student}/timetable', TimetableController::class)
+                ->name('children.timetable');
 
             Route::get('/report-cards/{reportCard}', [
                 Admin\ReportCardController::class,
@@ -922,7 +1066,7 @@ Route::middleware([
             ])->name('report-cards.pdf');
 
             Route::post('/attendance/{attendance}/justification', [
-                \App\Http\Controllers\Parent\ChildController::class,
+                ChildController::class,
                 'justify',
             ])->name('attendance.justify');
         });
@@ -939,7 +1083,7 @@ Route::middleware([
         ->group(function () {
 
             Route::get('/dashboard',
-                \App\Http\Controllers\Secretary\DashboardController::class
+                App\Http\Controllers\Secretary\DashboardController::class
             )->name('dashboard');
         });
 });

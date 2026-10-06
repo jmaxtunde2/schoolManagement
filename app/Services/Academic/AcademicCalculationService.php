@@ -21,8 +21,7 @@ class AcademicCalculationService
         ClassRoom $classRoom,
         AcademicPeriod $period,
         int $schoolId
-    ): array
-    {
+    ): array {
         if ((int) $classRoom->school_id !== (int) $period->school_id) {
             throw new InvalidArgumentException('La classe et la période doivent appartenir à la même école.');
         }
@@ -222,5 +221,4 @@ class AcademicCalculationService
             default => 'Insuffisant',
         };
     }
-
 }

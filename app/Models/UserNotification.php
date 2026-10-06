@@ -36,5 +36,4 @@ class UserNotification extends Model
     {
         return $this->belongsTo(School::class);
     }
-    
 }

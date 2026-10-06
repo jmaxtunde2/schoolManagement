@@ -7,6 +7,7 @@ import {
     ClipboardList,
     GraduationCap,
     UserRound,
+    CalendarRange,
 } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -68,6 +69,18 @@ export default function Child({ student, results = [] }) {
                         >
                             <CalendarDays className="h-4 w-4" />
                             <span>Assiduité</span>
+                            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                        </Link>
+
+                        <Link
+                            href={route(
+                                'parent.children.timetable',
+                                student.id
+                            )}
+                            className="group inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+                        >
+                            <CalendarRange className="h-4 w-4" />
+                            <span>Emploi du temps</span>
                             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                         </Link>
 

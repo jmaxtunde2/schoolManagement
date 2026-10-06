@@ -12,6 +12,7 @@ import {
     School,
     UserRound,
     CalendarDays,
+    RotateCcw,
 } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -24,6 +25,7 @@ import Modal from '@/Components/UI/Modal';
 import ConfirmDialog from '@/Components/UI/ConfirmDialog';
 import EmptyState from '@/Components/UI/EmptyState';
 import Field from '@/Components/UI/Field';
+import FileUpload from '@/Components/UI/FileUpload';
 import Input from '@/Components/UI/Input';
 import Select from '@/Components/UI/Select';
 import Checkbox from '@/Components/UI/Checkbox';
@@ -37,6 +39,8 @@ const empty = {
     gender: '',
     is_active: true,
     guardian_ids: [],
+    photo: null,
+    remove_photo: false,
 };
 
 export default function StudentsIndex({
@@ -68,7 +72,7 @@ export default function StudentsIndex({
         processing,
         errors,
         reset,
-    } = useForm(empty);
+    } = useForm(empty, { forceFormData: true });
 
     /*
      * Statistiques de la page courante.
@@ -121,6 +125,8 @@ export default function StudentsIndex({
             guardian_ids: row.guardians.map(
                 (guardian) => guardian.id
             ),
+            photo: null,
+            remove_photo: false,
         });
 
         setEditing(row);
@@ -380,14 +386,24 @@ export default function StudentsIndex({
                                 header: 'Élève',
                                 render: (row) => !isCenseur && (
                                     <div className="flex items-center gap-3">
-                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-blue-600">
-                                            {row.first_name
-                                                ?.charAt(0)
-                                                ?.toUpperCase()}
-                                            {row.last_name
-                                                ?.charAt(0)
-                                                ?.toUpperCase()}
-                                        </div>
+                                        {row.photo_url ? (
+                                            <img
+                                                src={
+                                                    row.photo_url
+                                                }
+                                                alt=""
+                                                className="h-10 w-10 shrink-0 rounded-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-blue-600">
+                                                {row.first_name
+                                                    ?.charAt(0)
+                                                    ?.toUpperCase()}
+                                                {row.last_name
+                                                    ?.charAt(0)
+                                                    ?.toUpperCase()}
+                                            </div>
+                                        )}
 
                                         <div className="min-w-0">
                                             <p className="truncate font-semibold text-slate-800">
@@ -787,6 +803,38 @@ export default function StudentsIndex({
                             />
                         </Field>
                     </div>
+
+                    <div className="mt-4">
+                        <FileUpload
+                            label="Photo de l'élève"
+                            previewUrl={
+                                editing?.photo_url ?? null
+                            }
+                            hint="JPG, PNG ou WebP, 2 Mo maximum."
+                            error={errors.photo}
+                            onChange={(file) =>
+                                setData('photo', file)
+                            }
+                            onRemove={() =>
+                                setData('remove_photo', true)
+                            }
+                        />
+
+                        {data.remove_photo && (
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setData('remove_photo', false)
+                                }
+                                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-slate-500 transition hover:text-slate-700"
+                            >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Annuler la suppression de la
+                                photo
+                            </button>
+                        )}
+                    </div>
+
                         {editing && (
                             <div className="mt-4 rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50 p-4">
                                 <div className="flex items-center justify-between gap-4">

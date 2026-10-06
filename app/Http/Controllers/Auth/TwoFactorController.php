@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Services\TwoFactor\TwoFactorService;
 use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Inertia\Inertia;
@@ -18,7 +19,7 @@ class TwoFactorController extends Controller
     public function setup(
         Request $request,
         TwoFactorService $twoFactor
-    ): Response|\Illuminate\Http\RedirectResponse {
+    ): Response|RedirectResponse {
         $user = $request->user();
 
         if ($user->two_factor_confirmed_at) {
@@ -45,7 +46,7 @@ class TwoFactorController extends Controller
     public function confirm(
         Request $request,
         TwoFactorService $twoFactor
-    ): \Illuminate\Http\RedirectResponse {
+    ): RedirectResponse {
         $request->validate([
             'code' => [
                 'required',
@@ -100,7 +101,7 @@ class TwoFactorController extends Controller
      */
     public function challenge(
         Request $request
-    ): Response|\Illuminate\Http\RedirectResponse {
+    ): Response|RedirectResponse {
         $user = $request->user();
 
         if (! $user->two_factor_confirmed_at) {
@@ -176,7 +177,7 @@ class TwoFactorController extends Controller
     public function verify(
         Request $request,
         TwoFactorService $twoFactor
-    ): \Illuminate\Http\RedirectResponse {
+    ): RedirectResponse {
         $request->validate([
             'code' => [
                 'required',
@@ -256,7 +257,7 @@ class TwoFactorController extends Controller
         return redirect()->to($return);
     }
 
-    public function cancel(Request $request): \Illuminate\Http\RedirectResponse
+    public function cancel(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'purpose' => ['nullable', 'string', 'max:80'],

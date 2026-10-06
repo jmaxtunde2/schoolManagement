@@ -16,8 +16,7 @@ class ReturnEvaluation
         private NotificationService $notifications,
         private AuditService $audit,
         private EvaluationNotificationService $evaluationNotifications
-    ) {
-    }
+    ) {}
 
     public function handle(
         Evaluation $evaluation,
