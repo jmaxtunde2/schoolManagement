@@ -3,7 +3,7 @@ import { Link, usePage, router } from '@inertiajs/react';
 import {
     LayoutDashboard, Building2, CalendarRange, School as SchoolIcon, BookOpen, Users, UserRound,
     GraduationCap, ClipboardList, BellRing, Globe2, ClipboardCheck, BookOpenCheck, FileText, Menu, X, LogOut, ChevronDown, CheckCheck, Layers, UserCircle,
-    CalendarDays, UserCog,
+    CalendarDays, UserCog, Upload,
 } from 'lucide-react';
 import Dropdown from '@/Components/UI/Dropdown';
 import Toast from '@/Components/UI/Toast';
@@ -77,6 +77,15 @@ const parentNav = [
     { href: 'parent.dashboard', label: 'Mes enfants', icon: LayoutDashboard },
 ];
 
+const platformNav = [
+    { href: 'platform.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+    { href: 'platform.demo-requests.index', label: 'Demandes de démo', icon: ClipboardList },
+    { href: 'platform.schools.index', label: 'Écoles', icon: Building2 },
+    { href: 'platform.licenses.index', label: 'Licences', icon: FileText },
+    { href: 'platform.audit-logs.index', label: 'Journaux d\'audit', icon: BellRing },
+    { href: 'platform.imports.index', label: 'Import en masse', icon: Upload },
+];
+
 export default function AuthenticatedLayout({ children, title }) {
     const { auth, school, url } = usePage().props;
     const currentUrl = usePage().url;
@@ -85,19 +94,21 @@ export default function AuthenticatedLayout({ children, title }) {
     const unreadCount = auth.user.unread_notifications_count ?? 0;
     const notifications = auth.user.notifications ?? [];
 
-    const nav = auth.user.role === 'admin'
-        ? adminNav
-        : auth.user.role === 'censeur'
-            ? censeurNav
-            : auth.user.role === 'director'
-                ? directorNav
-                : auth.user.role === 'accountant'
-                    ? accountantNav
-                    : auth.user.role === 'secretary'
-                        ? secretaryNav
-                        : auth.user.role === 'parent'
-                            ? parentNav
-                            : teacherNav;
+    const nav = auth.user.role === 'platform_admin'
+        ? platformNav
+        : auth.user.role === 'admin'
+            ? adminNav
+            : auth.user.role === 'censeur'
+                ? censeurNav
+                : auth.user.role === 'director'
+                    ? directorNav
+                    : auth.user.role === 'accountant'
+                        ? accountantNav
+                        : auth.user.role === 'secretary'
+                            ? secretaryNav
+                            : auth.user.role === 'parent'
+                                ? parentNav
+                                : teacherNav;
 
     function logout() {
         router.post(route('logout'));

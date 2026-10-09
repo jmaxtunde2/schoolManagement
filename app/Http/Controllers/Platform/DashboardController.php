@@ -25,6 +25,6 @@ class DashboardController extends Controller
             $schoolShare += $summary['school_share'];
         }
 
-return Inertia::render('Platform/Dashboard', ['stats' => ['schools' => $schools->count(), 'active_schools' => $schools->where('is_active', true)->count(), 'students' => Student::withoutGlobalScopes()->count(), 'paid_contributions' => $paid, 'collected' => $collected, 'coriyase_share' => $coriyase, 'school_share' => $schoolShare, 'notifications' => Notification::withoutGlobalScopes()->count()], 'schools' => $schools->map(fn ($s) => ['id' => $s->id, 'name' => $s->name, 'active' => $s->is_active, 'users_count' => $s->users_count])]);
+        return Inertia::render('Platform/Dashboard', ['stats' => ['schools' => $schools->count(), 'active_schools' => $schools->where('is_active', true)->count(), 'students' => Student::withoutGlobalScopes()->count(), 'paid_contributions' => $paid, 'collected' => $collected, 'coriyase_share' => $coriyase, 'school_share' => $schoolShare, 'notifications' => Notification::withoutGlobalScopes()->count()], 'schools' => $schools->map(fn ($s) => ['id' => $s->id, 'name' => $s->name, 'active' => $s->is_active, 'users_count' => $s->users_count])]);
     }
 }

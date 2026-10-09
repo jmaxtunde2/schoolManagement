@@ -41,6 +41,16 @@ class School extends Model
         return $this->hasMany(AcademicYear::class);
     }
 
+    public function licenses(): HasMany
+    {
+        return $this->hasMany(License::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
     public function domains(): HasMany
     {
         return $this->hasMany(SchoolDomain::class);
@@ -84,6 +94,11 @@ class School extends Model
     public function teachers(): HasMany
     {
         return $this->hasMany(Teacher::class);
+    }
+
+    public function classRooms(): HasMany
+    {
+        return $this->hasMany(ClassRoom::class);
     }
 
     /** Membres du personnel rattachés à cet établissement. */

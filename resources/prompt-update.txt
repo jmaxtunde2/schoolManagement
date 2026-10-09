@@ -1,0 +1,1560 @@
+# CORISCHOOL — REFONTE DU MODÈLE COMMERCIAL, LICENCES, DÉMONSTRATIONS ET ANNÉES SCOLAIRES
+
+Tu travailles sur le projet **CoriSchool**, une plateforme de gestion scolaire développée avec :
+
+- Laravel
+- Inertia.js
+- React
+- Tailwind CSS
+- MariaDB
+
+Le projet existe déjà et contient des fonctionnalités fonctionnelles.
+
+## RÈGLE ABSOLUE
+
+**NE MODIFIE RIEN avant d'avoir analysé l'architecture actuelle du projet.**
+
+Tu dois d'abord comprendre ce qui existe, identifier les dépendances et les éventuels conflits avec la nouvelle architecture.
+
+**Ne réécris pas inutilement du code existant.**
+
+**Ne casse aucune fonctionnalité existante.**
+
+**Réutilise autant que possible les modèles, composants UI, middleware, policies, services, notifications et conventions déjà présents.**
+
+---
+
+# 1. PHASE 0 — ANALYSE OBLIGATOIRE DU PROJET
+
+Avant toute modification, inspecte le projet dans son ensemble.
+
+Analyse notamment :
+
+### Backend
+
+- `app/Models`
+- `app/Http/Controllers`
+- `app/Http/Middleware`
+- `app/Policies`
+- `app/Services`
+- `app/Notifications`
+- `app/Http/Requests`
+- autres services ou classes métier existants
+
+### Base de données
+
+Inspecte :
+
+- toutes les migrations pertinentes
+- `schools`
+- `users`
+- `students`
+- `parents`
+- `teachers`
+- `classes`
+- `subjects`
+- `evaluations`
+- `grades`
+- `academic_years`
+- paiements
+- licences
+- notifications
+- toute autre table liée à la gestion scolaire.
+
+### Architecture multi-école
+
+Détermine précisément :
+
+- comment `school_id` est utilisé
+- quelles tables possèdent `school_id`
+- comment l'isolation des écoles est assurée
+- si un `TenantResolver` existe
+- comment le tenant courant est déterminé
+- comment les requêtes sont filtrées
+- quelles protections empêchent l'accès aux données d'une autre école.
+
+### Authentification et sécurité
+
+Inspecte :
+
+- rôles utilisateurs
+- permissions
+- policies
+- middleware
+- TOTP
+- 2FA
+- récupération de compte
+- vérification des actions sensibles
+- système `is_active` ou équivalent.
+
+### Frontend
+
+Inspecte :
+
+- pages Inertia
+- layouts
+- composants UI
+- formulaires
+- tables
+- modales
+- notifications
+- navigation
+- dashboard
+- landing page
+- login
+- pages d'administration.
+
+### Années scolaires
+
+Détermine exactement comment le système actuel gère :
+
+- création d'une année
+- année active
+- changement d'année
+- classes
+- élèves
+- notes
+- bulletins
+- historique.
+
+### Paiements / licences
+
+Vérifie si un système existe déjà.
+
+**Ne crée pas un deuxième système parallèle si un système compatible existe déjà.**
+
+---
+
+# 2. RAPPORT D'ANALYSE AVANT CODAGE
+
+Après l'analyse, ne commence pas immédiatement à coder.
+
+Présente d'abord un rapport comprenant :
+
+1. Architecture actuelle
+2. Fonctionnalités déjà disponibles
+3. Modèles existants réutilisables
+4. Migrations existantes réutilisables
+5. Routes existantes concernées
+6. Controllers concernés
+7. Policies/middleware concernés
+8. Système multi-tenant actuel
+9. Système TOTP/2FA actuel
+10. Système de notifications actuel
+11. Système actuel des années scolaires
+12. Système actuel de paiement/licence
+13. Conflits potentiels avec la nouvelle architecture
+14. Fonctionnalités nécessitant une modification
+15. Nouvelles fonctionnalités nécessaires.
+
+Ensuite, propose l'architecture cible avant d'implémenter.
+
+---
+
+# 3. NOUVEAU MODÈLE COMMERCIAL CORISCHOOL
+
+CoriSchool passe à un modèle commercial contrôlé par Coriyase.
+
+Une école ne doit **PLUS** pouvoir créer immédiatement son établissement et son compte administrateur depuis la page publique.
+
+Le parcours commercial devient :
+
+```text
+École intéressée
+      ↓
+Demande de démonstration
+      ↓
+Super Admin Cori examine
+      ↓
+Contact
+      ↓
+Planification
+      ↓
+Démonstration
+      ↓
+Approbation
+      ↓
+Demande de paiement
+      ↓
+Paiement initial confirmé
+      ↓
+Activation de l'école
+      ↓
+Création/configuration du compte administrateur
+      ↓
+Première licence
+      ↓
+Onboarding
+      ↓
+Import/configuration des données
+      ↓
+Utilisation
+      ↓
+Fin de l'année scolaire
+      ↓
+Renouvellement
+      ↓
+Paiement de 70 000 FCFA
+      ↓
+Nouvelle année scolaire
+```
+
+---
+
+# 4. MODÈLE ÉCONOMIQUE
+
+## Première année
+
+Le coût total de la première année est :
+
+**150 000 FCFA**
+
+Ce montant couvre :
+
+- activation de CoriSchool
+- première année de licence
+- configuration initiale
+- onboarding
+- configuration de l'environnement
+- accompagnement initial
+- import initial selon les fonctionnalités prévues
+- création/configuration du compte administrateur.
+
+### RÈGLE CRITIQUE
+
+**150 000 FCFA est le prix TOTAL de la première année.**
+
+Il ne faut surtout pas calculer :
+
+```text
+150 000 + 70 000
+```
+
+pour la première année.
+
+La logique est :
+
+```text
+Année 1 = 150 000 FCFA
+Année 2 = 70 000 FCFA
+Année 3 = 70 000 FCFA
+Année 4 = 70 000 FCFA
+```
+
+Exemple :
+
+```text
+2026-2027 → Initial → 150 000 FCFA
+2027-2028 → Renewal → 70 000 FCFA
+2028-2029 → Renewal → 70 000 FCFA
+2029-2030 → Renewal → 70 000 FCFA
+```
+
+Le système doit donc distinguer explicitement :
+
+- `initial`
+- `renewal`
+
+Une licence initiale représente :
+
+**Activation + première année de licence**
+
+et non simplement des frais d'installation.
+
+---
+
+# 5. DEMANDE DE DÉMONSTRATION
+
+La page publique actuelle `SchoolRegistration` ne doit plus créer directement une école.
+
+Elle doit devenir :
+
+**Demander une démonstration**
+
+Le CTA principal de la landing page doit être :
+
+**Demander une démonstration**
+
+et non :
+
+**Créer mon école**
+
+---
+
+## IMPORTANT — FORMULAIRE PUBLIC COURT
+
+Le formulaire public doit être volontairement simple.
+
+Ne demande pas toutes les informations administratives dès le premier contact.
+
+Les seuls champs obligatoires du formulaire public sont :
+
+```text
+school_name
+address
+phone
+email
+preferred_demo_date
+preferred_demo_time
+```
+
+### Interface utilisateur recommandée
+
+```text
+Nom de l'établissement *
+Adresse *
+Téléphone *
+Adresse e-mail *
+
+Date souhaitée pour la démonstration *
+Heure souhaitée *
+```
+
+Puis :
+
+**Demander une démonstration**
+
+---
+
+# 6. INFORMATIONS SUPPLÉMENTAIRES
+
+Les informations suivantes ne doivent PAS être obligatoires dans le formulaire public :
+
+```text
+short_name
+school_type
+city
+department
+country
+phone_secondary
+website
+contact_name
+contact_role
+estimated_students
+estimated_classes
+main_need
+message
+```
+
+Si certaines de ces informations sont nécessaires commercialement, elles doivent pouvoir être ajoutées ultérieurement par le Super Admin lors du traitement de la demande.
+
+Le principe est :
+
+**Formulaire public = friction minimale**
+
+**Espace Super Admin = informations commerciales détaillées**
+
+---
+
+# 7. DEMODREQUEST
+
+Créer ou adapter un modèle `DemoRequest` selon l'architecture existante.
+
+Minimum :
+
+```text
+id
+school_name
+address
+phone
+email
+preferred_demo_date
+preferred_demo_time
+status
+contacted_at
+scheduled_at
+demo_done_at
+approved_at
+rejected_at
+cancelled_at
+handled_by
+internal_notes
+created_at
+updated_at
+```
+
+Les champs supplémentaires peuvent être ajoutés si l'architecture le justifie, mais ne doivent pas alourdir le formulaire public.
+
+---
+
+# 8. IMPORTANT — AUCUNE ACTIVATION À LA SOUMISSION
+
+Lorsqu'une école soumet le formulaire :
+
+Créer uniquement :
+
+```text
+DemoRequest
+```
+
+Ne PAS créer automatiquement :
+
+- `School`
+- `User`
+- compte administrateur
+- `License`
+- `Payment`
+- tenant actif.
+
+Le statut initial doit être :
+
+```text
+pending
+```
+
+---
+
+# 9. STATUTS DEMANDEREQUEST
+
+Prévoir au minimum :
+
+```text
+pending
+contacted
+scheduled
+demo_done
+approved
+rejected
+cancelled
+```
+
+Workflow normal :
+
+```text
+pending
+   ↓
+contacted
+   ↓
+scheduled
+   ↓
+demo_done
+   ↓
+approved
+```
+
+Workflows alternatifs :
+
+```text
+pending → rejected
+
+scheduled → cancelled
+```
+
+Chaque changement important doit conserver une trace exploitable.
+
+Si le projet possède déjà un système d'historique/audit, le réutiliser.
+
+Sinon, proposer une solution adaptée.
+
+---
+
+# 10. ESPACE SUPER ADMIN CORI
+
+Créer ou adapter l'espace Super Admin Cori.
+
+Le Super Admin doit pouvoir gérer :
+
+- demandes de démonstration
+- écoles
+- licences
+- paiements
+- renouvellements
+- années scolaires
+- onboarding
+- imports
+- utilisateurs administrateurs
+- support.
+
+## Gestion des demandes
+
+Prévoir :
+
+- liste
+- recherche
+- filtres
+- détail
+- notes internes
+- changement de statut
+- contact
+- planification
+- confirmation de démonstration
+- approbation
+- rejet.
+
+Le Super Admin doit savoir :
+
+- qui traite la demande
+- quand elle a été traitée
+- son statut actuel
+- les actions déjà effectuées.
+
+---
+
+# 11. APPROBATION ≠ ACTIVATION
+
+C'est une règle métier importante.
+
+Lorsqu'une démonstration est terminée :
+
+```text
+demo_done
+    ↓
+approved
+```
+
+Mais :
+
+**approved ≠ active**
+
+L'école n'est pas encore activée.
+
+Le processus devient :
+
+```text
+Demo effectuée
+      ↓
+École approuvée
+      ↓
+Paiement initial demandé
+      ↓
+150 000 FCFA confirmé
+      ↓
+École activée
+      ↓
+Licence initiale créée/activée
+      ↓
+Compte administrateur créé/activé
+      ↓
+Onboarding
+```
+
+---
+
+# 12. PAIEMENT INITIAL
+
+Pour la première activation :
+
+```text
+Amount = 150000
+Currency = XOF
+Type = initial
+```
+
+Si aucun paiement en ligne n'existe actuellement :
+
+**ne pas inventer de provider.**
+
+Le Super Admin doit pouvoir confirmer manuellement un paiement.
+
+Mais l'architecture doit être compatible ultérieurement avec :
+
+- Mobile Money
+- carte bancaire
+- paiement en ligne
+- autres providers.
+
+---
+
+# 13. SYSTÈME DE LICENCE
+
+Créer ou adapter un véritable système de licence.
+
+Une licence doit pouvoir être liée à :
+
+```text
+school_id
+academic_year_id
+type
+amount
+status
+starts_at
+expires_at
+paid_at
+payment_reference
+created_by
+activated_by
+```
+
+Types :
+
+```text
+initial
+renewal
+```
+
+Statuts possibles :
+
+```text
+pending
+payment_pending
+active
+expired
+cancelled
+```
+
+Première licence :
+
+```text
+type = initial
+amount = 150000
+```
+
+Renouvellement :
+
+```text
+type = renewal
+amount = 70000
+```
+
+Ne pas considérer `License` comme un simple champ dans `School`.
+
+Il s'agit d'une véritable entité métier.
+
+---
+
+# 14. PAYMENT
+
+Créer ou réutiliser un modèle `Payment`.
+
+Structure minimale conceptuelle :
+
+```text
+school_id
+license_id
+amount
+currency
+reference
+status
+method
+paid_at
+metadata
+created_by
+```
+
+Exemples de statut :
+
+```text
+pending
+confirmed
+failed
+cancelled
+```
+
+Le système doit permettre de distinguer :
+
+- revenu première année
+- revenu de renouvellement.
+
+---
+
+# 15. ACADEMIC YEAR ≠ LICENSE
+
+Ne jamais fusionner ces deux concepts.
+
+Une école peut avoir plusieurs années :
+
+```text
+School
+ ├── AcademicYear 2026-2027
+ ├── AcademicYear 2027-2028
+ └── AcademicYear 2028-2029
+```
+
+Et des licences correspondantes :
+
+```text
+School
+ ├── License 2026-2027 / initial / 150000
+ ├── License 2027-2028 / renewal / 70000
+ └── License 2028-2029 / renewal / 70000
+```
+
+Une licence donne le droit d'utiliser CoriSchool pour une période donnée.
+
+---
+
+# 16. ÉTATS D'UNE ANNÉE SCOLAIRE
+
+Prévoir :
+
+```text
+draft
+active
+closed
+```
+
+Règle :
+
+**Une seule année scolaire peut être `active` pour une école donnée.**
+
+Cycle :
+
+```text
+draft
+  ↓
+active
+  ↓
+closed
+```
+
+---
+
+# 17. EXPIRATION D'UNE LICENCE
+
+À expiration :
+
+```text
+active → expired
+```
+
+Ne jamais supprimer les données.
+
+L'école conserve :
+
+- élèves
+- parents
+- classes
+- notes
+- évaluations
+- bulletins
+- historiques
+- années scolaires précédentes.
+
+Si nécessaire, l'accès aux données historiques devient :
+
+```text
+READ ONLY
+```
+
+Les opérations de la nouvelle année doivent être bloquées tant que le renouvellement n'est pas confirmé.
+
+Afficher un message clair :
+
+> Votre licence CoriSchool pour l'année 2026-2027 est arrivée à expiration.
+
+Puis :
+
+> Renouvelez votre licence pour l'année 2027-2028.
+
+Prix :
+
+**70 000 FCFA**
+
+CTA selon le système de paiement :
+
+**Demander le renouvellement**
+
+ou
+
+**Renouveler maintenant**
+
+---
+
+# 18. RENOUVELLEMENT
+
+Cycle :
+
+```text
+Licence 2026-2027
+       ↓
+Expiration
+       ↓
+Demande de renouvellement
+       ↓
+70 000 FCFA
+       ↓
+Paiement confirmé
+       ↓
+Licence 2027-2028
+       ↓
+Nouvelle année activée
+```
+
+Le Super Admin doit pouvoir :
+
+- voir les licences bientôt expirées
+- voir les licences expirées
+- voir les demandes de renouvellement
+- confirmer les paiements
+- activer les licences
+- consulter l'historique.
+
+---
+
+# 19. TRANSITION ENTRE ANNÉES
+
+Ne jamais simplement modifier l'ancien `class_id` d'un étudiant.
+
+Il faut conserver l'historique académique.
+
+Le modèle cible est idéalement :
+
+```text
+Student
+   ↓
+Enrollment
+   ↓
+School
+AcademicYear
+Class
+```
+
+Exemple :
+
+```text
+Jean
+2026-2027 → 6e A
+2027-2028 → 5e B
+2028-2029 → 4e A
+```
+
+Les anciennes affectations restent intactes.
+
+---
+
+# 20. RÉSULTAT DU PASSAGE
+
+Prévoir :
+
+```text
+promoted
+repeating
+graduated
+transferred
+withdrawn
+```
+
+Interface de transition :
+
+```text
+Jean    | 6e A  | Promoted   | 5e A
+Paul    | 6e A  | Repeating  | 6e A
+Marie   | 3e B  | Graduated  | Sortante
+```
+
+L'administrateur doit pouvoir modifier la proposition avant validation.
+
+Puis :
+
+**Valider le passage en classe supérieure**
+
+Après validation :
+
+- créer les nouvelles inscriptions
+- conserver les anciennes
+- ne jamais modifier l'historique.
+
+---
+
+# 21. IMPORT EXCEL / CSV
+
+Ajouter un système d'importation des données existantes.
+
+Types minimum :
+
+- classes
+- élèves
+- parents
+- matières
+- enseignants
+- personnel
+- relations élèves/parents
+- affectations élèves/classes
+- affectations enseignants/classes/matières.
+
+## Workflow obligatoire
+
+```text
+Upload
+   ↓
+Analyse
+   ↓
+Mapping des colonnes
+   ↓
+Preview
+   ↓
+Validation
+   ↓
+Confirmation
+   ↓
+Import
+   ↓
+Rapport
+```
+
+**NE JAMAIS importer immédiatement après l'upload.**
+
+Exemple :
+
+```text
+500 lignes détectées
+480 valides
+20 erreurs
+```
+
+Afficher :
+
+- numéro de ligne
+- champ
+- valeur
+- erreur.
+
+Permettre de télécharger le rapport d'erreurs.
+
+Templates :
+
+```text
+students_template.xlsx
+parents_template.xlsx
+classes_template.xlsx
+subjects_template.xlsx
+teachers_template.xlsx
+```
+
+Avant d'ajouter une librairie Excel/CSV :
+
+**inspecter `composer.json` et les packages déjà installés.**
+
+Ne pas ajouter inutilement une dépendance déjà disponible.
+
+---
+
+# 22. MULTI-TENANCY
+
+L'architecture actuelle repose sur :
+
+```text
+school_id
+```
+
+**CONSERVER cette architecture.**
+
+Toutes les données scolaires doivent rester isolées par école.
+
+Un utilisateur d'une école ne doit jamais pouvoir :
+
+- consulter une autre école
+- modifier une autre école
+- importer dans une autre école
+- consulter les licences d'une autre école
+- consulter les paiements d'une autre école
+- consulter les données d'une autre école.
+
+Le Super Admin Cori possède les permissions globales nécessaires.
+
+Réutiliser :
+
+- middleware
+- policies
+- scopes
+- TenantResolver
+- conventions existantes
+
+lorsqu'ils existent.
+
+---
+
+# 23. ONBOARDING APRÈS ACTIVATION
+
+Après activation de la licence initiale, proposer un onboarding.
+
+Étapes :
+
+```text
+1. Informations de l'école
+2. Année scolaire
+3. Classes
+4. Matières
+5. Enseignants/personnel
+6. Élèves
+7. Parents
+8. Vérification finale
+```
+
+Pour chaque étape :
+
+- saisie manuelle
+- import Excel si pertinent
+- progression visible
+- possibilité de reprendre plus tard.
+
+---
+
+# 24. IDENTITÉ VISUELLE
+
+CoriSchool doit avoir une identité visuelle cohérente.
+
+Palette principale :
+
+**Emerald / Teal**
+
+Règles :
+
+```text
+Emerald/Teal → marque, CTA principaux, succès
+Blue          → information
+Amber         → attention / pending
+Red           → erreur / danger
+Slate         → texte secondaire / surfaces
+```
+
+Le bleu ne doit plus être utilisé comme une deuxième identité de marque.
+
+Uniformiser progressivement :
+
+- landing page
+- login
+- dashboards
+- boutons
+- liens
+- badges
+- alertes
+- cartes
+- sidebar
+- onboarding
+- formulaires.
+
+Réutiliser les composants UI existants.
+
+Ne pas recréer inutilement de nouveaux composants si des composants équivalents existent déjà.
+
+---
+
+# 25. DASHBOARD SUPER ADMIN
+
+Le dashboard doit fournir une vision business réelle.
+
+Prévoir notamment :
+
+- demandes de démonstration
+- démos planifiées
+- démos effectuées
+- écoles approuvées
+- écoles actives
+- licences actives
+- licences expirant bientôt
+- renouvellements en attente
+- renouvellements payés
+- revenus première année
+- revenus de renouvellement.
+
+## RÈGLE CRITIQUE
+
+**Aucun chiffre fictif.**
+
+Toutes les statistiques doivent provenir de la base de données.
+
+Si aucune donnée n'existe :
+
+```text
+0
+```
+
+ou un état vide approprié.
+
+Ne jamais utiliser de statistiques hard-codées pour faire paraître le dashboard plus rempli.
+
+---
+
+# 26. RAPPELS DE RENOUVELLEMENT
+
+Prévoir une architecture permettant :
+
+```text
+J-30 → rappel
+J-15 → rappel
+J-7  → rappel
+J+0  → expiration
+J+X  → rappel de renouvellement
+```
+
+Avant d'ajouter un nouveau système de notification :
+
+**inspecter le système existant.**
+
+Réutiliser si possible :
+
+- notifications internes
+- email
+- jobs
+- scheduler existant.
+
+Ne pas envoyer automatiquement des SMS sans vérifier le système SMS actuellement utilisé.
+
+---
+
+# 27. TOTP / 2FA ET ACTIONS SENSIBLES
+
+Respecter intégralement le système TOTP/2FA existant.
+
+Les actions sensibles doivent être protégées selon les mécanismes déjà présents.
+
+Exemples :
+
+- activation d'une école
+- confirmation d'un paiement
+- activation d'une licence
+- rejet d'une demande
+- clôture d'une année
+- validation d'une transition
+- actions administratives critiques.
+
+Ne contourner aucune policy ou protection existante.
+
+---
+
+# 28. ARCHITECTURE DES PERMISSIONS
+
+Faire clairement la distinction entre :
+
+## Super Admin Cori
+
+Responsable de :
+
+- gouvernance
+- activation
+- licences
+- paiements
+- renouvellements
+- support
+- supervision globale
+- demandes de démonstration.
+
+## School Admin
+
+Responsable de :
+
+- gestion quotidienne de son école
+- utilisateurs
+- élèves
+- parents
+- classes
+- enseignants
+- notes
+- années scolaires
+- opérations scolaires.
+
+Le School Admin ne doit jamais obtenir les permissions globales du Super Admin.
+
+---
+
+# 29. ROUTES
+
+Avant d'ajouter de nouvelles routes :
+
+inspecter les routes existantes.
+
+Éviter les doublons.
+
+Organiser les nouvelles routes selon les conventions existantes.
+
+Conceptuellement, il faudra probablement couvrir :
+
+```text
+/public/demo-request
+
+/cori-admin/demo-requests
+/cori-admin/schools
+/cori-admin/licenses
+/cori-admin/payments
+/cori-admin/renewals
+/cori-admin/academic-years
+/cori-admin/onboarding
+```
+
+Mais **ne crée pas exactement ces routes sans vérifier la structure actuelle du projet.**
+
+Utilise les conventions existantes.
+
+---
+
+# 30. POLICIES ET AUTORISATION
+
+Toutes les nouvelles actions sensibles doivent utiliser :
+
+- policies
+- gates
+- permissions
+- middleware
+
+selon ce qui existe déjà.
+
+Ne jamais se contenter de masquer un bouton dans React.
+
+L'autorisation doit également être appliquée côté serveur.
+
+---
+
+# 31. VALIDATION
+
+Toutes les données reçues du frontend doivent être validées côté serveur.
+
+Créer/réutiliser les `FormRequest` existants lorsque pertinent.
+
+Prévoir notamment :
+
+- validation email
+- téléphone
+- date
+- heure
+- montant
+- statut
+- relations
+- fichiers importés
+- types MIME
+- taille des fichiers.
+
+---
+
+# 32. TRANSACTIONS ET INTÉGRITÉ
+
+Les opérations critiques doivent utiliser des transactions lorsque plusieurs données doivent être créées/modifiées ensemble.
+
+Exemple d'activation :
+
+```text
+Payment confirmé
+      ↓
+License créée
+      ↓
+School activée
+      ↓
+Admin créé
+      ↓
+Onboarding initialisé
+```
+
+Si une étape critique échoue, éviter de laisser la base dans un état incohérent.
+
+Utiliser les transactions Laravel lorsque nécessaire.
+
+---
+
+# 33. NE PAS TOUT CODER EN UNE SEULE FOIS
+
+L'implémentation doit être progressive.
+
+## PHASE 1
+
+DemoRequest + formulaire public simplifié.
+
+## PHASE 2
+
+Super Admin → gestion des demandes.
+
+## PHASE 3
+
+Approbation → processus d'activation.
+
+## PHASE 4
+
+License + Payment + licence initiale à 150 000 FCFA.
+
+## PHASE 5
+
+AcademicYear.
+
+## PHASE 6
+
+Renouvellement annuel à 70 000 FCFA.
+
+## PHASE 7
+
+Transition annuelle / passage des élèves.
+
+## PHASE 8
+
+Import Excel/CSV.
+
+## PHASE 9
+
+Onboarding.
+
+## PHASE 10
+
+Uniformisation UI/UX.
+
+## PHASE 11
+
+Notifications et rappels.
+
+## PHASE 12
+
+Tests, sécurité et audit final.
+
+---
+
+# 34. RÈGLE DE TRAVAIL POUR CHAQUE PHASE
+
+Pour chaque phase :
+
+### Avant
+
+1. Inspecter le code concerné.
+2. Identifier les dépendances.
+3. Identifier les risques.
+4. Définir les modifications minimales.
+
+### Pendant
+
+Implémenter uniquement la phase concernée.
+
+Ne pas commencer automatiquement les phases suivantes.
+
+### Après
+
+Exécuter :
+
+- migrations
+- tests
+- vérification des routes
+- vérification des relations
+- vérification des policies
+- vérification du multi-tenancy
+- vérification des permissions
+- vérification des composants Inertia.
+
+Corriger les erreurs avant de passer à la phase suivante.
+
+---
+
+# 35. TESTS
+
+Ajouter ou adapter les tests nécessaires.
+
+Tester notamment :
+
+## DemoRequest
+
+- soumission valide
+- validation
+- statut initial
+- aucune création de School
+- aucune création de User
+- aucune création de License.
+
+## Multi-tenancy
+
+- isolation des écoles
+- accès interdit à une autre école
+- import isolé.
+
+## Licences
+
+- licence initiale = 150000
+- renouvellement = 70000
+- expiration
+- activation
+- renouvellement.
+
+## Paiements
+
+- confirmation
+- montant
+- référence
+- statut.
+
+## AcademicYear
+
+- une seule année active
+- fermeture
+- nouvelle année.
+
+## Transition
+
+- promotion
+- redoublement
+- diplômé
+- transfert
+- conservation de l'historique.
+
+## Permissions
+
+- Super Admin
+- School Admin
+- autres rôles.
+
+---
+
+# 36. CONTRAINTES IMPORTANTES
+
+Tu dois respecter toutes les contraintes suivantes :
+
+### Ne pas
+
+- supprimer des fonctionnalités existantes sans justification
+- supprimer des données historiques
+- casser le multi-tenancy
+- contourner les policies
+- contourner TOTP/2FA
+- créer des statistiques fictives
+- créer de faux paiements
+- inventer un provider de paiement
+- hard-coder les statistiques
+- créer automatiquement une école depuis le formulaire public
+- créer automatiquement un compte admin depuis le formulaire public
+- importer immédiatement un fichier Excel
+- modifier directement les anciennes affectations d'élèves
+- créer un système parallèle lorsqu'un système existant peut être réutilisé.
+
+### Toujours
+
+- réutiliser l'architecture existante
+- respecter `school_id`
+- respecter les permissions
+- préserver les données historiques
+- utiliser des transactions pour les opérations critiques
+- valider côté serveur
+- tester après chaque phase
+- garder les fonctionnalités existantes opérationnelles.
+
+---
+
+# 37. ORDRE DE LIVRAISON ATTENDU
+
+Ne code pas tout immédiatement.
+
+Commence uniquement par :
+
+## ÉTAPE A — ANALYSE
+
+Inspecte le projet.
+
+## ÉTAPE B — RAPPORT
+
+Présente :
+
+- architecture actuelle
+- modèles concernés
+- migrations concernées
+- routes concernées
+- controllers concernés
+- middleware
+- policies
+- TOTP/2FA
+- multi-tenancy
+- notifications
+- années scolaires
+- paiements/licences
+- conflits identifiés.
+
+## ÉTAPE C — ARCHITECTURE CIBLE
+
+Propose :
+
+- modèles
+- relations
+- migrations
+- routes
+- controllers
+- services
+- policies
+- pages Inertia
+- composants
+- workflow métier.
+
+## ÉTAPE D — PLAN D'IMPLÉMENTATION
+
+Présente les 12 phases avec les fichiers qui seront probablement concernés.
+
+## ÉTAPE E — ATTENDRE AVANT DE MODIFIER L'ARCHITECTURE MAJEURE
+
+Ne lance pas une refonte complète du projet avant d'avoir identifié précisément ce qui existe.
+
+---
+
+# 38. LIVRABLE FINAL
+
+À la fin de l'implémentation complète, fournir un rapport contenant :
+
+### 1. Fichiers créés
+
+Liste complète.
+
+### 2. Fichiers modifiés
+
+Liste complète.
+
+### 3. Migrations
+
+Liste des migrations ajoutées/modifiées.
+
+### 4. Modèles
+
+Liste des modèles créés/modifiés.
+
+### 5. Routes
+
+Liste des routes ajoutées/modifiées.
+
+### 6. Controllers
+
+Liste des controllers créés/modifiés.
+
+### 7. Policies / permissions
+
+Liste des changements.
+
+### 8. Pages Inertia
+
+Liste des pages créées/modifiées.
+
+### 9. Composants UI
+
+Liste des composants créés/modifiés.
+
+### 10. Commandes
+
+Commandes nécessaires pour :
+
+- migrations
+- seed éventuel
+- cache
+- build
+- tests.
+
+### 11. Tests
+
+Indiquer :
+
+- tests exécutés
+- nombre de tests
+- résultats
+- éventuelles erreurs restantes.
+
+### 12. Sécurité
+
+Confirmer :
+
+- isolation `school_id`
+- permissions
+- policies
+- TOTP/2FA
+- validation serveur
+- protection des actions sensibles.
+
+### 13. Points restants
+
+Lister explicitement ce qui reste à faire.
+
+---
+
+# RÈGLE FINALE
+
+**La priorité est de préserver le projet existant tout en introduisant progressivement le nouveau modèle commercial CoriSchool.**
+
+Ne cherche pas simplement à produire beaucoup de code.
+
+Cherche à produire une architecture :
+
+- cohérente
+- maintenable
+- sécurisée
+- multi-tenant
+- évolutive
+- compatible avec le système actuel
+- prête pour les paiements futurs
+- prête pour les renouvellements annuels
+- adaptée à la croissance de CoriSchool.
+
+**Commence maintenant par l'analyse complète du projet. Ne modifie aucun fichier avant d'avoir terminé cette analyse et présenté le plan d'implémentation.**

@@ -6,12 +6,19 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Censeur\EvaluationController;
+use App\Http\Controllers\DemoRequestController;
 use App\Http\Controllers\Parent\ChildController;
 use App\Http\Controllers\Parent\TimetableController;
 use App\Http\Controllers\Platform\DashboardController;
+use App\Http\Controllers\Platform\DemoRequestController as PlatformDemoRequestController;
+use App\Http\Controllers\Platform\SchoolController;
+use App\Http\Controllers\Platform\LicenseController;
+use App\Http\Controllers\Platform\AuditLogController;
+use App\Http\Controllers\Platform\ImportController;
+use App\Http\Controllers\Platform\AcademicYearController;
+use App\Http\Controllers\Platform\AcademicPeriodController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicSchoolController;
-use App\Http\Controllers\SchoolRegistrationController;
 use App\Http\Controllers\Staff\AttendanceController;
 use App\Http\Controllers\Staff\EvaluationController as StaffEvaluationController;
 use App\Http\Controllers\Staff\ManagementDashboardController;
@@ -53,22 +60,32 @@ Route::get('/ecole/{slug}', [
 |
 | `/` affiche le site public de l'établissement résolu lorsqu'un domaine est
 | vérifié, sinon la landing CoriSchool (voir PublicSchoolController).
-| L'inscription d'un établissement est publique mais protégée par `guest` :
-| un utilisateur déjà connecté n'a pas à créer une seconde école depuis l'écran
-| de connexion.
+|
+| Le parcours est public mais protégé par `guest` : un utilisateur déjà
+| connecté n'a pas à redéposer une demande.
+|
+| Le formulaire public ne crée plus d'école : il dépose une demande de
+| démonstration (voir DemoRequestController). L'activation ne survient
+| qu'après démonstration, approbation et paiement initial confirmés.
 |
 */
 
 Route::middleware('guest')->group(function () {
-    Route::get('/creer-mon-ecole', [
-        SchoolRegistrationController::class,
+    Route::get('/demander-une-demonstration', [
+        DemoRequestController::class,
         'create',
-    ])->name('school.register');
+    ])->name('demo.request');
 
-    Route::post('/creer-mon-ecole', [
-        SchoolRegistrationController::class,
+    Route::post('/demander-une-demonstration', [
+        DemoRequestController::class,
         'store',
-    ])->middleware('throttle:10,1')->name('school.register.store');
+    ])->middleware('throttle:10,1')->name('demo.request.store');
+
+    // L'inscription directe n'est plus possible : les anciens liens
+    // « Créer mon école » rejoignent le nouveau parcours commercial.
+    Route::match(['get', 'post'], '/creer-mon-ecole', function () {
+        return redirect()->route('demo.request');
+    })->name('school.register');
 });
 
 /*
@@ -242,6 +259,104 @@ Route::middleware([
             Route::get('/dashboard',
                 DashboardController::class
             )->name('dashboard');
+
+            /*
+            | Demandes de démonstration
+            */
+
+            Route::get('/demo-requests', [
+                PlatformDemoRequestController::class,
+                'index',
+            ])->name('demo-requests.index');
+
+            Route::get('/demo-requests/{demoRequest}', [
+                PlatformDemoRequestController::class,
+                'show',
+            ])->name('demo-requests.show');
+
+            Route::patch('/demo-requests/{demoRequest}/status', [
+                PlatformDemoRequestController::class,
+                'updateStatus',
+            ])->name('demo-requests.status');
+
+            Route::patch('/demo-requests/{demoRequest}/notes', [
+                PlatformDemoRequestController::class,
+                'updateNotes',
+            ])->name('demo-requests.notes');
+
+            /*
+            | Approbation → activation
+            |
+            | Trois étapes protégées par une authentification fraîche
+            | (code Authenticator) : demande de paiement initial, confirmation
+            | manuelle du 150 000 FCFA, puis activation atomique de l'école
+            | (School + compte administrateur).
+            */
+
+            Route::post('/demo-requests/{demoRequest}/payment/request', [
+                PlatformDemoRequestController::class,
+                'requestPayment',
+            ])->middleware('2fa.fresh:request_payment')->name('demo-requests.payment.request');
+
+            Route::post('/demo-requests/{demoRequest}/payment/confirm', [
+                PlatformDemoRequestController::class,
+                'confirmPayment',
+            ])->middleware('2fa.fresh:confirm_payment')->name('demo-requests.payment.confirm');
+
+            Route::post('/demo-requests/{demoRequest}/activate', [
+                PlatformDemoRequestController::class,
+                'activate',
+            ])->middleware('2fa.fresh:activate_school')->name('demo-requests.activate');
+
+            /*
+            | Écoles
+            */
+            Route::get('/schools', [SchoolController::class, 'index'])->name('schools.index');
+            Route::get('/schools/{school}', [SchoolController::class, 'show'])->name('schools.show');
+            Route::post('/schools/{school}/toggle', [SchoolController::class, 'toggle'])
+                ->middleware('2fa.fresh:toggle_school')->name('schools.toggle');
+            Route::delete('/schools/{school}', [SchoolController::class, 'destroy'])
+                ->middleware('2fa.fresh:delete_school')->name('schools.destroy');
+
+            /*
+            | Licences
+            */
+            Route::get('/licenses', [LicenseController::class, 'index'])->name('licenses.index');
+            Route::get('/licenses/{license}', [LicenseController::class, 'show'])->name('licenses.show');
+            Route::post('/licenses/{license}/renew', [LicenseController::class, 'renew'])
+                ->middleware('2fa.fresh:renew_license')->name('licenses.renew');
+
+            /*
+            | Journaux d'audit globaux
+            */
+            Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+            Route::get('/audit-logs/{auditLog}', [AuditLogController::class, 'show'])->name('audit-logs.show');
+
+            /*
+            | Import en masse
+            */
+            Route::get('/imports', [ImportController::class, 'index'])->name('imports.index');
+            Route::get('/imports/{school}', [ImportController::class, 'show'])->name('imports.show');
+            Route::post('/imports/{school}', [ImportController::class, 'store'])->name('imports.store');
+            Route::get('/imports/template/{type}', [ImportController::class, 'downloadTemplate'])->name('imports.template');
+
+            /*
+            | Années scolaires (par école)
+            */
+            Route::get('/schools/{school}/academic-years', [AcademicYearController::class, 'index'])->name('schools.academic-years.index');
+            Route::post('/schools/{school}/academic-years', [AcademicYearController::class, 'store'])->name('schools.academic-years.store');
+            Route::put('/schools/{school}/academic-years/{academicYear}', [AcademicYearController::class, 'update'])->name('schools.academic-years.update');
+            Route::delete('/schools/{school}/academic-years/{academicYear}', [AcademicYearController::class, 'destroy'])->name('schools.academic-years.destroy');
+            Route::post('/schools/{school}/academic-years/{academicYear}/toggle', [AcademicYearController::class, 'toggle'])->name('schools.academic-years.toggle');
+
+            /*
+            | Périodes scolaires (par école)
+            */
+            Route::get('/schools/{school}/academic-periods', [AcademicPeriodController::class, 'index'])->name('schools.academic-periods.index');
+            Route::post('/schools/{school}/academic-periods', [AcademicPeriodController::class, 'store'])->name('schools.academic-periods.store');
+            Route::put('/schools/{school}/academic-periods/{academicPeriod}', [AcademicPeriodController::class, 'update'])->name('schools.academic-periods.update');
+            Route::delete('/schools/{school}/academic-periods/{academicPeriod}', [AcademicPeriodController::class, 'destroy'])->name('schools.academic-periods.destroy');
+            Route::post('/schools/{school}/academic-periods/{academicPeriod}/toggle', [AcademicPeriodController::class, 'toggle'])->name('schools.academic-periods.toggle');
         });
 
     /*

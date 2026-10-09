@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\ClassRoom;
 use App\Models\ParentGuardian;
 use App\Support\SchoolBranding;
+use App\Services\Tenancy\TenantResolver;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -21,7 +22,12 @@ class AppServiceProvider extends ServiceProvider
     {
         // Injecte les variables CSS du thème dans le HTML initial (évite tout flash de couleurs par défaut).
         View::composer('app', function ($view) {
-            $view->with('branding', SchoolBranding::for(auth()->user()?->school));
+            $school = auth()->user()?->school;
+            if (! $school) {
+                $resolver = app(TenantResolver::class);
+                $school = $resolver->resolve(request());
+            }
+            $view->with('branding', SchoolBranding::for($school));
         });
 
         Inertia::share('auth.user.notifications', function () {

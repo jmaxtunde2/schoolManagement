@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\Role;
 use App\Models\School;
+use App\Models\SchoolDomain;
 use App\Models\SchoolSetting;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -75,6 +76,12 @@ class SchoolSeeder extends Seeder
             $school = School::updateOrCreate(['slug' => $data['slug']], ['name' => $data['name'], 'is_active' => true]);
 
             SchoolSetting::withoutGlobalScopes()->updateOrCreate(['school_id' => $school->id], $data['settings']);
+
+            // Domaines pour le développement local (utilisez Laravel Herd/Valet ou ajoutez à /etc/hosts : 127.0.0.1 lycee-excellence.test)
+            SchoolDomain::updateOrCreate(
+                ['school_id' => $school->id, 'domain' => $data['slug'] . '.test'],
+                ['is_primary' => true, 'verified' => true]
+            );
 
             foreach ($data['users'] as [$name, $email, $role]) {
                 $user = User::firstOrNew(['email' => $email]);

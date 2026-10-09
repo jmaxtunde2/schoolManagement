@@ -12,7 +12,7 @@ import {
 export default function GuestLayout({ children }) {
     const { school } = usePage().props;
 
-    const primaryColor = 'var(--color-primary)';
+    const primaryColor = school?.primary_color ?? 'var(--color-primary)';
 
     return (
         <div className="relative min-h-screen overflow-hidden bg-slate-50">
