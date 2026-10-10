@@ -9,7 +9,7 @@ class ImportRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('update', $this->route('school')) === true;
+        return $this->user()?->isPlatformAdmin() ?? false;
     }
 
     public function rules(): array
@@ -24,7 +24,7 @@ class ImportRequest extends FormRequest
                 'academic_years' => true,
                 'academic_periods' => true,
             ]))],
-            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240'],
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'extensions:xlsx,xls,csv', 'max:10240'],
         ];
     }
 
@@ -43,6 +43,7 @@ class ImportRequest extends FormRequest
             'type.in' => 'Type d\'import non reconnu.',
             'file.required' => 'Le fichier Excel est obligatoire.',
             'file.mimes' => 'Le fichier doit être au format .xlsx, .xls ou .csv.',
+            'file.extensions' => 'Le fichier doit avoir l\'extension .xlsx, .xls ou .csv.',
             'file.max' => 'Le fichier ne doit pas dépasser 10 Mo.',
         ];
     }

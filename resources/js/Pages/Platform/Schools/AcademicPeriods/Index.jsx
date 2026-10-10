@@ -1,4 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 import {
     ArrowLeft,
     CalendarDays,
@@ -26,6 +27,11 @@ import EmptyState from '@/Components/UI/EmptyState';
 import ConfirmDialog from '@/Components/UI/ConfirmDialog';
 import StatCard from '@/Components/UI/StatCard';
 
+const PERIOD_OPTIONS = [
+    { group: 'Trimestres', options: ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'] },
+    { group: 'Semestres', options: ['Semestre 1', 'Semestre 2'] },
+];
+
 export default function AcademicPeriodsIndex({ school, periods, years }) {
     const [showCreate, setShowCreate] = useState(false);
     const [editing, setEditing] = useState(null);
@@ -34,17 +40,17 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
     const { data, setData, post, put, processing, errors, reset } = useForm({
         name: '',
         academic_year_id: '',
+        position: '1',
         starts_at: '',
         ends_at: '',
-        is_active: true,
-        type: 'trimestre',
+        is_closed: false,
     });
 
     const stats = {
         total: periods.total ?? 0,
-        active: periods.data?.filter(p => p.is_active).length ?? 0,
-        trimestres: periods.data?.filter(p => p.type === 'trimestre').length ?? 0,
-        semestres: periods.data?.filter(p => p.type === 'semestre').length ?? 0,
+        open: periods.data?.filter(p => !p.is_closed).length ?? 0,
+        closed: periods.data?.filter(p => p.is_closed).length ?? 0,
+        dated: periods.data?.filter(p => p.starts_at && p.ends_at).length ?? 0,
     };
 
     function openCreate() {
@@ -53,10 +59,10 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
         setData({
             name: '',
             academic_year_id: currentYear?.id ?? '',
+            position: String((periods.data?.length ?? 0) + 1),
             starts_at: '',
             ends_at: '',
-            is_active: true,
-            type: 'trimestre',
+            is_closed: false,
         });
         setShowCreate(true);
     }
@@ -66,10 +72,21 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
         setData({
             name: period.name,
             academic_year_id: period.academic_year_id,
+            position: String(period.position ?? 1),
             starts_at: period.starts_at?.split('T')[0] ?? '',
             ends_at: period.ends_at?.split('T')[0] ?? '',
-            is_active: period.is_active,
-            type: period.type,
+            is_closed: period.is_closed,
+        });
+    }
+
+    function handleNameChange(event) {
+        const value = event.target.value;
+        const match = value.match(/(\d+)\s*$/);
+
+        setData({
+            ...data,
+            name: value,
+            position: match ? match[1] : data.position,
         });
     }
 
@@ -85,7 +102,7 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
 
     function submitEdit(event) {
         event.preventDefault();
-        put(route('platform.schools.academic-periods.update', school.id, editing.id), {
+        put(route('platform.schools.academic-periods.update', [school.id, editing.id]), {
             onSuccess: () => {
                 setEditing(null);
                 reset();
@@ -94,7 +111,7 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
     }
 
     function handleToggle(period) {
-        router.post(route('platform.schools.academic-periods.toggle', school.id, period.id));
+        router.post(route('platform.schools.academic-periods.toggle', [school.id, period.id]));
     }
 
     function confirmDelete(period) {
@@ -104,7 +121,7 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
             confirmLabel: 'Supprimer',
             variant: 'destructive',
             onConfirm: () => {
-                router.delete(route('platform.schools.academic-periods.destroy', school.id, period.id));
+                router.delete(route('platform.schools.academic-periods.destroy', [school.id, period.id]));
             },
         });
     }
@@ -115,9 +132,7 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
             header: 'Période',
             render: (period) => (
                 <div className="flex items-center gap-3">
-                    <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-                        period.type === 'trimestre' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'
-                    }`}>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
                         <CalendarDays className="h-4 w-4" strokeWidth={2} />
                     </div>
                     <div>
@@ -128,12 +143,12 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
             ),
         },
         {
-            key: 'type',
-            header: 'Type',
+            key: 'position',
+            header: 'Ordre',
             className: 'hidden lg:table-cell',
             render: (period) => (
-                <Badge tone={period.type === 'trimestre' ? 'blue' : 'purple'}>
-                    {period.type === 'trimestre' ? 'Trimestre' : 'Semestre'}
+                <Badge tone="blue">
+                    Période {period.position}
                 </Badge>
             ),
         },
@@ -152,11 +167,11 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
             header: 'Statut',
             render: (period) => (
                 <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-                    period.is_active
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-slate-100 text-slate-500'
+                    period.is_closed
+                        ? 'bg-slate-100 text-slate-500'
+                        : 'bg-emerald-100 text-emerald-700'
                 }`}>
-                    {period.is_active ? 'Active' : 'Inactive'}
+                    {period.is_closed ? 'Close' : 'Ouverte'}
                 </span>
             ),
         },
@@ -263,23 +278,23 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
                 />
                 <StatCard
                     icon={CalendarDays}
-                    label="Actives"
-                    value={stats.active}
-                    description="Périodes en cours"
+                    label="Ouvertes"
+                    value={stats.open}
+                    description="Périodes non clôturées"
                     className="from-emerald-500 to-teal-600"
                 />
                 <StatCard
                     icon={CalendarDays}
-                    label="Trimestres"
-                    value={stats.trimestres}
-                    description="Périodes trimestrielles"
-                    className="from-blue-500 to-indigo-600"
+                    label="Closes"
+                    value={stats.closed}
+                    description="Périodes clôturées"
+                    className="from-slate-500 to-slate-600"
                 />
                 <StatCard
                     icon={CalendarRange}
-                    label="Semestres"
-                    value={stats.semestres}
-                    description="Périodes semestrielles"
+                    label="Datées"
+                    value={stats.dated}
+                    description="Périodes avec dates"
                     className="from-purple-500 to-pink-600"
                 />
             </div>
@@ -344,12 +359,20 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
                         <form onSubmit={submitCreate} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Nom *</label>
-                                <Input
+                                <Select
                                     value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
-                                    placeholder="Ex: 1er Trimestre, Semestre 1"
+                                    onChange={handleNameChange}
                                     error={errors.name}
-                                />
+                                >
+                                    <option value="" disabled>Sélectionner une période…</option>
+                                    {PERIOD_OPTIONS.map((group) => (
+                                        <optgroup key={group.group} label={group.group}>
+                                            {group.options.map((option) => (
+                                                <option key={option} value={option}>{option}</option>
+                                            ))}
+                                        </optgroup>
+                                    ))}
+                                </Select>
                             </div>
 
                             <div>
@@ -357,9 +380,12 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
                                 <Select
                                     value={data.academic_year_id}
                                     onChange={(e) => setData('academic_year_id', e.target.value)}
-                                    options={years.map(y => ({ value: y.id, label: y.name }))}
                                     error={errors.academic_year_id}
-                                />
+                                >
+                                    {years.map(y => (
+                                        <option key={y.id} value={y.id}>{y.name}</option>
+                                    ))}
+                                </Select>
                             </div>
 
                             <div className="grid gap-4 sm:grid-cols-2">
@@ -384,31 +410,33 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
-                                <Select
-                                    value={data.type}
-                                    onChange={(e) => setData('type', e.target.value)}
-                                >
-                                    <option value="trimestre">Trimestre</option>
-                                    <option value="semestre">Semestre</option>
-                                </Select>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Ordre *</label>
+                                <Input
+                                    type="number"
+                                    min="1"
+                                    max="60"
+                                    value={data.position}
+                                    onChange={(e) => setData('position', e.target.value)}
+                                    error={errors.position}
+                                />
                             </div>
 
                             <div className="flex items-center gap-2">
                                 <input
                                     type="checkbox"
-                                    id="is_active_create"
-                                    checked={data.is_active}
-                                    onChange={(e) => setData('is_active', e.target.checked)}
+                                    id="is_closed_create"
+                                    checked={data.is_closed}
+                                    onChange={(e) => setData('is_closed', e.target.checked)}
                                     className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
                                 />
-                                <label htmlFor="is_active_create" className="text-sm text-slate-700">
-                                    Active
+                                <label htmlFor="is_closed_create" className="text-sm text-slate-700">
+                                    Période close
                                 </label>
                             </div>
 
                             {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
                             {errors.academic_year_id && <p className="text-sm text-red-600">{errors.academic_year_id}</p>}
+                            {errors.position && <p className="text-sm text-red-600">{errors.position}</p>}
                             {errors.starts_at && <p className="text-sm text-red-600">{errors.starts_at}</p>}
                             {errors.ends_at && <p className="text-sm text-red-600">{errors.ends_at}</p>}
 
@@ -452,9 +480,12 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
                                 <Select
                                     value={data.academic_year_id}
                                     onChange={(e) => setData('academic_year_id', e.target.value)}
-                                    options={years.map(y => ({ value: y.id, label: y.name }))}
                                     error={errors.academic_year_id}
-                                />
+                                >
+                                    {years.map(y => (
+                                        <option key={y.id} value={y.id}>{y.name}</option>
+                                    ))}
+                                </Select>
                             </div>
 
                             <div className="grid gap-4 sm:grid-cols-2">
@@ -479,31 +510,33 @@ export default function AcademicPeriodsIndex({ school, periods, years }) {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
-                                <Select
-                                    value={data.type}
-                                    onChange={(e) => setData('type', e.target.value)}
-                                >
-                                    <option value="trimestre">Trimestre</option>
-                                    <option value="semestre">Semestre</option>
-                                </Select>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Ordre *</label>
+                                <Input
+                                    type="number"
+                                    min="1"
+                                    max="60"
+                                    value={data.position}
+                                    onChange={(e) => setData('position', e.target.value)}
+                                    error={errors.position}
+                                />
                             </div>
 
                             <div className="flex items-center gap-2">
                                 <input
                                     type="checkbox"
-                                    id="is_active_edit"
-                                    checked={data.is_active}
-                                    onChange={(e) => setData('is_active', e.target.checked)}
+                                    id="is_closed_edit"
+                                    checked={data.is_closed}
+                                    onChange={(e) => setData('is_closed', e.target.checked)}
                                     className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
                                 />
-                                <label htmlFor="is_active_edit" className="text-sm text-slate-700">
-                                    Active
+                                <label htmlFor="is_closed_edit" className="text-sm text-slate-700">
+                                    Période close
                                 </label>
                             </div>
 
                             {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
                             {errors.academic_year_id && <p className="text-sm text-red-600">{errors.academic_year_id}</p>}
+                            {errors.position && <p className="text-sm text-red-600">{errors.position}</p>}
                             {errors.starts_at && <p className="text-sm text-red-600">{errors.starts_at}</p>}
                             {errors.ends_at && <p className="text-sm text-red-600">{errors.ends_at}</p>}
 

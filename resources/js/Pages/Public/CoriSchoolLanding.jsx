@@ -1975,9 +1975,9 @@ function SiteFooter() {
 
                     <p>
                         Une solution de{' '}
-                        <span className="font-bold text-slate-400">
+                        <a href="https://coriyase.com" className="font-bold text-slate-400" target="_blank" rel="noopener noreferrer">
                             Coriyase Technologies
-                        </span>
+                        </a>
                     </p>
                 </div>
             </div>

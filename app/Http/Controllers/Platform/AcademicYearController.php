@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Platform;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\AcademicYear\StoreAcademicYear;
-use App\Http\Requests\AcademicYear\UpdateAcademicYear;
+use App\Http\Requests\Platform\StoreAcademicYear;
+use App\Http\Requests\Platform\UpdateAcademicYear;
 use App\Models\AcademicYear;
 use App\Models\School;
 use App\Services\AuditService;
@@ -19,7 +19,7 @@ class AcademicYearController extends Controller
     {
         $years = AcademicYear::query()
             ->where('school_id', $school->id)
-            ->orderByDesc('starts_at')
+            ->orderByDesc('starts_on')
             ->paginate(20)
             ->withQueryString();
 

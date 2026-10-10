@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Models\ClassRoom;
 use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
@@ -71,19 +72,82 @@ class TeacherImport implements ToCollection, WithHeadingRow, WithValidation, Ski
                 $this->results['updated']++;
             }
 
-            // Attach subjects if provided
-            if (! empty($data['subjects'])) {
-                $subjectCodes = array_map('trim', explode(',', $data['subjects']));
-                $subjects = Subject::where('school_id', $this->school->id)
-                    ->whereIn('code', $subjectCodes)
-                    ->orWhereIn('name', $subjectCodes)
-                    ->pluck('id');
+            // Attach class/subject assignments if provided
+            $this->syncAssignments($teacher, $data);
+        }
+    }
 
-                if ($subjects->isNotEmpty()) {
-                    $teacher->subjects()->sync($subjects);
-                }
+    protected function syncAssignments(Teacher $teacher, array $data): void
+    {
+        $subjects = $this->resolveSubjects($data['subjects'] ?? null);
+
+        if ($subjects->isEmpty()) {
+            return;
+        }
+
+        $classes = $this->resolveClasses($data['classes'] ?? null);
+
+        // Sans classe explicite, on retombe sur les classes qui enseignent ces matières.
+        if ($classes->isEmpty()) {
+            $classes = ClassRoom::where('school_id', $this->school->id)
+                ->whereIn('id', function ($query) use ($subjects) {
+                    $query->select('class_id')
+                        ->from('class_subject')
+                        ->whereIn('subject_id', $subjects);
+                })
+                ->pluck('id');
+        }
+
+        if ($classes->isEmpty()) {
+            $this->results['errors'][] = "Enseignant {$data['name']} : aucune classe trouvée pour les matières indiquées ; affectations ignorées.";
+
+            return;
+        }
+
+        foreach ($classes as $classId) {
+            foreach ($subjects as $subjectId) {
+                $teacher->assignments()->firstOrCreate([
+                    'class_id' => $classId,
+                    'subject_id' => $subjectId,
+                ]);
             }
         }
+    }
+
+    protected function resolveSubjects(?string $value): Collection
+    {
+        if (! $value) {
+            return collect();
+        }
+
+        $codes = array_values(array_filter(array_map('trim', explode(',', $value))));
+
+        if (empty($codes)) {
+            return collect();
+        }
+
+        return Subject::where('school_id', $this->school->id)
+            ->where(function ($query) use ($codes) {
+                $query->whereIn('code', $codes)->orWhereIn('name', $codes);
+            })
+            ->pluck('id');
+    }
+
+    protected function resolveClasses(?string $value): Collection
+    {
+        if (! $value) {
+            return collect();
+        }
+
+        $names = array_values(array_filter(array_map('trim', explode(',', $value))));
+
+        if (empty($names)) {
+            return collect();
+        }
+
+        return ClassRoom::where('school_id', $this->school->id)
+            ->whereIn('name', $names)
+            ->pluck('id');
     }
 
     protected function transformRow($row): ?array
@@ -106,6 +170,7 @@ class TeacherImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             'employee_number' => $this->getValue($row, ['employee_number', 'matricule', 'numero_employe']),
             'hire_date' => $this->parseDate($this->getValue($row, ['hire_date', 'date_embauche', 'date_entree'])),
             'subjects' => $this->getValue($row, ['subjects', 'matieres', 'matiere']),
+            'classes' => $this->getValue($row, ['classes', 'classe', 'class']),
         ];
     }
 
@@ -147,6 +212,7 @@ class TeacherImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             'employee_number' => 'nullable|string|max:50',
             'hire_date' => 'nullable|date',
             'subjects' => 'nullable|string',
+            'classes' => 'nullable|string',
         ];
     }
 

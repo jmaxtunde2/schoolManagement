@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Platform;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\AcademicPeriod\StoreAcademicPeriod;
-use App\Http\Requests\AcademicPeriod\UpdateAcademicPeriod;
+use App\Http\Requests\Platform\StoreAcademicPeriod;
+use App\Http\Requests\Platform\UpdateAcademicPeriod;
 use App\Models\AcademicPeriod;
 use App\Models\AcademicYear;
 use App\Models\School;
@@ -27,8 +27,8 @@ class AcademicPeriodController extends Controller
             ->withQueryString();
 
         $years = AcademicYear::where('school_id', $school->id)
-            ->orderByDesc('starts_at')
-            ->get(['id', 'name']);
+            ->orderByDesc('starts_on')
+            ->get(['id', 'name', 'is_current']);
 
         return Inertia::render('Platform/Schools/AcademicPeriods/Index', [
             'school' => ['id' => $school->id, 'name' => $school->name, 'slug' => $school->slug],
@@ -86,17 +86,17 @@ class AcademicPeriodController extends Controller
     {
         $this->authorizeForSchool($school, $academicPeriod);
 
-        $academicPeriod->update(['is_active' => ! $academicPeriod->is_active]);
+        $academicPeriod->update(['is_closed' => ! $academicPeriod->is_closed]);
 
         app(AuditService::class)->log('academic_period.toggled', $academicPeriod, [
             'school_id' => $school->id,
-            'new_status' => $academicPeriod->is_active ? 'active' : 'inactive',
+            'new_status' => $academicPeriod->is_closed ? 'closed' : 'open',
             'by' => $request->user()->id,
         ]);
 
-        return back()->with('success', $academicPeriod->is_active
-            ? "Période « {$academicPeriod->name} » activée."
-            : "Période « {$academicPeriod->name} » désactivée.");
+        return back()->with('success', $academicPeriod->is_closed
+            ? "Période « {$academicPeriod->name} » clôturée."
+            : "Période « {$academicPeriod->name} » réouverte.");
     }
 
     protected function authorizeForSchool(School $school, AcademicPeriod $academicPeriod): void

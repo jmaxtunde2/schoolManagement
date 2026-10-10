@@ -51,10 +51,10 @@ class StudentImport implements ToCollection, WithHeadingRow, WithValidation, Ski
                 continue;
             }
 
-            $student = Student::updateOrCreate(
-                ['school_id' => $this->school->id, 'student_number' => $data['student_number']],
-                array_merge($data, ['class_id' => $classId])
-            );
+        $student = Student::updateOrCreate(
+            ['school_id' => $this->school->id, 'matricule' => $data['matricule']],
+            array_merge($data, ['class_id' => $classId, 'matricule' => $data['matricule']])
+        );
 
             if ($student->wasRecentlyCreated) {
                 $this->results['created']++;
@@ -66,21 +66,15 @@ class StudentImport implements ToCollection, WithHeadingRow, WithValidation, Ski
 
     protected function transformRow($row): ?array
     {
-        $studentNumber = $this->getValue($row, ['student_number', 'matricule', 'numero_eleve', 'numero']);
-        if (! $studentNumber) {
-            return null;
-        }
-
-        $firstName = $this->getValue($row, ['first_name', 'prenom', 'prenoms']);
-        $lastName = $this->getValue($row, ['last_name', 'nom', 'nom_famille']);
-
         if (! $firstName || ! $lastName) {
             return null;
         }
 
+        $matricule = $this->getValue($row, ['matricule', 'student_number', 'numero_eleve', 'numero']);
+
         return [
             'school_id' => $this->school->id,
-            'student_number' => trim((string) $studentNumber),
+            'matricule' => $matricule ? trim((string) $matricule) : null,
             'first_name' => trim((string) $firstName),
             'last_name' => trim((string) $lastName),
             'gender' => $this->parseGender($this->getValue($row, ['gender', 'sexe', 'sexe_eleve'])),
@@ -134,7 +128,8 @@ class StudentImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     public function rules(): array
     {
         return [
-            'student_number' => 'required|string|max:50',
+            'student_number' => 'required_without:matricule|string|max:50',
+            'matricule' => 'required_without:student_number|string|max:50',
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
             'gender' => 'nullable|in:M,F',

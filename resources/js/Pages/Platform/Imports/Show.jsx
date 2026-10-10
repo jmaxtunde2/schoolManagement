@@ -51,7 +51,6 @@ const typeColors = {
 const typeOrder = ['academic_years', 'academic_periods', 'classes', 'subjects', 'teachers', 'students', 'parents'];
 
 export default function ImportsShow({ school, importTypes, import_results, success }) {
-    const [selectedType, setSelectedType] = useState(null);
     const [showPreview, setShowPreview] = useState(false);
     const [previewData, setPreviewData] = useState([]);
     const [previewHeaders, setPreviewHeaders] = useState([]);
@@ -183,12 +182,12 @@ export default function ImportsShow({ school, importTypes, import_results, succe
                 {sortedTypes.map(({ key, label, description, required_columns, optional_columns, sample_headers }) => {
                     const Icon = typeIcons[key] || FileSpreadsheet;
                     const color = typeColors[key] || 'from-slate-500 to-slate-600';
-                    const isSelected = selectedType === key;
+                    const isSelected = data.type === key;
 
                     return (
                         <div
                             key={key}
-                            onClick={() => setSelectedType(isSelected ? null : key)}
+                            onClick={() => setData('type', isSelected ? '' : key)}
                             className={`relative cursor-pointer rounded-2xl border-2 p-5 transition-all ${
                                 isSelected
                                     ? 'border-primary bg-primary/5 shadow-lg ring-2 ring-primary/20'
@@ -223,7 +222,7 @@ export default function ImportsShow({ school, importTypes, import_results, succe
                                 variant={isSelected ? 'primary' : 'outline'}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    setSelectedType(key);
+                                    setData('type', key);
                                     downloadTemplate(key);
                                 }}
                             >
@@ -236,16 +235,18 @@ export default function ImportsShow({ school, importTypes, import_results, succe
             </div>
 
             {/* Formulaire d'import */}
-            {selectedType && (
+            {data.type && (
                 <Card className="mt-6">
                     <Card.Header
-                        title={`Importer : ${importTypes[selectedType].label}`}
-                        description={importTypes[selectedType].description}
+                        title={`Importer : ${importTypes[data.type].label}`}
+                        description={importTypes[data.type].description}
                     />
 
                     <Card.Body>
                         <form onSubmit={submitImport} className="space-y-4">
-                            <input type="hidden" name="type" value={selectedType} />
+                            {errors.type && (
+                                <p className="text-sm text-red-600">{errors.type}</p>
+                            )}
 
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -321,7 +322,7 @@ export default function ImportsShow({ school, importTypes, import_results, succe
                                     type="button"
                                     variant="secondary"
                                     onClick={() => {
-                                        setSelectedType(null);
+                                        setData('type', '');
                                         reset();
                                         setPreviewData([]);
                                         setPreviewHeaders([]);

@@ -25,6 +25,14 @@ import Pagination from '@/Components/UI/Pagination';
 import EmptyState from '@/Components/UI/EmptyState';
 import ConfirmDialog from '@/Components/UI/ConfirmDialog';
 import StatCard from '@/Components/UI/StatCard';
+import { useState } from 'react';
+
+const CURRENT_YEAR = new Date().getFullYear();
+const DEFAULT_ACADEMIC_YEAR = `${CURRENT_YEAR}-${CURRENT_YEAR + 1}`;
+const ACADEMIC_YEAR_OPTIONS = Array.from({ length: 11 }, (_, i) => {
+    const start = CURRENT_YEAR - 10 + i;
+    return `${start}-${start + 1}`;
+});
 
 export default function AcademicYearsIndex({ school, years }) {
     const [showCreate, setShowCreate] = useState(false);
@@ -33,35 +41,47 @@ export default function AcademicYearsIndex({ school, years }) {
 
     const { data, setData, post, put, processing, errors, reset } = useForm({
         name: '',
-        starts_at: '',
-        ends_at: '',
+        starts_on: '',
+        ends_on: '',
         is_current: false,
     });
 
     const stats = {
         total: years.total ?? 0,
         current: years.data?.filter(y => y.is_current).length ?? 0,
-        past: years.data?.filter(y => !y.is_current && new Date(y.ends_at) < new Date()).length ?? 0,
-        future: years.data?.filter(y => !y.is_current && new Date(y.starts_at) > new Date()).length ?? 0,
+        past: years.data?.filter(y => !y.is_current && new Date(y.ends_on) < new Date()).length ?? 0,
+        future: years.data?.filter(y => !y.is_current && new Date(y.starts_on) > new Date()).length ?? 0,
     };
 
     function openCreate() {
         reset();
         setData({
-            name: '',
-            starts_at: new Date().toISOString().split('T')[0],
-            ends_at: new Date(new Date().getFullYear() + 1, 6, 30).toISOString().split('T')[0],
+            name: DEFAULT_ACADEMIC_YEAR,
+            starts_on: `${CURRENT_YEAR}-09-01`,
+            ends_on: `${CURRENT_YEAR + 1}-06-30`,
             is_current: false,
         });
         setShowCreate(true);
+    }
+
+    function handleYearChange(event) {
+        const value = event.target.value;
+        const startYear = parseInt(value.split('-')[0], 10);
+
+        setData({
+            ...data,
+            name: value,
+            starts_on: `${startYear}-09-01`,
+            ends_on: `${startYear + 1}-06-30`,
+        });
     }
 
     function openEdit(year) {
         setEditing(year);
         setData({
             name: year.name,
-            starts_at: year.starts_at?.split('T')[0] ?? '',
-            ends_at: year.ends_at?.split('T')[0] ?? '',
+            starts_on: year.starts_on?.split('T')[0] ?? '',
+            ends_on: year.ends_on?.split('T')[0] ?? '',
             is_current: year.is_current,
         });
     }
@@ -78,7 +98,7 @@ export default function AcademicYearsIndex({ school, years }) {
 
     function submitEdit(event) {
         event.preventDefault();
-        put(route('platform.schools.academic-years.update', school.id, editing.id), {
+        put(route('platform.schools.academic-years.update', [school.id, editing.id]), {
             onSuccess: () => {
                 setEditing(null);
                 reset();
@@ -87,7 +107,7 @@ export default function AcademicYearsIndex({ school, years }) {
     }
 
     function handleToggle(year) {
-        router.post(route('platform.schools.academic-years.toggle', school.id, year.id));
+        router.post(route('platform.schools.academic-years.toggle', [school.id, year.id]));
     }
 
     function confirmDelete(year) {
@@ -97,7 +117,7 @@ export default function AcademicYearsIndex({ school, years }) {
             confirmLabel: 'Supprimer',
             variant: 'destructive',
             onConfirm: () => {
-                router.delete(route('platform.schools.academic-years.destroy', school.id, year.id));
+                router.delete(route('platform.schools.academic-years.destroy', [school.id, year.id]));
             },
         });
     }
@@ -114,7 +134,7 @@ export default function AcademicYearsIndex({ school, years }) {
                     <div>
                         <p className="font-medium text-slate-900">{year.name}</p>
                         <p className="text-xs text-slate-500">
-                            {year.starts_at} → {year.ends_at}
+                            {year.starts_on} → {year.ends_on}
                         </p>
                     </div>
                 </div>
@@ -126,7 +146,7 @@ export default function AcademicYearsIndex({ school, years }) {
             className: 'hidden lg:table-cell',
             render: (year) => (
                 <span className="text-slate-700">
-                    {year.starts_at} – {year.ends_at}
+                    {year.starts_on} – {year.ends_on}
                 </span>
             ),
         },
@@ -137,9 +157,9 @@ export default function AcademicYearsIndex({ school, years }) {
                 <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
                     year.is_current
                         ? 'bg-emerald-100 text-emerald-700'
-                        : new Date(year.ends_at) < new Date()
+                        : new Date(year.ends_on) < new Date()
                             ? 'bg-slate-100 text-slate-500'
-                            : new Date(year.starts_at) > new Date()
+                            : new Date(year.starts_on) > new Date()
                                 ? 'bg-amber-100 text-amber-700'
                                 : 'bg-blue-100 text-blue-700'
                 }`}>
@@ -148,9 +168,9 @@ export default function AcademicYearsIndex({ school, years }) {
                             <CheckCircle2 className="h-3 w-3" strokeWidth={2} />
                             Actuelle
                         </>
-                    ) : new Date(year.ends_at) < new Date() ? (
+                    ) : new Date(year.ends_on) < new Date() ? (
                         'Terminée'
-                    ) : new Date(year.starts_at) > new Date() ? (
+                    ) : new Date(year.starts_on) > new Date() ? (
                         'À venir'
                     ) : (
                         'En cours'
@@ -342,12 +362,15 @@ export default function AcademicYearsIndex({ school, years }) {
                         <form onSubmit={submitCreate} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Nom *</label>
-                                <Input
+                                <Select
                                     value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
-                                    placeholder="Ex: 2024-2025"
+                                    onChange={handleYearChange}
                                     error={errors.name}
-                                />
+                                >
+                                    {ACADEMIC_YEAR_OPTIONS.map((option) => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </Select>
                             </div>
 
                             <div className="grid gap-4 sm:grid-cols-2">
@@ -355,18 +378,18 @@ export default function AcademicYearsIndex({ school, years }) {
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Début *</label>
                                     <Input
                                         type="date"
-                                        value={data.starts_at}
-                                        onChange={(e) => setData('starts_at', e.target.value)}
-                                        error={errors.starts_at}
+                                        value={data.starts_on}
+                                        onChange={(e) => setData('starts_on', e.target.value)}
+                                        error={errors.starts_on}
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Fin *</label>
                                     <Input
                                         type="date"
-                                        value={data.ends_at}
-                                        onChange={(e) => setData('ends_at', e.target.value)}
-                                        error={errors.ends_at}
+                                        value={data.ends_on}
+                                        onChange={(e) => setData('ends_on', e.target.value)}
+                                        error={errors.ends_on}
                                     />
                                 </div>
                             </div>
@@ -385,8 +408,8 @@ export default function AcademicYearsIndex({ school, years }) {
                             </div>
 
                             {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
-                            {errors.starts_at && <p className="text-sm text-red-600">{errors.starts_at}</p>}
-                            {errors.ends_at && <p className="text-sm text-red-600">{errors.ends_at}</p>}
+                            {errors.starts_on && <p className="text-sm text-red-600">{errors.starts_on}</p>}
+                            {errors.ends_on && <p className="text-sm text-red-600">{errors.ends_on}</p>}
 
                             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                                 <Button type="button" variant="secondary" onClick={() => setShowCreate(false)}>
@@ -428,18 +451,18 @@ export default function AcademicYearsIndex({ school, years }) {
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Début *</label>
                                     <Input
                                         type="date"
-                                        value={data.starts_at}
-                                        onChange={(e) => setData('starts_at', e.target.value)}
-                                        error={errors.starts_at}
+                                        value={data.starts_on}
+                                        onChange={(e) => setData('starts_on', e.target.value)}
+                                        error={errors.starts_on}
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Fin *</label>
                                     <Input
                                         type="date"
-                                        value={data.ends_at}
-                                        onChange={(e) => setData('ends_at', e.target.value)}
-                                        error={errors.ends_at}
+                                        value={data.ends_on}
+                                        onChange={(e) => setData('ends_on', e.target.value)}
+                                        error={errors.ends_on}
                                     />
                                 </div>
                             </div>
@@ -458,8 +481,8 @@ export default function AcademicYearsIndex({ school, years }) {
                             </div>
 
                             {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
-                            {errors.starts_at && <p className="text-sm text-red-600">{errors.starts_at}</p>}
-                            {errors.ends_at && <p className="text-sm text-red-600">{errors.ends_at}</p>}
+                            {errors.starts_on && <p className="text-sm text-red-600">{errors.starts_on}</p>}
+                            {errors.ends_on && <p className="text-sm text-red-600">{errors.ends_on}</p>}
 
                             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                                 <Button type="button" variant="secondary" onClick={() => setEditing(null)}>

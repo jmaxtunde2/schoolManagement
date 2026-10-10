@@ -14,6 +14,7 @@ import {
     FileText,
     GraduationCap,
     Key,
+    ShieldCheck,
     Users,
     XCircle,
 } from 'lucide-react';

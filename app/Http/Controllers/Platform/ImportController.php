@@ -40,10 +40,10 @@ class ImportController extends Controller
         'teachers' => [
             'label' => 'Enseignants',
             'import' => TeacherImport::class,
-            'description' => 'Importer les enseignants (nom, email, téléphone, matières)',
+            'description' => 'Importer les enseignants (nom, email, téléphone, matières, classes)',
             'required_columns' => ['name', 'email'],
-            'optional_columns' => ['password', 'phone', 'employee_number', 'hire_date', 'subjects'],
-            'sample_headers' => ['name', 'email', 'password', 'phone', 'employee_number', 'hire_date', 'subjects'],
+            'optional_columns' => ['password', 'phone', 'employee_number', 'hire_date', 'subjects', 'classes'],
+            'sample_headers' => ['name', 'email', 'password', 'phone', 'employee_number', 'hire_date', 'subjects', 'classes'],
         ],
         'students' => [
             'label' => 'Élèves',
