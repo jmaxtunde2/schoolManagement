@@ -973,7 +973,7 @@ function RowActions({ member, onEdit, onToggle, onDelete }) {
                 )}
             </button>
 
-            <button
+            {/* <button
                 type="button"
                 onClick={onDelete}
                 disabled={member.is_self}
@@ -986,7 +986,7 @@ function RowActions({ member, onEdit, onToggle, onDelete }) {
                 aria-label={`Supprimer ${member.full_name}`}
             >
                 <Trash2 className="h-4 w-4" />
-            </button>
+            </button> */}
         </div>
     );
 }

@@ -191,10 +191,10 @@ export function SlotCard({ slot, className }) {
                     </p>
                 )}
 
-                {slot.room && (
+                {slot.room_name && (
                     <p className="flex items-center gap-1.5 text-xs text-slate-600">
                         <DoorOpen className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                        {slot.room}
+                        {slot.room_name}
                     </p>
                 )}
             </div>

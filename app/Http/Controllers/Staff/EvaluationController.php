@@ -9,6 +9,8 @@ use App\Enums\EvaluationType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Evaluations\StoreEvaluationRequest;
 use App\Http\Requests\Evaluations\UpdateGradesRequest;
+use App\Models\AcademicPeriod;
+use App\Models\AcademicYear;
 use App\Models\Evaluation;
 use App\Models\Teacher;
 use App\Services\TwoFactor\TwoFactorService;
@@ -70,12 +72,41 @@ class EvaluationController extends Controller
             ? $this->teacherAssignments($user)
             : $this->allTeacherAssignments($user);
 
+        $academicYear = AcademicYear::query()
+            ->where('school_id', $user->school_id)
+            ->where('is_current', true)
+            ->latest('id')
+            ->first()
+            ?? AcademicYear::query()
+                ->where('school_id', $user->school_id)
+                ->latest('id')
+                ->first();
+
+        $academicPeriod = $academicYear
+            ? AcademicPeriod::query()
+                ->where('school_id', $user->school_id)
+                ->where('academic_year_id', $academicYear->id)
+                ->where('is_closed', false)
+                ->whereDate('starts_at', '<=', now())
+                ->whereDate('ends_at', '>=', now())
+                ->orderBy('position')
+                ->first()
+            : null;
+
         return Inertia::render(
             'Teacher/Evaluations/Create',
             [
                 'assignments' => $assignments,
                 'types' => EvaluationType::options(),
                 'isSecretary' => $user->isSecretary(),
+                'academicYear' => $academicYear ? [
+                    'id' => $academicYear->id,
+                    'name' => $academicYear->name,
+                ] : null,
+                'academicPeriod' => $academicPeriod ? [
+                    'id' => $academicPeriod->id,
+                    'name' => $academicPeriod->name,
+                ] : null,
             ]
         );
     }
@@ -165,6 +196,8 @@ class EvaluationController extends Controller
             'classRoom:id,name',
             'subject:id,name',
             'teacher.user:id,name',
+            'academicYear:id,name',
+            'academicPeriod:id,name',
             'enteredBy:id,name',
             'submitter:id,name',
             'validator:id,name',
@@ -198,6 +231,10 @@ class EvaluationController extends Controller
                     'class_name' => $evaluation->classRoom->name,
 
                     'subject_name' => $evaluation->subject->name,
+
+                    'academic_year_name' => $evaluation->academicYear?->name,
+
+                    'academic_period_name' => $evaluation->academicPeriod?->name,
 
                     'teacher_name' => $evaluation->teacher->user->name,
 

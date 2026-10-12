@@ -1,6 +1,8 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import {
     Award,
+    BarChart3,
     BookOpenCheck,
     ChevronDown,
     FileText,
@@ -13,20 +15,80 @@ import {
 } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ResultsPerformanceChart from '@/Components/Academic/ResultsPerformanceChart';
 import Badge from '@/Components/UI/Badge';
 import Button from '@/Components/UI/Button';
 import Card from '@/Components/UI/Card';
 import Select from '@/Components/UI/Select';
+import Tabs from '@/Components/UI/Tabs';
 
 export default function AcademicResults({
     classes,
     periods,
     filters,
     results,
+    performance,
+    performanceFilters,
+    academicYears,
+    initialTab = 'results',
     routePrefix,
 }) {
     const { auth } = usePage().props;
     const canGenerate = auth.user.role !== 'teacher';
+
+    const [activeTab, setActiveTab] = useState(initialTab);
+    const [perfFilters, setPerfFilters] = useState({
+        mode: performanceFilters?.mode ?? 'periods',
+        class_id: performanceFilters?.class_id ?? '',
+        academic_year_id: performanceFilters?.academic_year_id ?? '',
+    });
+
+    function applyPerformanceFilters(event) {
+        event.preventDefault();
+
+        const params = {
+            tab: 'performance',
+            perf_mode: perfFilters.mode,
+        };
+
+        if (perfFilters.class_id) {
+            params.perf_class_id = perfFilters.class_id;
+        }
+
+        if (perfFilters.mode === 'periods' && perfFilters.academic_year_id) {
+            params.perf_academic_year_id = perfFilters.academic_year_id;
+        }
+
+        router.get(route(`${routePrefix}.academic.results.index`), params, {
+            preserveState: true,
+            replace: true,
+        });
+    }
+
+    function changeTab(tab) {
+        setActiveTab(tab);
+
+        if (tab === 'performance' && !performance) {
+            const params = { tab: 'performance', perf_mode: perfFilters.mode };
+
+            if (perfFilters.class_id) {
+                params.perf_class_id = perfFilters.class_id;
+            }
+
+            if (
+                perfFilters.mode === 'periods' &&
+                perfFilters.academic_year_id
+            ) {
+                params.perf_academic_year_id = perfFilters.academic_year_id;
+            }
+
+            router.get(
+                route(`${routePrefix}.academic.results.index`),
+                params,
+                { preserveState: true, replace: true }
+            );
+        }
+    }
 
     function applyFilters(event) {
         event.preventDefault();
@@ -114,6 +176,36 @@ export default function AcademicResults({
                         </div>
                     )}
                 </div>
+
+                {/* Tabs */}
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 pt-3 shadow-sm sm:px-5">
+                    <Tabs
+                        active={activeTab}
+                        onChange={changeTab}
+                        tabs={[
+                            {
+                                key: 'results',
+                                label: 'Résultats par classe',
+                            },
+                            {
+                                key: 'performance',
+                                label: 'Performance',
+                            },
+                        ]}
+                    />
+                </div>
+
+                {activeTab === 'performance' ? (
+                    <PerformancePanel
+                        performance={performance}
+                        classes={classes}
+                        academicYears={academicYears}
+                        perfFilters={perfFilters}
+                        setPerfFilters={setPerfFilters}
+                        onSubmit={applyPerformanceFilters}
+                    />
+                ) : (
+                    <>
 
                 {/* Filters */}
                 <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-slate-200">
@@ -473,8 +565,157 @@ export default function AcademicResults({
                         </Card>
                     </>
                 )}
+                    </>
+                )}
             </div>
         </AuthenticatedLayout>
+    );
+}
+
+function PerformancePanel({
+    performance,
+    classes,
+    academicYears,
+    perfFilters,
+    setPerfFilters,
+    onSubmit,
+}) {
+    const overall = performance?.overall;
+
+    return (
+        <div className="space-y-6">
+            <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-slate-200">
+                <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-emerald-50/40 px-5 py-4 sm:px-6">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                            <BarChart3 className="h-5 w-5" />
+                        </div>
+
+                        <div>
+                            <h2 className="font-bold text-slate-900">
+                                Graphique de performance
+                            </h2>
+
+                            <p className="text-xs text-slate-500">
+                                Moyenne générale par période ou par année,
+                                pour tout l’établissement ou une classe.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <Card.Body className="p-5 sm:p-6">
+                    <form
+                        onSubmit={onSubmit}
+                        className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto]"
+                    >
+                        <div>
+                            <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Comparer par
+                            </label>
+
+                            <Select
+                                value={perfFilters.mode}
+                                onChange={(event) =>
+                                    setPerfFilters((current) => ({
+                                        ...current,
+                                        mode: event.target.value,
+                                    }))
+                                }
+                            >
+                                <option value="periods">
+                                    Périodes (trimestres / semestres)
+                                </option>
+
+                                <option value="years">Années académiques</option>
+                            </Select>
+                        </div>
+
+                        <div>
+                            <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Classe
+                            </label>
+
+                            <Select
+                                value={perfFilters.class_id}
+                                onChange={(event) =>
+                                    setPerfFilters((current) => ({
+                                        ...current,
+                                        class_id: event.target.value,
+                                    }))
+                                }
+                            >
+                                <option value="">Tout l’établissement</option>
+
+                                {classes.map((item) => (
+                                    <option key={item.id} value={item.id}>
+                                        {item.name}
+                                    </option>
+                                ))}
+                            </Select>
+                        </div>
+
+                        <div>
+                            <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Année académique
+                            </label>
+
+                            <Select
+                                value={perfFilters.academic_year_id}
+                                disabled={perfFilters.mode !== 'periods'}
+                                onChange={(event) =>
+                                    setPerfFilters((current) => ({
+                                        ...current,
+                                        academic_year_id: event.target.value,
+                                    }))
+                                }
+                            >
+                                <option value="">Année en cours</option>
+
+                                {academicYears.map((year) => (
+                                    <option key={year.id} value={year.id}>
+                                        {year.name}
+                                    </option>
+                                ))}
+                            </Select>
+                        </div>
+
+                        <div className="flex items-end">
+                            <Button
+                                type="submit"
+                                variant="secondary"
+                                className="w-full lg:w-auto"
+                            >
+                                <BarChart3 className="h-4 w-4" />
+                                Analyser
+                            </Button>
+                        </div>
+                    </form>
+                </Card.Body>
+            </Card>
+
+            <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-slate-200">
+                <Card.Header
+                    title="Performance académique"
+                    description={`${performance?.scope_label ?? ''} · ${
+                        performance?.mode === 'years'
+                            ? 'comparaison par année'
+                            : 'comparaison par période'
+                    }`}
+                    actions={
+                        <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-sm font-bold text-emerald-700">
+                            {overall === null || overall === undefined
+                                ? '—'
+                                : `${overall.toFixed(2)} / 20`}
+                        </span>
+                    }
+                />
+
+                <Card.Body className="p-4 sm:p-6">
+                    <ResultsPerformanceChart performance={performance} />
+                </Card.Body>
+            </Card>
+        </div>
     );
 }
 

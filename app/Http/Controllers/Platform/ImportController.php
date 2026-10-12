@@ -8,6 +8,7 @@ use App\Imports\AcademicPeriodImport;
 use App\Imports\AcademicYearImport;
 use App\Imports\ClassRoomImport;
 use App\Imports\ParentImport;
+use App\Imports\RoomImport;
 use App\Imports\StudentImport;
 use App\Imports\SubjectImport;
 use App\Imports\TeacherImport;
@@ -36,6 +37,14 @@ class ImportController extends Controller
             'required_columns' => ['name'],
             'optional_columns' => ['code', 'default_coefficient'],
             'sample_headers' => ['name', 'code', 'default_coefficient'],
+        ],
+        'rooms' => [
+            'label' => 'Salles',
+            'import' => RoomImport::class,
+            'description' => 'Importer les salles (nom, bâtiment, capacité)',
+            'required_columns' => ['name'],
+            'optional_columns' => ['building', 'capacity'],
+            'sample_headers' => ['name', 'building', 'capacity'],
         ],
         'teachers' => [
             'label' => 'Enseignants',
@@ -156,6 +165,14 @@ class ImportController extends Controller
         }
 
         $config = $this->importTypes[$type];
+        $filename = "import_template_{$type}.csv";
+
+        // Priorité au fichier modèle présent dans le projet (import_template_{type}.csv)
+        $projectTemplate = base_path($filename);
+        if (is_file($projectTemplate)) {
+            return response()->download($projectTemplate, $filename);
+        }
+
         $headers = array_merge(
             $config['required_columns'] ?? [],
             $config['optional_columns'] ?? []
@@ -164,15 +181,14 @@ class ImportController extends Controller
         // Exemples de lignes selon le type
         $examples = $this->getTemplateExamples($type, $headers);
 
-        // Create CSV with headers + example rows
-        $csv = implode(',', $headers) . "\n";
-        foreach ($examples as $row) {
-            $csv .= implode(',', array_map(fn($h) => $row[$h] ?? '', $headers)) . "\n";
-        }
-        $filename = "import_template_{$type}.csv";
-
+        // Create CSV with headers + example rows (fputcsv gère quotes/virgules)
         $tempFile = tempnam(sys_get_temp_dir(), 'import_');
-        file_put_contents($tempFile, $csv);
+        $handle = fopen($tempFile, 'w');
+        fputcsv($handle, $headers);
+        foreach ($examples as $row) {
+            fputcsv($handle, array_map(fn($h) => $row[$h] ?? '', $headers));
+        }
+        fclose($handle);
 
         return response()->download($tempFile, $filename)->deleteFileAfterSend(true);
     }
@@ -215,6 +231,19 @@ class ImportController extends Controller
                     'name' => 'Anglais',
                     'code' => 'ANG',
                     'default_coefficient' => '2.0',
+                ];
+                break;
+
+            case 'rooms':
+                $examples[] = [
+                    'name' => 'Salle 1',
+                    'building' => 'A',
+                    'capacity' => '40',
+                ];
+                $examples[] = [
+                    'name' => 'Laboratoire Physique',
+                    'building' => 'B',
+                    'capacity' => '25',
                 ];
                 break;
 

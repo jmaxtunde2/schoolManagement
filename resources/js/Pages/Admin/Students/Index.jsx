@@ -122,7 +122,7 @@ export default function StudentsIndex({
             birth_date: row.birth_date ?? '',
             gender: row.gender ?? '',
             is_active: row.is_active,
-            guardian_ids: row.guardians.map(
+            guardian_ids: (row.guardians ?? []).map(
                 (guardian) => guardian.id
             ),
             photo: null,
@@ -144,13 +144,13 @@ export default function StudentsIndex({
     }
 
     function toggleGuardian(id) {
+        const ids = data.guardian_ids ?? [];
+
         setData(
             'guardian_ids',
-            data.guardian_ids.includes(id)
-                ? data.guardian_ids.filter(
-                      (guardianId) => guardianId !== id
-                  )
-                : [...data.guardian_ids, id]
+            ids.includes(id)
+                ? ids.filter((guardianId) => guardianId !== id)
+                : [...ids, id]
         );
     }
 
@@ -930,7 +930,8 @@ export default function StudentsIndex({
                                 ) : (
                                     guardians.map((guardian) => {
                                         const selected =
-                                            data.guardian_ids[0] === guardian.id;
+                                            (data.guardian_ids ?? [])[0] ===
+                                            guardian.id;
 
                                         return (
                                             <label

@@ -22,6 +22,8 @@ export default function CreateEvaluation({
     assignments = [],
     types = [],
     isSecretary = false,
+    academicYear = null,
+    academicPeriod = null,
 }) {
     const {
         data,
@@ -392,6 +394,11 @@ export default function CreateEvaluation({
                                             <div className="relative">
                                                 <Input
                                                     type="date"
+                                                    max={
+                                                        new Date()
+                                                            .toISOString()
+                                                            .slice(0, 10)
+                                                    }
                                                     value={
                                                         data.evaluation_date
                                                     }
@@ -407,6 +414,51 @@ export default function CreateEvaluation({
                                                 <CalendarDays className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                             </div>
                                         </Field>
+                                    </div>
+
+                                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                        <div className="flex items-center gap-2 text-slate-500">
+                                            <GraduationCap className="h-4 w-4" />
+
+                                            <span className="text-xs font-bold uppercase tracking-wide">
+                                                Année académique et période
+                                            </span>
+                                        </div>
+
+                                        <p className="mt-1 text-xs text-slate-500">
+                                            Déterminées automatiquement à partir de l'année et de la période en cours.
+                                        </p>
+
+                                        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                            <Field label="Année académique">
+                                                <Input
+                                                    value={
+                                                        academicYear?.name ??
+                                                        'Non définie'
+                                                    }
+                                                    disabled
+                                                    readOnly
+                                                />
+                                            </Field>
+
+                                            <Field
+                                                label="Période"
+                                                error={
+                                                    academicPeriod
+                                                        ? undefined
+                                                        : "Aucune période en cours n'est ouverte."
+                                                }
+                                            >
+                                                <Input
+                                                    value={
+                                                        academicPeriod?.name ??
+                                                        'Aucune période en cours'
+                                                    }
+                                                    disabled
+                                                    readOnly
+                                                />
+                                            </Field>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

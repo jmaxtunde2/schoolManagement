@@ -22,10 +22,10 @@ class TimetableFactory extends Factory
             'class_id' => ClassRoom::factory(),
             'subject_id' => Subject::factory(),
             'teacher_id' => null,
+            'room_id' => null,
             'day_of_week' => fake()->numberBetween(1, 5),
             'starts_at' => sprintf('%02d:00', fake()->numberBetween(7, 15)),
             'ends_at' => sprintf('%02d:55', fake()->numberBetween(8, 16)),
-            'room' => 'Salle '.fake()->numberBetween(1, 20),
         ];
     }
 

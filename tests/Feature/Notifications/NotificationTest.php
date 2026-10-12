@@ -15,6 +15,7 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Services\Notifications\NotificationService;
 use App\Services\Sms\EsmsAfricaProvider;
+use App\Services\Sms\MetaWhatsAppProvider;
 use App\Services\Sms\SmsProviderInterface;
 use App\Services\Sms\SmsResponse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -145,6 +146,151 @@ class NotificationTest extends TestCase
             && $request['text'] === 'Hello from eSMS!'
             && ! array_key_exists('sender_id', $request->data())
         );
+    }
+
+    public function test_whatsapp_provider_is_resolved_when_sms_provider_is_whatsapp(): void
+    {
+        config(['services.sms.provider' => 'whatsapp']);
+
+        $this->assertInstanceOf(MetaWhatsAppProvider::class, app(SmsProviderInterface::class));
+    }
+
+    public function test_meta_whatsapp_sends_text_message_with_bearer_token(): void
+    {
+        config([
+            'services.whatsapp.token' => 'fake-whatsapp-token',
+            'services.whatsapp.phone_number_id' => '106732507566763',
+        ]);
+
+        Http::fake([
+            'https://graph.facebook.com/v21.0/106732507566763/messages' => Http::response([
+                'messages' => [['id' => 'wamid.HBg...+22890000001']],
+            ], 200),
+        ]);
+
+        $response = (new MetaWhatsAppProvider)->send('90000001', 'CoriSchool : note de Eya en Maths (Devoir) : 15.0/20.');
+
+        $this->assertTrue($response->success);
+        $this->assertSame('wamid.HBg...+22890000001', $response->externalId);
+
+        Http::assertSent(fn (HttpRequest $request) => $request->url() === 'https://graph.facebook.com/v21.0/106732507566763/messages'
+            && $request->hasHeader('Authorization', 'Bearer fake-whatsapp-token')
+            && $request->hasHeader('Content-Type', 'application/json')
+            && $request['messaging_product'] === 'whatsapp'
+            && $request['to'] === '+22890000001'
+            && $request['type'] === 'text'
+            && $request['text']['body'] === 'CoriSchool : note de Eya en Maths (Devoir) : 15.0/20.'
+        );
+    }
+
+    public function test_meta_whatsapp_normalizes_local_and_international_numbers_to_e164(): void
+    {
+        config([
+            'services.whatsapp.token' => 'fake-whatsapp-token',
+            'services.whatsapp.phone_number_id' => '106732507566763',
+        ]);
+
+        Http::fake([
+            'https://graph.facebook.com/*' => Http::response(['messages' => [['id' => 'wamid.ok']]], 200),
+        ]);
+
+        foreach (['90000001', '090000001', '22890000001', '+22890000001', '0022890000001'] as $input) {
+            (new MetaWhatsAppProvider)->send($input, 'Bonjour');
+        }
+
+        $destinations = collect(Http::recorded())
+            ->map(fn (array $pair) => $pair[0]['to'])
+            ->all();
+
+        $this->assertSame(
+            ['+22890000001', '+22890000001', '+22890000001', '+22890000001', '+22890000001'],
+            $destinations
+        );
+    }
+
+    public function test_meta_whatsapp_returns_failure_when_credentials_are_missing(): void
+    {
+        config(['services.whatsapp.token' => null, 'services.whatsapp.phone_number_id' => null]);
+
+        $response = (new MetaWhatsAppProvider)->send('90000001', 'Bonjour');
+
+        $this->assertFalse($response->success);
+        $this->assertStringContainsString('WHATSAPP_TOKEN is not configured.', (string) $response->error);
+    }
+
+    public function test_meta_whatsapp_returns_failure_on_graph_api_error(): void
+    {
+        config([
+            'services.whatsapp.token' => 'fake-whatsapp-token',
+            'services.whatsapp.phone_number_id' => '106732507566763',
+        ]);
+
+        Http::fake([
+            'https://graph.facebook.com/*' => Http::response([
+                'error' => ['message' => 'Invalid OAuth access token.', 'code' => 190],
+            ], 400),
+        ]);
+
+        $response = (new MetaWhatsAppProvider)->send('+22890000001', 'Bonjour');
+
+        $this->assertFalse($response->success);
+        $this->assertStringContainsString('Invalid OAuth access token.', (string) $response->error);
+    }
+
+    public function test_meta_whatsapp_rejects_invalid_phone_number_without_calling_api(): void
+    {
+        config([
+            'services.whatsapp.token' => 'fake-whatsapp-token',
+            'services.whatsapp.phone_number_id' => '106732507566763',
+        ]);
+
+        Http::fake();
+
+        $response = (new MetaWhatsAppProvider)->send('abc', 'Bonjour');
+
+        $this->assertFalse($response->success);
+        $this->assertStringContainsString('Numéro invalide', (string) $response->error);
+        Http::assertNothingSent();
+    }
+
+    public function test_notification_service_uses_whatsapp_channel_with_rich_message_when_provider_is_whatsapp(): void
+    {
+        config(['services.sms.provider' => 'whatsapp']);
+        Queue::fake();
+
+        $school = School::factory()->create();
+        ['evaluation' => $evaluation, 'guardian' => $guardian] = $this->makeEvaluationWithGuardian($school);
+
+        $created = app(NotificationService::class)->notifyForEvaluation($evaluation);
+
+        $this->assertSame(1, $created);
+        $notification = Notification::withoutGlobalScopes()->first();
+
+        $this->assertSame('whatsapp', $notification->channel);
+        $this->assertStringStartsWith('🎓 *'.$school->name.'*', $notification->message);
+        $this->assertStringContainsString('Bonjour '.$guardian->name.',', $notification->message);
+        $this->assertStringContainsString('15.0/20', $notification->message);
+        $this->assertStringContainsString('Merci pour votre confiance 🙏', $notification->message);
+
+        Queue::assertPushed(SendSmsNotificationJob::class);
+
+        config(['services.sms.provider' => 'log']);
+    }
+
+    public function test_notification_service_keeps_compact_message_on_sms_channel(): void
+    {
+        Queue::fake();
+
+        $school = School::factory()->create();
+        ['evaluation' => $evaluation] = $this->makeEvaluationWithGuardian($school);
+
+        app(NotificationService::class)->notifyForEvaluation($evaluation);
+
+        $notification = Notification::withoutGlobalScopes()->first();
+
+        $this->assertSame('sms', $notification->channel);
+        $this->assertStringContainsString('note de', $notification->message);
+        $this->assertStringNotContainsString('🎓', $notification->message);
     }
 
     public function test_admin_can_view_notification_history_scoped_to_their_school(): void

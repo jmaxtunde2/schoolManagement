@@ -297,4 +297,101 @@ class AttendanceWorkflowTest extends TestCase
             ->put("/parent/attendance/{$record->id}", ['status' => 'present'])
             ->assertNotFound();
     }
+
+    public function test_permission_requires_reason_and_is_automatically_justified(): void
+    {
+        $student = $this->student('Lea');
+        $date = now()->toDateString();
+        $teacherUser = $this->teacher->user;
+
+        $this->actingAsVerified($teacherUser)
+            ->post('/teacher/attendance', [
+                'class_room_id' => $this->classRoom->id,
+                'attendance_date' => $date,
+                'records' => [['student_id' => $student->id, 'status' => 'permission']],
+            ])
+            ->assertSessionHasErrors('records.0.reason');
+
+        $this->assertDatabaseCount('attendance_records', 0);
+
+        $this->actingAsVerified($teacherUser)
+            ->post('/teacher/attendance', [
+                'class_room_id' => $this->classRoom->id,
+                'attendance_date' => $date,
+                'records' => [[
+                    'student_id' => $student->id,
+                    'status' => 'permission',
+                    'reason' => 'Autorisation de sortie',
+                ]],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $record = AttendanceRecord::withoutGlobalScopes()->where('student_id', $student->id)->firstOrFail();
+        $this->assertSame(AttendanceStatus::Permission, $record->status);
+        $this->assertNotNull($record->justified_at);
+        $this->assertSame($teacherUser->id, $record->justified_by);
+        $this->assertNull($record->delay_minutes);
+    }
+
+    public function test_surveillant_can_update_record_to_permission_and_sets_justification(): void
+    {
+        $student = $this->student('Yao');
+        $record = AttendanceRecord::create([
+            'school_id' => $this->school->id,
+            'student_id' => $student->id,
+            'class_room_id' => $this->classRoom->id,
+            'attendance_date' => now()->toDateString(),
+            'status' => AttendanceStatus::Absent,
+        ]);
+
+        $surveillant = User::factory()->forSchool($this->school)->create(['role' => 'surveillant']);
+
+        $this->actingAsVerified($surveillant)
+            ->put("/surveillant/attendance/{$record->id}", ['status' => 'permission'])
+            ->assertSessionHasErrors('reason');
+
+        $this->actingAsVerified($surveillant)
+            ->put("/surveillant/attendance/{$record->id}", ['status' => 'permission', 'reason' => 'RDV médical'])
+            ->assertSessionHasNoErrors();
+
+        $fresh = $record->fresh();
+        $this->assertSame(AttendanceStatus::Permission, $fresh->status);
+        $this->assertNotNull($fresh->justified_at);
+        $this->assertSame($surveillant->id, $fresh->justified_by);
+        $this->assertNull($fresh->delay_minutes);
+
+        $this->actingAsVerified($surveillant)
+            ->get("/surveillant/attendance/students/{$student->id}")
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Staff/Attendance/Student')
+                ->where('stats.permission', 1));
+
+        $this->actingAsVerified($surveillant)
+            ->put("/surveillant/attendance/{$record->id}", ['status' => 'present'])
+            ->assertSessionHasNoErrors();
+
+        $fresh->refresh();
+        $this->assertSame(AttendanceStatus::Present, $fresh->status);
+        $this->assertNull($fresh->justified_at);
+        $this->assertNull($fresh->justified_by);
+    }
+
+    public function test_teacher_cannot_update_attendance_record(): void
+    {
+        $student = $this->student('Ada');
+        $record = AttendanceRecord::create([
+            'school_id' => $this->school->id,
+            'student_id' => $student->id,
+            'class_room_id' => $this->classRoom->id,
+            'attendance_date' => now()->toDateString(),
+            'status' => AttendanceStatus::Absent,
+        ]);
+
+        $this->actingAsVerified($this->teacher->user)
+            ->put("/teacher/attendance/{$record->id}", ['status' => 'present'])
+            ->assertForbidden();
+
+        $this->assertSame(AttendanceStatus::Absent, $record->fresh()->status);
+    }
 }

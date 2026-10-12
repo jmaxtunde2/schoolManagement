@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AttendanceStatus;
 use App\Models\Concerns\BelongsToSchool;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class AttendanceRecord extends Model
 {
     use BelongsToSchool;
+
+    protected $appends = ['recorded_at_label'];
 
     protected $fillable = [
         'student_id',
@@ -22,6 +25,7 @@ class AttendanceRecord extends Model
         'reason',
         'note',
         'recorded_by',
+        'recorded_at',
         'justified_at',
         'justified_by',
     ];
@@ -31,8 +35,35 @@ class AttendanceRecord extends Model
         return [
             'attendance_date' => 'date:Y-m-d',
             'status' => AttendanceStatus::class,
+            'recorded_at' => 'datetime',
             'justified_at' => 'datetime',
         ];
+    }
+
+    protected function recordedAtLabel(): Attribute
+    {
+        return Attribute::get(function () {
+            $at = $this->recorded_at ?? $this->created_at;
+
+            if (! $at) {
+                return null;
+            }
+
+            $days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+            $months = [
+                1 => 'jan', 'fév', 'mar', 'avr', 'mai', 'juin',
+                'juil', 'août', 'sep', 'oct', 'nov', 'déc',
+            ];
+
+            return sprintf(
+                '%s %d %s %d %s',
+                $days[(int) $at->dayOfWeek],
+                (int) $at->day,
+                $months[(int) $at->month],
+                (int) $at->year,
+                $at->format('H:i:s'),
+            );
+        });
     }
 
     public function student(): BelongsTo

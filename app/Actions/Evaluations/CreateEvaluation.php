@@ -2,6 +2,7 @@
 
 namespace App\Actions\Evaluations;
 
+use App\Models\AcademicPeriod;
 use App\Models\Evaluation;
 use App\Models\Student;
 use App\Models\Teacher;
@@ -24,11 +25,14 @@ class CreateEvaluation
             throw new RuntimeException("Aucune année scolaire n'est configurée pour cet établissement. Contactez l'administration.");
         }
 
-        return DB::transaction(function () use ($teacher, $data, $academicYearId, $actorId) {
+        $academicPeriodId = $this->currentPeriodId($teacher->school_id, $academicYearId);
+
+        return DB::transaction(function () use ($teacher, $data, $academicYearId, $academicPeriodId, $actorId) {
             $evaluation = Evaluation::create([
                 ...$data,
                 'teacher_id' => $teacher->id,
                 'academic_year_id' => $academicYearId,
+                'academic_period_id' => $academicPeriodId,
                 'created_by' => $actorId,
                 'entered_by' => $actorId,
                 'status' => 'draft',
@@ -42,5 +46,17 @@ class CreateEvaluation
 
             return $evaluation->fresh(['teacher.user', 'classRoom', 'subject']);
         });
+    }
+
+    private function currentPeriodId(int $schoolId, int $academicYearId): ?int
+    {
+        return AcademicPeriod::withoutGlobalScopes()
+            ->where('school_id', $schoolId)
+            ->where('academic_year_id', $academicYearId)
+            ->where('is_closed', false)
+            ->whereDate('starts_at', '<=', now())
+            ->whereDate('ends_at', '>=', now())
+            ->orderBy('position')
+            ->value('id');
     }
 }

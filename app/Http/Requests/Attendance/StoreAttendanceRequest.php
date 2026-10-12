@@ -86,6 +86,14 @@ class StoreAttendanceRequest extends FormRequest
                         'Indiquez le nombre de minutes de retard.'
                     );
                 }
+
+                if (($record['status'] ?? null) === AttendanceStatus::Permission->value
+                    && blank($record['reason'] ?? null)) {
+                    $validator->errors()->add(
+                        "records.{$index}.reason",
+                        'Indiquez le motif de la permission.'
+                    );
+                }
             }
         });
     }

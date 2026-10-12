@@ -101,6 +101,7 @@ class ChildController extends Controller
                 'justified' => (clone $baseQuery)->where('status', AttendanceStatus::Absent->value)->whereNotNull('justified_at')->count(),
                 'late' => (clone $baseQuery)->where('status', AttendanceStatus::Late->value)->count(),
                 'delay_minutes' => (clone $baseQuery)->sum('delay_minutes'),
+                'permission' => (clone $baseQuery)->where('status', AttendanceStatus::Permission->value)->count(),
             ],
         ]);
     }

@@ -8,12 +8,17 @@ import {
     AlertTriangle,
     Eye,
     ArrowRight,
+    Wallet,
+    ShoppingCart,
+    HandCoins,
 } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Card from '@/Components/UI/Card';
 import Badge from '@/Components/UI/Badge';
 import EmptyState from '@/Components/UI/EmptyState';
+import ExecutionBrief from '@/Components/Timetable/ExecutionBrief';
+import RecentIncidents from '@/Components/Attendance/RecentIncidents';
 
 const statusTones = {
     draft: 'slate',
@@ -29,10 +34,21 @@ const statusLabels = {
     returned: 'Retournée pour correction',
 };
 
+const expenseTones = { pending: 'amber', approved: 'green', rejected: 'red' };
+const contributionTones = { paid: 'green', partial: 'amber', pending: 'red' };
+
+const money = (value) => `${Number(value ?? 0).toLocaleString('fr-FR')} F`;
+
 export default function Dashboard({
     stats,
     recentEvaluations,
+    timetableBrief,
+    recentIncidents,
     routePrefix = 'admin',
+    finance = false,
+    recentExpenses = [],
+    recentSales = [],
+    recentContributions = [],
 }) {
     const { auth } = usePage().props;
 
@@ -83,6 +99,101 @@ export default function Dashboard({
         },
     ];
 
+    const recentEvaluationsCard = (
+        <Card className="overflow-hidden">
+            <Card.Header
+                title="Évaluations récentes"
+                actions={
+                    <Link
+                        href={route(
+                            `${routePrefix}.evaluations.index`
+                        )}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-80"
+                        style={{
+                            color: 'var(--color-primary)',
+                        }}
+                    >
+                        Voir tout
+                        <ArrowRight className="h-4 w-4" />
+                    </Link>
+                }
+            />
+
+            <Card.Body className="p-0">
+                {recentEvaluations.length === 0 ? (
+                    <div className="p-6">
+                        <EmptyState
+                            title="Aucune évaluation pour l'instant"
+                            description="Les évaluations créées par les enseignants apparaîtront ici."
+                        />
+                    </div>
+                ) : (
+                    <ul className="divide-y divide-slate-100">
+                        {recentEvaluations.map((evaluation) => (
+                            <li key={evaluation.id}>
+                                <Link
+                                    href={route(
+                                        `${routePrefix}.evaluations.grades`,
+                                        evaluation.id
+                                    )}
+                                    className="group flex items-center justify-between gap-4 px-6 py-4 transition-colors hover:bg-slate-50"
+                                >
+                                    {/* Evaluation information */}
+                                    <div className="flex min-w-0 items-center gap-4">
+                                        {/* Icon */}
+                                        <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary sm:flex">
+                                            <ClipboardList className="h-5 w-5" />
+                                        </div>
+
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <p className="truncate text-sm font-semibold text-slate-800 group-hover:text-primary">
+                                                    {evaluation.title}
+                                                </p>
+                                            </div>
+
+                                            <p className="mt-1 truncate text-xs text-slate-500">
+                                                {evaluation.subject.name}
+                                                {' · '}
+                                                {evaluation.class_room.name}
+                                                {' · '}
+                                                {evaluation.teacher.user.name}
+                                                {' · '}
+                                                {evaluation.evaluation_date}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Status + consultation */}
+                                    <div className="flex shrink-0 items-center gap-3">
+                                        <Badge
+                                            tone={
+                                                statusTones[
+                                                    evaluation.status
+                                                ] ?? 'slate'
+                                            }
+                                        >
+                                            {statusLabels[
+                                                evaluation.status
+                                            ] ?? evaluation.status}
+                                        </Badge>
+
+                                        <span className="hidden items-center gap-1 text-xs font-medium text-slate-500 transition-colors group-hover:text-primary sm:flex">
+                                            <Eye className="h-4 w-4" />
+                                            Consulter
+                                        </span>
+
+                                        <ArrowRight className="h-4 w-4 text-slate-300 transition-all group-hover:translate-x-1 group-hover:text-primary" />
+                                    </div>
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </Card.Body>
+        </Card>
+    );
+
     return (
         <AuthenticatedLayout
             title={`Bonjour, ${auth.user.name.split(' ')[0]}`}
@@ -124,99 +235,174 @@ export default function Dashboard({
                 })}
             </div>
 
-            {/* Recent evaluations */}
-            <Card className="mt-6 overflow-hidden">
-                <Card.Header
-                    title="Évaluations récentes"
-                    actions={
+            {/* Timetable execution brief */}
+            <ExecutionBrief brief={timetableBrief} routePrefix={routePrefix} />
+
+            {/* Latest delays & absences + recent evaluations */}
+            {finance ? (
+                <RecentIncidents
+                    incidents={recentIncidents}
+                    routePrefix={routePrefix}
+                />
+            ) : (
+                <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <RecentIncidents
+                        incidents={recentIncidents}
+                        routePrefix={routePrefix}
+                        className=""
+                    />
+
+                    {recentEvaluationsCard}
+                </div>
+            )}
+
+            {/* Recent finance */}
+            {finance && (
+                <section className="mt-6">
+                    <div className="mb-4 flex items-end justify-between">
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-wider text-violet-600">Gestion financière</p>
+                            <h2 className="mt-1 text-lg font-bold tracking-tight text-slate-950">Finances récentes</h2>
+                        </div>
                         <Link
-                            href={route(
-                                `${routePrefix}.evaluations.index`
-                            )}
-                            className="inline-flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-80"
-                            style={{
-                                color: 'var(--color-primary)',
-                            }}
+                            href={route(`${routePrefix}.expenses.index`)}
+                            className="inline-flex items-center gap-1.5 text-sm font-medium hover:opacity-80"
+                            style={{ color: 'var(--color-primary)' }}
                         >
-                            Voir tout
+                            Ouvrir la finance
                             <ArrowRight className="h-4 w-4" />
                         </Link>
-                    }
-                />
+                    </div>
 
-                <Card.Body className="p-0">
-                    {recentEvaluations.length === 0 ? (
-                        <div className="p-6">
-                            <EmptyState
-                                title="Aucune évaluation pour l'instant"
-                                description="Les évaluations créées par les enseignants apparaîtront ici."
-                            />
-                        </div>
-                    ) : (
-                        <ul className="divide-y divide-slate-100">
-                            {recentEvaluations.map((evaluation) => (
-                                <li key={evaluation.id}>
-                                    <Link
-                                        href={route(
-                                            `${routePrefix}.evaluations.grades`,
-                                            evaluation.id
-                                        )}
-                                        className="group flex items-center justify-between gap-4 px-6 py-4 transition-colors hover:bg-slate-50"
-                                    >
-                                        {/* Evaluation information */}
-                                        <div className="flex min-w-0 items-center gap-4">
-                                            {/* Icon */}
-                                            <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary sm:flex">
-                                                <ClipboardList className="h-5 w-5" />
-                                            </div>
-
-                                            <div className="min-w-0">
-                                                <div className="flex items-center gap-2">
-                                                    <p className="truncate text-sm font-semibold text-slate-800 group-hover:text-primary">
-                                                        {evaluation.title}
-                                                    </p>
-                                                </div>
-
-                                                <p className="mt-1 truncate text-xs text-slate-500">
-                                                    {evaluation.subject.name}
-                                                    {' · '}
-                                                    {evaluation.class_room.name}
-                                                    {' · '}
-                                                    {evaluation.teacher.user.name}
-                                                    {' · '}
-                                                    {evaluation.evaluation_date}
-                                                </p>
-                                            </div>
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        <FinanceCard
+                            title="Dépenses récentes"
+                            icon={Wallet}
+                            href={route(`${routePrefix}.expenses.index`)}
+                            items={recentExpenses}
+                            emptyTitle="Aucune dépense enregistrée"
+                            renderItem={(expense) => (
+                                <>
+                                    <div className="flex min-w-0 items-center gap-4">
+                                        <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600 sm:flex">
+                                            <Wallet className="h-5 w-5" />
                                         </div>
-
-                                        {/* Status + consultation */}
-                                        <div className="flex shrink-0 items-center gap-3">
-                                            <Badge
-                                                tone={
-                                                    statusTones[
-                                                        evaluation.status
-                                                    ] ?? 'slate'
-                                                }
-                                            >
-                                                {statusLabels[
-                                                    evaluation.status
-                                                ] ?? evaluation.status}
-                                            </Badge>
-
-                                            <span className="hidden items-center gap-1 text-xs font-medium text-slate-500 transition-colors group-hover:text-primary sm:flex">
-                                                <Eye className="h-4 w-4" />
-                                                Consulter
-                                            </span>
-
-                                            <ArrowRight className="h-4 w-4 text-slate-300 transition-all group-hover:translate-x-1 group-hover:text-primary" />
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-semibold text-slate-800">{expense.label}</p>
+                                            <p className="mt-0.5 truncate text-xs text-slate-500">
+                                                {expense.category_label} · {expense.expense_date}
+                                            </p>
                                         </div>
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </Card.Body>
-            </Card>
+                                    </div>
+                                    <div className="flex shrink-0 items-center gap-3">
+                                        <Badge tone={expenseTones[expense.status] ?? 'slate'}>{expense.status_label}</Badge>
+                                        <span className="whitespace-nowrap text-sm font-bold text-slate-800">{money(expense.amount)}</span>
+                                    </div>
+                                </>
+                            )}
+                        />
+
+                        <FinanceCard
+                            title="Ventes récentes"
+                            icon={ShoppingCart}
+                            href={route(`${routePrefix}.sales.index`)}
+                            items={recentSales}
+                            emptyTitle="Aucune vente enregistrée"
+                            renderItem={(sale) => (
+                                <>
+                                    <div className="flex min-w-0 items-center gap-4">
+                                        <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 sm:flex">
+                                            <ShoppingCart className="h-5 w-5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-semibold text-slate-800">{sale.item}</p>
+                                            <p className="mt-0.5 truncate text-xs text-slate-500">
+                                                {sale.category_label} · {sale.quantity} article(s) · {sale.sold_at}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="whitespace-nowrap text-sm font-bold text-emerald-700">{money(sale.total)}</span>
+                                </>
+                            )}
+                        />
+
+                        <FinanceCard
+                            title="Contributions récentes"
+                            icon={HandCoins}
+                            href={route(`${routePrefix}.contributions.index`)}
+                            items={recentContributions}
+                            emptyTitle="Aucune contribution enregistrée"
+                            className="lg:col-span-2"
+                            renderItem={(contribution) => (
+                                <>
+                                    <div className="flex min-w-0 items-center gap-4">
+                                        <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 sm:flex">
+                                            <HandCoins className="h-5 w-5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-semibold text-slate-800">{contribution.student}</p>
+                                            <p className="mt-0.5 truncate text-xs text-slate-500">{contribution.academic_year}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex shrink-0 items-center gap-3">
+                                        <Badge tone={contributionTones[contribution.status] ?? 'slate'}>
+                                            {contribution.status === 'paid' ? 'Payée' : contribution.status === 'partial' ? 'Partielle' : 'En attente'}
+                                        </Badge>
+                                        <span className="whitespace-nowrap text-sm font-bold text-slate-800">
+                                            {money(contribution.amount_paid)}<span className="font-normal text-slate-400"> / {money(contribution.amount_due)}</span>
+                                        </span>
+                                    </div>
+                                </>
+                            )}
+                        />
+                    </div>
+                </section>
+            )}
+
+            {/* Recent evaluations */}
+            {finance && (
+                <div className="mt-6">{recentEvaluationsCard}</div>
+            )}
         </AuthenticatedLayout>
+    );
+}
+
+function FinanceCard({ title, icon: Icon, href, items, emptyTitle, renderItem, className = '' }) {
+    return (
+        <Card className={`overflow-hidden ${className}`}>
+            <Card.Header
+                title={title}
+                actions={
+                    <Link
+                        href={href}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-80"
+                        style={{ color: 'var(--color-primary)' }}
+                    >
+                        Voir tout
+                        <ArrowRight className="h-4 w-4" />
+                    </Link>
+                }
+            />
+            <Card.Body className="p-0">
+                {items.length === 0 ? (
+                    <div className="p-6">
+                        <EmptyState title={emptyTitle} description="Les dernières opérations apparaîtront ici." />
+                    </div>
+                ) : (
+                    <ul className="divide-y divide-slate-100">
+                        {items.map((item, index) => (
+                            <li key={`${item.id}-${index}`}>
+                                <Link
+                                    href={href}
+                                    className="group flex items-center justify-between gap-4 px-6 py-4 transition-colors hover:bg-slate-50"
+                                >
+                                    {renderItem(item)}
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </Card.Body>
+        </Card>
     );
 }

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Censeur;
 
+use App\Actions\Attendance\BuildRecentIncidents;
+use App\Actions\Timetable\BuildTimetableBrief;
 use App\Http\Controllers\Controller;
 use App\Models\ClassRoom;
 use App\Models\Evaluation;
@@ -12,7 +14,7 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-    public function __invoke()
+    public function __invoke(BuildTimetableBrief $brief, BuildRecentIncidents $incidents)
     {
         return Inertia::render('Admin/Dashboard', [
             'stats' => [
@@ -29,6 +31,9 @@ class DashboardController extends Controller
                 'teacher.user:id,name',
             ])->latest('evaluation_date')->limit(8)->get(),
             'routePrefix' => 'censeur',
+            'finance' => false,
+            'timetableBrief' => $brief->handle(),
+            'recentIncidents' => $incidents->handle(10),
         ]);
     }
 }

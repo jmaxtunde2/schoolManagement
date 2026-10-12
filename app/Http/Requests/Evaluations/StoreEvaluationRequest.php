@@ -16,7 +16,7 @@ class StoreEvaluationRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['class_id' => ['required', 'integer', Rule::exists('classes', 'id')->where('school_id', $this->user()->school_id)], 'subject_id' => ['required', 'integer', Rule::exists('subjects', 'id')->where('school_id', $this->user()->school_id)], 'teacher_id' => [Rule::requiredIf($this->user()->isSecretary()), 'nullable', 'integer', Rule::exists('teachers', 'id')->where('school_id', $this->user()->school_id)], 'title' => ['required', 'string', 'max:255'], 'type' => ['required', Rule::in(array_column(EvaluationType::cases(), 'value'))], 'evaluation_date' => ['required', 'date'], 'max_score' => ['required', 'numeric', 'min:1', 'max:1000'], 'coefficient' => ['required', 'numeric', 'min:0.5', 'max:10']];
+        return ['class_id' => ['required', 'integer', Rule::exists('classes', 'id')->where('school_id', $this->user()->school_id)], 'subject_id' => ['required', 'integer', Rule::exists('subjects', 'id')->where('school_id', $this->user()->school_id)], 'teacher_id' => [Rule::requiredIf($this->user()->isSecretary()), 'nullable', 'integer', Rule::exists('teachers', 'id')->where('school_id', $this->user()->school_id)], 'title' => ['required', 'string', 'max:255'], 'type' => ['required', Rule::in(array_column(EvaluationType::cases(), 'value'))], 'evaluation_date' => ['required', 'date', 'before_or_equal:today'], 'max_score' => ['required', 'numeric', 'min:1', 'max:1000'], 'coefficient' => ['required', 'numeric', 'min:0.5', 'max:10']];
     }
 
     public function withValidator(Validator $validator): void
@@ -33,5 +33,10 @@ class StoreEvaluationRequest extends FormRequest
     public function attributes(): array
     {
         return ['class_id' => 'classe', 'subject_id' => 'matière', 'teacher_id' => 'enseignant', 'evaluation_date' => "date de l'évaluation", 'max_score' => 'barème', 'coefficient' => 'coefficient'];
+    }
+
+    public function messages(): array
+    {
+        return ['evaluation_date.before_or_equal' => "La date de l'évaluation ne peut pas être dans le futur."];
     }
 }

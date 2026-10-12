@@ -3,16 +3,19 @@ import { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 
 import {
+    BarChart3,
     CalendarDays,
     CheckCircle2,
     ClipboardCheck,
     Clock3,
     Edit3,
     Filter,
+    LineChart,
     Plus,
     Search,
     ShieldCheck,
     UserCheck,
+    UserRound,
     UserX,
     XCircle,
     ArrowRight,
@@ -27,18 +30,22 @@ import Input from '@/Components/UI/Input';
 import Modal from '@/Components/UI/Modal';
 import Pagination from '@/Components/UI/Pagination';
 import Select from '@/Components/UI/Select';
+import Tabs from '@/Components/UI/Tabs';
 import Textarea from '@/Components/UI/Textarea';
+import EvolutionChart from '@/Components/Attendance/EvolutionChart';
 
 const statusLabels = {
     present: 'Présent',
     absent: 'Absent',
     late: 'Retard',
+    permission: 'Permission',
 };
 
 const statusTones = {
     present: 'green',
     absent: 'red',
     late: 'amber',
+    permission: 'blue',
 };
 
 const justificationLabels = {
@@ -53,8 +60,16 @@ export default function AttendanceIndex({
     filters,
     stats,
     routePrefix,
+    evolution,
+    initialTab = 'liste',
 }) {
     const [editing, setEditing] = useState(null);
+    const [activeTab, setActiveTab] = useState(initialTab);
+    const [chartFilters, setChartFilters] = useState({
+        granularity: evolution?.granularity ?? 'day',
+        start: evolution?.granularity === 'custom' ? evolution.start : '',
+        end: evolution?.granularity === 'custom' ? evolution.end : '',
+    });
 
     const editForm = useForm({
         status: 'absent',
@@ -62,6 +77,37 @@ export default function AttendanceIndex({
         reason: '',
         note: '',
     });
+
+    function applyChartFilters(event) {
+        event.preventDefault();
+
+        const params = {
+            ...filters,
+            tab: 'evolution',
+            granularity: chartFilters.granularity,
+        };
+
+        if (chartFilters.granularity === 'custom') {
+            params.start = chartFilters.start || undefined;
+            params.end = chartFilters.end || undefined;
+        } else {
+            delete params.start;
+            delete params.end;
+        }
+
+        Object.keys(params).forEach((key) => {
+            if (params[key] === '' || params[key] == null) {
+                delete params[key];
+            }
+        });
+
+        router.get(route(`${routePrefix}.attendance.index`), params, {
+            only: ['evolution'],
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    }
 
     function applyFilters(event) {
         event.preventDefault();
@@ -241,12 +287,117 @@ export default function AttendanceIndex({
                 ====================================================== */}
                 <Card className="overflow-hidden">
 
-                    <Card.Header
-                        title="Relevés d’assiduité"
-                        description={`${records.total} relevé${records.total > 1 ? 's' : ''} enregistré${records.total > 1 ? 's' : ''}`}
-                    />
+                    <div className="px-4 pt-3 sm:px-5">
+                        <Tabs
+                            active={activeTab}
+                            onChange={setActiveTab}
+                            tabs={[
+                                {
+                                    key: 'evolution',
+                                    label: 'Évolution',
+                                },
+                                {
+                                    key: 'liste',
+                                    label: 'Liste des relevés',
+                                },
+                            ]}
+                        />
+                    </div>
 
-                    <Card.Body className="p-0">
+                    {activeTab === 'evolution' ? (
+                        <Card.Body>
+                            <form
+                                onSubmit={applyChartFilters}
+                                className="mb-5 space-y-4"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                                        <LineChart className="h-4 w-4" />
+                                    </div>
+
+                                    <div>
+                                        <p className="text-sm font-semibold text-slate-800">
+                                            Évolution des retards & absences
+                                        </p>
+
+                                        <p className="text-xs text-slate-500">
+                                            Choisissez une période d’analyse.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-3 sm:grid-cols-3">
+                                    <Select
+                                        value={chartFilters.granularity}
+                                        onChange={(event) =>
+                                            setChartFilters((current) => ({
+                                                ...current,
+                                                granularity:
+                                                    event.target.value,
+                                            }))
+                                        }
+                                    >
+                                        <option value="day">
+                                            Par jour (14 derniers jours)
+                                        </option>
+                                        <option value="week">
+                                            Par semaine (12 dernières)
+                                        </option>
+                                        <option value="month">
+                                            Par mois (12 derniers)
+                                        </option>
+                                        <option value="custom">
+                                            Période personnalisée
+                                        </option>
+                                    </Select>
+
+                                    {chartFilters.granularity === 'custom' && (
+                                        <>
+                                            <Input
+                                                type="date"
+                                                value={chartFilters.start}
+                                                onChange={(event) =>
+                                                    setChartFilters(
+                                                        (current) => ({
+                                                            ...current,
+                                                            start: event.target
+                                                                .value,
+                                                        })
+                                                    )
+                                                }
+                                                aria-label="Date de début"
+                                            />
+
+                                            <Input
+                                                type="date"
+                                                value={chartFilters.end}
+                                                onChange={(event) =>
+                                                    setChartFilters(
+                                                        (current) => ({
+                                                            ...current,
+                                                            end: event.target
+                                                                .value,
+                                                        })
+                                                    )
+                                                }
+                                                aria-label="Date de fin"
+                                            />
+                                        </>
+                                    )}
+                                </div>
+
+                                <div className="flex justify-end">
+                                    <Button type="submit" variant="secondary">
+                                        <BarChart3 className="h-4 w-4" />
+                                        Analyser
+                                    </Button>
+                                </div>
+                            </form>
+
+                            <EvolutionChart evolution={evolution} />
+                        </Card.Body>
+                    ) : (
+                        <Card.Body className="p-0">
 
                         {/* =================================================
                             FILTER TOOLBAR
@@ -341,6 +492,10 @@ export default function AttendanceIndex({
 
                                         <option value="present">
                                             Présent
+                                        </option>
+
+                                        <option value="permission">
+                                            Permission
                                         </option>
                                     </Select>
 
@@ -443,6 +598,14 @@ export default function AttendanceIndex({
 
                                                 <th className="px-4 py-4">
                                                     Justification
+                                                </th>
+
+                                                <th className="px-4 py-4">
+                                                    Ajouté par
+                                                </th>
+
+                                                <th className="px-4 py-4">
+                                                    Ajouté le
                                                 </th>
 
                                                 <th className="px-6 py-4 text-right">
@@ -600,6 +763,24 @@ export default function AttendanceIndex({
                                                                     —
                                                                 </span>
                                                             )}
+                                                        </td>
+
+                                                        <td className="px-4 py-4">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                                                                    <UserRound className="h-4 w-4" />
+                                                                </div>
+
+                                                                <span className="font-medium text-slate-700">
+                                                                    {record.recorder_name ||
+                                                                        '—'}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+
+                                                        <td className="whitespace-nowrap px-4 py-4 text-slate-600">
+                                                            {record.recorded_at ||
+                                                                '—'}
                                                         </td>
 
                                                         <td className="px-6 py-4">
@@ -766,6 +947,26 @@ export default function AttendanceIndex({
                                                     />
                                                 </div>
 
+                                                <div className="mt-3 grid grid-cols-2 gap-3">
+                                                    <InfoItem
+                                                        icon={UserRound}
+                                                        label="Ajouté par"
+                                                        value={
+                                                            record.recorder_name ||
+                                                            '—'
+                                                        }
+                                                    />
+
+                                                    <InfoItem
+                                                        icon={Clock3}
+                                                        label="Ajouté le"
+                                                        value={
+                                                            record.recorded_at ||
+                                                            '—'
+                                                        }
+                                                    />
+                                                </div>
+
                                                 {record.reason && (
                                                     <div className="mt-3 rounded-xl bg-slate-50 p-3">
                                                         <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
@@ -877,7 +1078,8 @@ export default function AttendanceIndex({
                                 <Pagination meta={records} />
                             </div>
                         )}
-                    </Card.Body>
+                        </Card.Body>
+                    )}
                 </Card>
             </div>
 
@@ -955,6 +1157,10 @@ export default function AttendanceIndex({
                             <option value="late">
                                 Retard
                             </option>
+
+                            <option value="permission">
+                                Permission
+                            </option>
                         </Select>
                     </div>
 
@@ -1002,6 +1208,31 @@ export default function AttendanceIndex({
                             <span className="mt-1 block text-xs font-normal text-slate-400">
                                 Facultatif — peut être complété lors de
                                 la justification.
+                            </span>
+                        </label>
+                    )}
+
+                    {editForm.data.status === 'permission' && (
+                        <label className="block text-sm font-semibold text-slate-700">
+                            Motif de la permission
+
+                            <Input
+                                className="mt-1.5"
+                                value={editForm.data.reason}
+                                onChange={(event) =>
+                                    editForm.setData(
+                                        'reason',
+                                        event.target.value
+                                    )
+                                }
+                                error={editForm.errors.reason}
+                                placeholder="Autorisation de sortie, RDV médical…"
+                                maxLength={500}
+                            />
+
+                            <span className="mt-1 block text-xs font-normal text-sky-600">
+                                Obligatoire — une permission est
+                                considérée comme justifiée.
                             </span>
                         </label>
                     )}

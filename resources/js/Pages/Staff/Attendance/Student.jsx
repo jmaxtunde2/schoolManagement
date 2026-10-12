@@ -19,12 +19,14 @@ const statusLabels = {
     present: 'Présent',
     absent: 'Absent',
     late: 'Retard',
+    permission: 'Permission',
 };
 
 const statusTones = {
     present: 'green',
     absent: 'red',
     late: 'amber',
+    permission: 'blue',
 };
 
 export default function AttendanceStudent({
@@ -97,7 +99,7 @@ export default function AttendanceStudent({
                 </div>
 
                 {/* Metrics */}
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
                     <Metric
                         icon={UserX}
                         label="Absences"
@@ -110,6 +112,13 @@ export default function AttendanceStudent({
                         label="Justifiées"
                         value={stats.justified}
                         gradient="from-emerald-500 to-teal-600"
+                    />
+
+                    <Metric
+                        icon={ShieldCheck}
+                        label="Permissions"
+                        value={stats.permission}
+                        gradient="from-sky-500 to-indigo-600"
                     />
 
                     <Metric
@@ -269,6 +278,9 @@ export default function AttendanceStudent({
                                                                         justificationLabel
                                                                     }
                                                                 />
+                                                            ) : record.status ===
+                                                              'permission' ? (
+                                                                <JustificationBadge label="Justifiée" />
                                                             ) : (
                                                                 <span className="text-slate-300">
                                                                     —
@@ -282,11 +294,21 @@ export default function AttendanceStudent({
                                                                     <UserRound className="h-4 w-4" />
                                                                 </div>
 
-                                                                <span className="font-medium text-slate-700">
-                                                                    {record.recorder
-                                                                        ?.name ||
-                                                                        '—'}
-                                                                </span>
+                                                                <div>
+                                                                    <p className="font-medium text-slate-700">
+                                                                        {record.recorder
+                                                                            ?.name ||
+                                                                            '—'}
+                                                                    </p>
+
+                                                                    {record.recorded_at_label && (
+                                                                        <p className="mt-0.5 text-xs text-slate-500">
+                                                                            {
+                                                                                record.recorded_at_label
+                                                                            }
+                                                                        </p>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -390,6 +412,8 @@ export default function AttendanceStudent({
                                                             {record.recorder
                                                                 ?.name || '—'}
                                                         </span>
+                                                        {record.recorded_at_label &&
+                                                            ` · ${record.recorded_at_label}`}
                                                     </span>
                                                 </div>
                                             </div>

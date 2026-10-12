@@ -41,7 +41,7 @@ class TeacherImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             $user = User::firstOrNew(['email' => $data['email']]);
             $isNewUser = ! $user->exists;
 
-            $user->fill([
+            $user->forceFill([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'password' => Hash::make($data['password'] ?? 'password123'),

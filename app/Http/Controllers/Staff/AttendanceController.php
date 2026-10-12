@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Staff;
 
+use App\Actions\Attendance\BuildAttendanceEvolution;
 use App\Actions\Attendance\RecordDailyAttendance;
 use App\Enums\AttendanceJustificationStatus;
 use App\Enums\AttendanceStatus;
@@ -24,13 +25,13 @@ use Inertia\Response;
 
 class AttendanceController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, BuildAttendanceEvolution $evolution): Response
     {
         Gate::authorize('viewAny', AttendanceRecord::class);
 
         $user = $request->user();
         $schoolId = $user->school_id;
-        $classIds = $this->classIdsFor($user);
+        $recordedBy = $user->isTeacher() ? $user->id : null;
         $query = AttendanceRecord::withoutGlobalScopes()
             ->where('school_id', $schoolId)
             ->with([
@@ -42,8 +43,8 @@ class AttendanceController extends Controller
                 'justifications.reviewer:id,name',
             ]);
 
-        if ($classIds !== null) {
-            $query->whereIn('class_room_id', $classIds);
+        if ($recordedBy !== null) {
+            $query->where('recorded_by', $recordedBy);
         }
 
         $filters = $request->validate([
@@ -53,6 +54,10 @@ class AttendanceController extends Controller
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
             'status' => ['nullable', Rule::enum(AttendanceStatus::class)],
             'justification' => ['nullable', Rule::in(['pending', 'approved', 'rejected', 'unjustified'])],
+            'granularity' => ['nullable', Rule::in(BuildAttendanceEvolution::GRANULARITIES)],
+            'start' => ['nullable', 'date'],
+            'end' => ['nullable', 'date'],
+            'tab' => ['nullable', Rule::in(['evolution', 'liste'])],
         ]);
 
         if (! empty($filters['class_id'])) {
@@ -86,13 +91,11 @@ class AttendanceController extends Controller
 
         $stats = AttendanceRecord::withoutGlobalScopes()
             ->where('school_id', $schoolId)
-            ->when($classIds !== null, fn ($records) => $records->whereIn('class_room_id', $classIds));
+            ->when($recordedBy !== null, fn ($records) => $records->where('recorded_by', $recordedBy));
         $today = now()->toDateString();
         $monthStart = now()->startOfMonth()->toDateString();
 
-        $routePrefix = $user->isAdmin()
-            ? 'admin'
-            : ($user->isCenseur() ? 'censeur' : 'teacher');
+        $routePrefix = $this->routePrefix($request);
 
         $records = $query
             ->latest('attendance_date')
@@ -115,6 +118,7 @@ class AttendanceController extends Controller
                 'class_name' => $record->classRoom?->name,
                 'period_name' => $record->period?->name,
                 'recorder_name' => $record->recorder?->name,
+                'recorded_at' => $record->recorded_at_label,
                 'justifications' => $record->justifications->map(fn (AttendanceJustification $justification) => [
                     'id' => $justification->id,
                     'parent_name' => $justification->parent?->name,
@@ -134,6 +138,12 @@ class AttendanceController extends Controller
             ]),
             'filters' => $filters,
             'routePrefix' => $routePrefix,
+            'initialTab' => $filters['tab'] ?? 'liste',
+            'evolution' => $evolution->handle(
+                $filters['granularity'] ?? 'day',
+                $filters['start'] ?? null,
+                $filters['end'] ?? null,
+            ),
             'stats' => [
                 'absent_today' => (clone $stats)->whereDate('attendance_date', $today)->where('status', AttendanceStatus::Absent->value)->count(),
                 'late_today' => (clone $stats)->whereDate('attendance_date', $today)->where('status', AttendanceStatus::Late->value)->count(),
@@ -199,7 +209,7 @@ class AttendanceController extends Controller
             'students' => $students,
             'attendanceDate' => $date,
             'periods' => $periods,
-            'routePrefix' => $user->isAdmin() ? 'admin' : ($user->isCenseur() ? 'censeur' : 'teacher'),
+            'routePrefix' => $this->routePrefix($request),
         ]);
     }
 
@@ -238,13 +248,26 @@ class AttendanceController extends Controller
             return back()->withErrors(['delay_minutes' => 'Indiquez le nombre de minutes de retard.']);
         }
 
+        if ($data['status'] === AttendanceStatus::Permission->value && blank($data['reason'] ?? null)) {
+            return back()->withErrors(['reason' => 'Indiquez le motif de la permission.']);
+        }
+
         $before = $attendance->only(['status', 'delay_minutes', 'reason', 'note', 'justified_at', 'justified_by']);
         $attendance->fill([
             ...$data,
             'delay_minutes' => $data['status'] === AttendanceStatus::Late->value ? $data['delay_minutes'] : null,
-            'justified_at' => $data['status'] === AttendanceStatus::Absent->value ? $attendance->justified_at : null,
-            'justified_by' => $data['status'] === AttendanceStatus::Absent->value ? $attendance->justified_by : null,
+            'justified_at' => match ($data['status']) {
+                AttendanceStatus::Permission->value => $attendance->justified_at ?? now(),
+                AttendanceStatus::Absent->value => $attendance->justified_at,
+                default => null,
+            },
+            'justified_by' => match ($data['status']) {
+                AttendanceStatus::Permission->value => $attendance->justified_by ?? $request->user()->id,
+                AttendanceStatus::Absent->value => $attendance->justified_by,
+                default => null,
+            },
             'recorded_by' => $request->user()->id,
+            'recorded_at' => now(),
         ])->save();
 
         $audit->log('attendance.updated', $attendance, [
@@ -297,6 +320,7 @@ class AttendanceController extends Controller
     public function studentHistory(Request $request, Student $student): Response
     {
         abort_unless((int) $student->school_id === (int) $request->user()->school_id, 404);
+        $recordedBy = $request->user()->isTeacher() ? $request->user()->id : null;
         if ($request->user()->isTeacher()) {
             abort_unless($student->class_id && $this->classIdsFor($request->user())?->contains($student->class_id), 403);
         }
@@ -304,6 +328,7 @@ class AttendanceController extends Controller
         $records = AttendanceRecord::withoutGlobalScopes()
             ->where('school_id', $request->user()->school_id)
             ->where('student_id', $student->id)
+            ->when($recordedBy !== null, fn ($records) => $records->where('recorded_by', $recordedBy))
             ->with(['recorder:id,name', 'justifications.parent:id,name', 'justifications.reviewer:id,name'])
             ->latest('attendance_date')
             ->paginate(30)
@@ -311,7 +336,8 @@ class AttendanceController extends Controller
 
         $base = AttendanceRecord::withoutGlobalScopes()
             ->where('school_id', $request->user()->school_id)
-            ->where('student_id', $student->id);
+            ->where('student_id', $student->id)
+            ->when($recordedBy !== null, fn ($records) => $records->where('recorded_by', $recordedBy));
 
         return Inertia::render('Staff/Attendance/Student', [
             'student' => [
@@ -327,6 +353,7 @@ class AttendanceController extends Controller
                 'unjustified' => (clone $base)->where('status', AttendanceStatus::Absent->value)->whereNull('justified_at')->count(),
                 'late' => (clone $base)->where('status', AttendanceStatus::Late->value)->count(),
                 'delay_minutes' => (clone $base)->sum('delay_minutes'),
+                'permission' => (clone $base)->where('status', AttendanceStatus::Permission->value)->count(),
             ],
             'routePrefix' => $this->routePrefix($request),
         ]);
@@ -355,8 +382,11 @@ class AttendanceController extends Controller
 
     private function routePrefix(Request $request): string
     {
-        return $request->user()->isAdmin()
-            ? 'admin'
-            : ($request->user()->isCenseur() ? 'censeur' : 'teacher');
+        return match (true) {
+            $request->user()->isAdmin() => 'admin',
+            $request->user()->isCenseur() => 'censeur',
+            $request->user()->isSurveillant() => 'surveillant',
+            default => 'teacher',
+        };
     }
 }

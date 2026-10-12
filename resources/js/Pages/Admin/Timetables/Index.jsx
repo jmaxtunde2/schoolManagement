@@ -27,10 +27,10 @@ const emptySlot = {
     class_id: '',
     subject_id: '',
     teacher_id: '',
+    room_id: '',
     day_of_week: 1,
     starts_at: '08:00',
     ends_at: '09:00',
-    room: '',
 };
 
 export default function Index({
@@ -40,6 +40,7 @@ export default function Index({
     selectedAcademicYearId,
     classes = [],
     subjects = [],
+    rooms = [],
     teachers = [],
     filters = {},
     canManage = false,
@@ -94,6 +95,7 @@ export default function Index({
             class_id: slot.class_id ?? '',
             subject_id: slot.subject_id ?? '',
             teacher_id: slot.teacher_id ?? '',
+            room_id: slot.room_id ?? '',
             day_of_week: slot.day_of_week,
             starts_at: slot.starts_at,
             ends_at: slot.ends_at,
@@ -118,6 +120,36 @@ export default function Index({
                 setDeleting(null);
             },
         });
+    }
+
+    const subjectTeacherIds = form.data.subject_id
+        ? teachers
+              .filter((teacher) =>
+                  teacher.subject_ids?.includes(
+                      Number(form.data.subject_id)
+                  )
+              )
+              .map((teacher) => String(teacher.id))
+        : [];
+
+    let teacherOptions = teachers.filter((teacher) =>
+        subjectTeacherIds.includes(String(teacher.id))
+    );
+
+    // En édition, on conserve l'enseignant déjà affecté même s'il ne
+    // correspond plus au filtre de la matière.
+    if (
+        form.data.teacher_id &&
+        !teacherOptions.some(
+            (teacher) => String(teacher.id) === String(form.data.teacher_id)
+        )
+    ) {
+        const current = teachers.find(
+            (teacher) => String(teacher.id) === String(form.data.teacher_id)
+        );
+        if (current) {
+            teacherOptions = [current, ...teacherOptions];
+        }
     }
 
     const slotForm = (
@@ -178,9 +210,27 @@ export default function Index({
             >
                 <Select
                     value={form.data.subject_id}
-                    onChange={(e) =>
-                        form.setData('subject_id', e.target.value)
-                    }
+                    onChange={(e) => {
+                        const nextSubject = e.target.value;
+                        form.setData('subject_id', nextSubject);
+
+                        // Si l'enseignant sélectionné n'enseigne pas cette
+                        // matière, on le retire pour éviter un champ vide.
+                        if (
+                            form.data.teacher_id &&
+                            nextSubject &&
+                            !teachers.some(
+                                (teacher) =>
+                                    String(teacher.id) ===
+                                        String(form.data.teacher_id) &&
+                                    teacher.subject_ids?.includes(
+                                        Number(nextSubject)
+                                    )
+                            )
+                        ) {
+                            form.setData('teacher_id', '');
+                        }
+                    }}
                     required
                 >
                     <option value="">Sélectionnez une matière</option>
@@ -203,10 +253,15 @@ export default function Index({
                     onChange={(e) =>
                         form.setData('teacher_id', e.target.value)
                     }
+                    disabled={!form.data.subject_id}
                 >
-                    <option value="">Non assigné</option>
+                    <option value="">
+                        {form.data.subject_id
+                            ? 'Non assigné'
+                            : 'Choisissez d’abord une matière'}
+                    </option>
 
-                    {teachers.map((teacher) => (
+                    {teacherOptions.map((teacher) => (
                         <option key={teacher.id} value={teacher.id}>
                             {teacher.name}
                             {teacher.is_active ? '' : ' (inactif)'}
@@ -268,14 +323,25 @@ export default function Index({
             </div>
 
             <div className="sm:col-span-2">
-                <Field label="Salle" error={form.errors.room}>
-                    <Input
-                        value={form.data.room}
+                <Field
+                    label="Salle"
+                    error={form.errors.room_id}
+                    hint="Une salle ne peut pas accueillir deux cours sur le même créneau."
+                >
+                    <Select
+                        value={form.data.room_id}
                         onChange={(e) =>
-                            form.setData('room', e.target.value)
+                            form.setData('room_id', e.target.value)
                         }
-                        placeholder="Bâtiment B, salle 12"
-                    />
+                    >
+                        <option value="">Non assignée</option>
+
+                        {rooms.map((room) => (
+                            <option key={room.id} value={room.id}>
+                                {room.name}
+                            </option>
+                        ))}
+                    </Select>
                 </Field>
             </div>
         </form>

@@ -41,6 +41,7 @@ class TimetableController extends Controller
             'classRoom:id,name',
             'subject:id,name',
             'teacher.user:id,name',
+            'room:id,name',
         ])
             ->where('class_id', $student->class_id)
             ->when($selectedYearId, fn ($q) => $q->where('academic_year_id', $selectedYearId))
@@ -54,7 +55,7 @@ class TimetableController extends Controller
                 'starts_at' => $slot->formatTime($slot->starts_at),
                 'ends_at' => $slot->formatTime($slot->ends_at),
                 'time_range' => $slot->time_range,
-                'room' => $slot->room,
+                'room_name' => $slot->room?->name,
                 'class_name' => $slot->classRoom?->name,
                 'subject_name' => $slot->subject?->name,
                 'teacher_name' => $slot->teacher?->user?->name,

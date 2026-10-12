@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Censeur\EvaluationController;
 use App\Http\Controllers\DemoRequestController;
+use App\Http\Controllers\Finance;
 use App\Http\Controllers\Parent\ChildController;
 use App\Http\Controllers\Parent\TimetableController;
 use App\Http\Controllers\Platform\DashboardController;
@@ -455,6 +456,83 @@ Route::middleware([
                 'index',
             ])->name('billing.index');
 
+            Route::get('/performance', Admin\PerformanceController::class)
+                ->name('performance.index');
+
+            /*
+            | Finance — Dépenses, salaires, ventes, contributions
+            */
+
+            Route::get('/expenses', [
+                Finance\ExpenseController::class,
+                'index',
+            ])->name('expenses.index');
+
+            Route::post('/expenses', [
+                Finance\ExpenseController::class,
+                'store',
+            ])->name('expenses.store');
+
+            Route::put('/expenses/settings', [
+                Finance\ExpenseController::class,
+                'updateSettings',
+            ])->name('expenses.settings');
+
+            Route::post('/expenses/{expense}/approve', [
+                Finance\ExpenseController::class,
+                'approve',
+            ])->name('expenses.approve');
+
+            Route::post('/expenses/{expense}/reject', [
+                Finance\ExpenseController::class,
+                'reject',
+            ])->name('expenses.reject');
+
+            Route::delete('/expenses/{expense}', [
+                Finance\ExpenseController::class,
+                'destroy',
+            ])->name('expenses.destroy');
+
+            Route::get('/salaries', [
+                Finance\SalaryController::class,
+                'index',
+            ])->name('salaries.index');
+
+            Route::post('/salaries', [
+                Finance\SalaryController::class,
+                'save',
+            ])->name('salaries.save');
+
+            Route::get('/sales', [
+                Finance\SaleController::class,
+                'index',
+            ])->name('sales.index');
+
+            Route::post('/sales', [
+                Finance\SaleController::class,
+                'store',
+            ])->name('sales.store');
+
+            Route::delete('/sales/{sale}', [
+                Finance\SaleController::class,
+                'destroy',
+            ])->name('sales.destroy');
+
+            Route::get('/contributions', [
+                Finance\ContributionController::class,
+                'index',
+            ])->name('contributions.index');
+
+            Route::post('/contributions', [
+                Finance\ContributionController::class,
+                'store',
+            ])->name('contributions.store');
+
+            Route::delete('/contributions/{contribution}', [
+                Finance\ContributionController::class,
+                'destroy',
+            ])->name('contributions.destroy');
+
             /*
             | Users
             */
@@ -640,6 +718,30 @@ Route::middleware([
                 Admin\SubjectController::class,
                 'destroy',
             ])->name('subjects.destroy');
+
+            /*
+            | Rooms / Salles
+            */
+
+            Route::get('/rooms', [
+                Admin\RoomController::class,
+                'index',
+            ])->name('rooms.index');
+
+            Route::post('/rooms', [
+                Admin\RoomController::class,
+                'store',
+            ])->name('rooms.store');
+
+            Route::put('/rooms/{room}', [
+                Admin\RoomController::class,
+                'update',
+            ])->name('rooms.update');
+
+            Route::delete('/rooms/{room}', [
+                Admin\RoomController::class,
+                'destroy',
+            ])->name('rooms.destroy');
 
             /*
             | Teachers
@@ -985,6 +1087,82 @@ Route::middleware([
 
     /*
     |--------------------------------------------------------------------------
+    | Surveillant — vie scolaire (lecture & assiduité)
+    |--------------------------------------------------------------------------
+    |
+    | Centré sur la discipline et l'assiduité : retards, absences et exécution
+    | de l'emploi du temps. Pas d'accès aux évaluations ni aux paramètres.
+    */
+
+    Route::middleware('role:surveillant')
+        ->prefix('surveillant')
+        ->name('surveillant.')
+        ->group(function () {
+
+            Route::get('/dashboard',
+                App\Http\Controllers\Surveillant\DashboardController::class
+            )->name('dashboard');
+
+            /*
+            | Emploi du temps — lecture seule
+            */
+
+            Route::get('/timetables', [
+                Admin\TimetableController::class,
+                'index',
+            ])->name('timetables.index');
+
+            /*
+            | Assiduité — retards & absences
+            */
+
+            Route::get('/attendance', [
+                AttendanceController::class,
+                'index',
+            ])->name('attendance.index');
+
+            Route::get('/attendance/create', [
+                AttendanceController::class,
+                'create',
+            ])->name('attendance.create');
+
+            Route::post('/attendance', [
+                AttendanceController::class,
+                'store',
+            ])->name('attendance.store');
+
+            Route::get('/attendance/students/{student}', [
+                AttendanceController::class,
+                'studentHistory',
+            ])->name('attendance.students.show');
+
+            Route::put('/attendance/{attendance}', [
+                AttendanceController::class,
+                'update',
+            ])->name('attendance.update');
+
+            Route::post('/attendance/{attendance}/justify', [
+                AttendanceController::class,
+                'reviewJustification',
+            ])->name('attendance.justify');
+
+            /*
+            | Élèves & classes — lecture
+            */
+
+            Route::get('/students', [
+                Admin\StudentController::class,
+                'index',
+            ])->name('students.index');
+
+            Route::get('/classes', [
+                Admin\ClassRoomController::class,
+                'index',
+            ])->name('classes.index');
+        });
+
+    /*
+    |--------------------------------------------------------------------------
     | Direction & Comptabilité — pilotage en lecture
     |--------------------------------------------------------------------------
     */
@@ -1005,7 +1183,7 @@ Route::middleware([
     |--------------------------------------------------------------------------
     */
 
-    Route::middleware('role:teacher,secretary')
+    Route::middleware('role:teacher,secretary,gardien,agent_entretien')
         ->prefix('teacher')
         ->name('teacher.')
         ->group(function () {
@@ -1200,5 +1378,58 @@ Route::middleware([
             Route::get('/dashboard',
                 App\Http\Controllers\Secretary\DashboardController::class
             )->name('dashboard');
+
+            /*
+            | Emploi du temps — lecture seule
+            */
+
+            Route::get('/timetables', [
+                Admin\TimetableController::class,
+                'index',
+            ])->name('timetables.index');
+
+            /*
+            | Finance — la secrétaire saisit dépenses, salaires, ventes et contributions
+            */
+
+            Route::get('/depenses', [
+                Finance\ExpenseController::class,
+                'index',
+            ])->name('expenses.index');
+
+            Route::post('/depenses', [
+                Finance\ExpenseController::class,
+                'store',
+            ])->name('expenses.store');
+
+            Route::get('/salaires', [
+                Finance\SalaryController::class,
+                'index',
+            ])->name('salaries.index');
+
+            Route::post('/salaires', [
+                Finance\SalaryController::class,
+                'save',
+            ])->name('salaries.save');
+
+            Route::get('/ventes', [
+                Finance\SaleController::class,
+                'index',
+            ])->name('sales.index');
+
+            Route::post('/ventes', [
+                Finance\SaleController::class,
+                'store',
+            ])->name('sales.store');
+
+            Route::get('/contributions', [
+                Finance\ContributionController::class,
+                'index',
+            ])->name('contributions.index');
+
+            Route::post('/contributions', [
+                Finance\ContributionController::class,
+                'store',
+            ])->name('contributions.store');
         });
 });

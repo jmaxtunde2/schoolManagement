@@ -66,6 +66,9 @@ class StudentImport implements ToCollection, WithHeadingRow, WithValidation, Ski
 
     protected function transformRow($row): ?array
     {
+        $firstName = $this->getValue($row, ['first_name', 'prenom', 'prénom']);
+        $lastName = $this->getValue($row, ['last_name', 'nom']);
+
         if (! $firstName || ! $lastName) {
             return null;
         }

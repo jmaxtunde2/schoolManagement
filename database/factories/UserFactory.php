@@ -51,6 +51,21 @@ class UserFactory extends Factory
         return $this->afterMaking(fn (User $user) => $user->role = Role::Teacher);
     }
 
+    public function surveillant(): static
+    {
+        return $this->afterMaking(fn (User $user) => $user->role = Role::Surveillant);
+    }
+
+    public function censeur(): static
+    {
+        return $this->afterMaking(fn (User $user) => $user->role = Role::Censeur);
+    }
+
+    public function secretary(): static
+    {
+        return $this->afterMaking(fn (User $user) => $user->role = Role::Secretary);
+    }
+
     public function inactive(): static
     {
         return $this->afterMaking(fn (User $user) => $user->is_active = false);

@@ -7,6 +7,7 @@ import {
     Circle,
     Clock3,
     Save,
+    ShieldCheck,
     Users,
     UserRound,
     UserCheck,
@@ -43,6 +44,13 @@ const statuses = [
         icon: Timer,
         active: 'border-amber-500 bg-amber-50 text-amber-700 ring-1 ring-amber-200',
         iconBg: 'bg-amber-100 text-amber-600',
+    },
+    {
+        value: 'permission',
+        label: 'Permission',
+        icon: ShieldCheck,
+        active: 'border-sky-500 bg-sky-50 text-sky-700 ring-1 ring-sky-200',
+        iconBg: 'bg-sky-100 text-sky-600',
     },
 ];
 
@@ -135,6 +143,7 @@ export default function AttendanceCreate({
             present: 0,
             absent: 0,
             late: 0,
+            permission: 0,
         }
     );
 
@@ -333,7 +342,7 @@ export default function AttendanceCreate({
                     <form onSubmit={submit}>
 
                         {/* Statistics */}
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
 
                             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-5 text-white shadow-sm">
                                 <div className="absolute -right-6 -top-8 h-28 w-28 rounded-full bg-white/10" />
@@ -388,6 +397,25 @@ export default function AttendanceCreate({
 
                                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
                                         <Timer className="h-6 w-6" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 p-5 text-white shadow-sm">
+                                <div className="absolute -right-6 -top-8 h-28 w-28 rounded-full bg-white/10" />
+
+                                <div className="relative flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-white/80">
+                                            Permissions
+                                        </p>
+                                        <p className="mt-1 text-3xl font-bold">
+                                            {counts.permission}
+                                        </p>
+                                    </div>
+
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
+                                        <ShieldCheck className="h-6 w-6" />
                                     </div>
                                 </div>
                             </div>
@@ -479,13 +507,20 @@ export default function AttendanceCreate({
                                                                     <p className="mt-1 text-xs text-slate-500">
                                                                         Saisie existante :{' '}
                                                                         <span className="font-medium text-slate-700">
-                                                                            {student.attendance.status ===
-                                                                            'present'
-                                                                                ? 'Présent'
-                                                                                : student.attendance.status ===
-                                                                                    'absent'
-                                                                                ? 'Absent'
-                                                                                : `Retard · ${student.attendance.delay_minutes} min`}
+{student.attendance.status ===
+                                                                'present'
+                                                                    ? 'Présent'
+                                                                    : student
+                                                                          .attendance
+                                                                          .status ===
+                                                                      'absent'
+                                                                    ? 'Absent'
+                                                                    : student
+                                                                          .attendance
+                                                                          .status ===
+                                                                      'permission'
+                                                                    ? 'En permission'
+                                                                    : `Retard · ${student.attendance.delay_minutes} min`}
                                                                         </span>
                                                                     </p>
                                                                 )}
@@ -504,7 +539,7 @@ export default function AttendanceCreate({
                                                         </p>
 
                                                         <div
-                                                            className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap"
+                                                            className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap"
                                                             role="group"
                                                             aria-label={`Statut de ${student.name}`}
                                                         >
@@ -654,9 +689,60 @@ export default function AttendanceCreate({
                                                         </div>
                                                     )}
 
+                                                    {/* Permission details */}
+                                                    {row.status ===
+                                                        'permission' && (
+                                                        <div className="rounded-xl border border-sky-100 bg-sky-50/50 p-4">
+                                                            <label className="block text-xs font-bold text-sky-800">
+                                                                Motif de la
+                                                                permission
+                                                                <span className="ml-1 font-normal text-sky-500">
+                                                                    (obligatoire)
+                                                                </span>
+
+                                                                <Input
+                                                                    className="mt-2 bg-white"
+                                                                    value={
+                                                                        row.reason
+                                                                    }
+                                                                    onChange={(
+                                                                        event
+                                                                    ) =>
+                                                                        updateRow(
+                                                                            index,
+                                                                            {
+                                                                                reason:
+                                                                                    event
+                                                                                        .target
+                                                                                        .value,
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                    maxLength={
+                                                                        500
+                                                                    }
+                                                                    placeholder="Autorisation de sortie, RDV médical…"
+                                                                />
+
+                                                                <span className="mt-2 flex items-center gap-1.5 font-normal text-sky-600">
+                                                                    <ShieldCheck className="h-3.5 w-3.5" />
+                                                                    Une permission
+                                                                    est
+                                                                    considérée
+                                                                    comme une
+                                                                    absence
+                                                                    justifiée.
+                                                                </span>
+                                                            </label>
+                                                        </div>
+                                                    )}
+
                                                     {/* Observation */}
                                                     {(row.status === 'absent' ||
-                                                        row.status === 'late') && (
+                                                        row.status ===
+                                                            'late' ||
+                                                        row.status ===
+                                                            'permission') && (
                                                         <label className="block text-xs font-bold text-slate-600">
                                                             Observation
                                                             <span className="ml-1 font-normal text-slate-400">

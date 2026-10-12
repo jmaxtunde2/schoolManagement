@@ -10,8 +10,11 @@ enum Role: string
     case Accountant = 'accountant';
     case Censeur = 'censeur';
     case Secretary = 'secretary';
+    case Surveillant = 'surveillant';
     case Teacher = 'teacher';
     case Parent = 'parent';
+    case Gardien = 'gardien';
+    case AgentEntretien = 'agent_entretien';
 
     public function label(): string
     {
@@ -22,8 +25,11 @@ enum Role: string
             self::Accountant => 'Comptable',
             self::Censeur => 'Censeur',
             self::Secretary => 'Secrétaire',
+            self::Surveillant => 'Surveillant',
             self::Teacher => 'Enseignant',
             self::Parent => 'Parent',
+            self::Gardien => 'Gardien',
+            self::AgentEntretien => 'Agent d\'entretien',
         };
     }
 
@@ -36,8 +42,11 @@ enum Role: string
             self::Accountant => 'accountant.dashboard',
             self::Censeur => 'censeur.dashboard',
             self::Secretary => 'secretary.dashboard',
+            self::Surveillant => 'surveillant.dashboard',
             self::Teacher => 'teacher.dashboard',
             self::Parent => 'parent.dashboard',
+            self::Gardien => 'teacher.dashboard',
+            self::AgentEntretien => 'teacher.dashboard',
         };
     }
 
@@ -65,7 +74,10 @@ enum Role: string
             self::Accountant,
             self::Censeur,
             self::Secretary,
+            self::Surveillant,
             self::Teacher,
+            self::Gardien,
+            self::AgentEntretien,
         ], true);
     }
 

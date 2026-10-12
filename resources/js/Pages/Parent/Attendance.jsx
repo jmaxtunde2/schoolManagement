@@ -10,8 +10,8 @@ import Modal from '@/Components/UI/Modal';
 import Pagination from '@/Components/UI/Pagination';
 import Textarea from '@/Components/UI/Textarea';
 
-const statusLabels = { present: 'Présent', absent: 'Absence', late: 'Retard' };
-const statusTones = { present: 'green', absent: 'red', late: 'amber' };
+const statusLabels = { present: 'Présent', absent: 'Absence', late: 'Retard', permission: 'Permission' };
+const statusTones = { present: 'green', absent: 'red', late: 'amber', permission: 'blue' };
 const justificationLabels = { pending: 'En attente', approved: 'Justifiée', rejected: 'Refusée' };
 
 export default function Attendance({ student, records, stats }) {
@@ -46,9 +46,10 @@ export default function Attendance({ student, records, stats }) {
                     <p className="mt-1 text-sm text-slate-500">{student.name}{student.matricule ? ` · ${student.matricule}` : ''}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
                     <Metric icon={UserX} label="Absences" value={stats.absent} />
                     <Metric icon={FileCheck2} label="Justifiées" value={stats.justified} />
+                    <Metric icon={CalendarDays} label="Permissions" value={stats.permission} />
                     <Metric icon={Clock3} label="Retards" value={stats.late} />
                     <Metric icon={CalendarDays} label="Minutes de retard" value={stats.delay_minutes} />
                 </div>

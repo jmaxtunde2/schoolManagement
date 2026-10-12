@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Models\AcademicYear;
 use App\Models\ClassRoom;
 use App\Models\ParentGuardian;
+use App\Models\Room;
 use App\Models\School;
 use App\Models\Student;
 use App\Models\Subject;
@@ -31,6 +32,8 @@ class TimetableTest extends TestCase
 
     private Subject $subject;
 
+    private Room $room;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -44,6 +47,10 @@ class TimetableTest extends TestCase
         $this->subject = Subject::factory()->create([
             'school_id' => $this->school->id,
             'name' => 'Mathématiques',
+        ]);
+        $this->room = Room::factory()->create([
+            'school_id' => $this->school->id,
+            'name' => 'Salle 1',
         ]);
     }
 
@@ -82,7 +89,7 @@ class TimetableTest extends TestCase
             'day_of_week' => 1,
             'starts_at' => '08:00',
             'ends_at' => '09:55',
-            'room' => 'Salle 1',
+            'room_id' => $this->room->id,
         ], $overrides);
     }
 
@@ -125,8 +132,13 @@ class TimetableTest extends TestCase
     {
         $this->admin();
 
+        $otherRoom = Room::factory()->create([
+            'school_id' => $this->school->id,
+            'name' => 'Salle 4',
+        ]);
+
         $this->post(route('admin.timetables.store'), $this->payload([
-            'room' => 'Salle 4',
+            'room_id' => $otherRoom->id,
         ]))->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('timetables', [
@@ -134,7 +146,7 @@ class TimetableTest extends TestCase
             'class_id' => $this->classRoom->id,
             'subject_id' => $this->subject->id,
             'day_of_week' => 1,
-            'room' => 'Salle 4',
+            'room_id' => $otherRoom->id,
         ]);
     }
 
@@ -147,11 +159,16 @@ class TimetableTest extends TestCase
 
         $slot = Timetable::where('school_id', $this->school->id)->firstOrFail();
 
+        $otherRoom = Room::factory()->create([
+            'school_id' => $this->school->id,
+            'name' => 'Salle 9',
+        ]);
+
         $this->put(route('admin.timetables.update', $slot), $this->payload([
-            'room' => 'Salle 9',
+            'room_id' => $otherRoom->id,
         ]))->assertSessionHasNoErrors();
 
-        $this->assertSame('Salle 9', $slot->fresh()->room);
+        $this->assertSame('Salle 9', $slot->fresh()->room->name);
 
         $this->delete(route('admin.timetables.destroy', $slot))
             ->assertSessionHasNoErrors();
@@ -182,7 +199,10 @@ class TimetableTest extends TestCase
             'subject_id' => Subject::factory()->create([
                 'school_id' => $this->school->id,
             ])->id,
-            'room' => 'Salle 2',
+            'room_id' => Room::factory()->create([
+                'school_id' => $this->school->id,
+                'name' => 'Salle 2',
+            ])->id,
         ]))->assertSessionHasErrors('class_id');
     }
 
@@ -200,8 +220,12 @@ class TimetableTest extends TestCase
             'teacher_id' => $teacher->id,
             'class_id' => ClassRoom::factory()->create([
                 'school_id' => $this->school->id,
+                'name' => '6ème B',
             ])->id,
-            'room' => 'Salle 3',
+            'room_id' => Room::factory()->create([
+                'school_id' => $this->school->id,
+                'name' => 'Salle 3',
+            ])->id,
         ]))->assertSessionHasErrors('teacher_id');
     }
 
@@ -215,8 +239,9 @@ class TimetableTest extends TestCase
         $this->post(route('admin.timetables.store'), $this->payload([
             'class_id' => ClassRoom::factory()->create([
                 'school_id' => $this->school->id,
+                'name' => '6ème B',
             ])->id,
-        ]))->assertSessionHasErrors('room');
+        ]))->assertSessionHasErrors('room_id');
     }
 
     public function test_the_same_slot_may_exist_on_another_day(): void
@@ -274,12 +299,17 @@ class TimetableTest extends TestCase
         );
 
         $this->put(route('admin.timetables.update', $slot), $this->payload([
-            'room' => 'Piraté',
+            'room_id' => Room::factory()->create([
+                'school_id' => $this->school->id,
+                'name' => 'Piraté',
+            ])->id,
         ]))->assertNotFound();
 
         $this->delete(route('admin.timetables.destroy', $slot))->assertNotFound();
 
-        $this->assertSame('Salle 1', $slot->fresh()->room);
+        // SchoolScope rattache la lecture à l'école de l'utilisateur courant :
+        // on vérifie l'identifiant brut, non la relation filtrée par le scope.
+        $this->assertSame($this->room->id, $slot->fresh()->room_id);
     }
 
     public function test_a_teacher_only_sees_their_own_slots(): void

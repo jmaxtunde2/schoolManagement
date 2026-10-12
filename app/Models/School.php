@@ -104,14 +104,10 @@ class School extends Model
     /** Membres du personnel rattachés à cet établissement. */
     public function staff(): HasMany
     {
-        return $this->hasMany(User::class)->whereIn('role', [
-            Role::Admin->value,
-            Role::Director->value,
-            Role::Accountant->value,
-            Role::Censeur->value,
-            Role::Secretary->value,
-            Role::Teacher->value,
-        ]);
+        return $this->hasMany(User::class)->whereIn(
+            'role',
+            array_map(fn (Role $role) => $role->value, Role::assignableStaff())
+        );
     }
 
     public function mailSettings(): HasOne

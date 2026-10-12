@@ -18,6 +18,7 @@ class ImportRequest extends FormRequest
             'type' => ['required', Rule::in(array_keys([
                 'classes' => true,
                 'subjects' => true,
+                'rooms' => true,
                 'teachers' => true,
                 'students' => true,
                 'parents' => true,

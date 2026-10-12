@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Timetable\TimetableRequest;
 use App\Models\AcademicYear;
 use App\Models\ClassRoom;
+use App\Models\Room;
 use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\Timetable;
@@ -38,6 +39,7 @@ class TimetableController extends Controller
             'classRoom:id,name',
             'subject:id,name',
             'teacher.user:id,name,photo_path',
+            'room:id,name',
         ])
             ->when($selectedYearId, fn ($q) => $q->where('academic_year_id', $selectedYearId))
             ->when($request->filled('class_id'), fn ($q) => $q->where('class_id', $request->integer('class_id')))
@@ -60,12 +62,18 @@ class TimetableController extends Controller
             'selectedAcademicYearId' => $selectedYearId,
             'classes' => ClassRoom::orderBy('name')->get(['id', 'name']),
             'subjects' => Subject::orderBy('name')->get(['id', 'name']),
-            'teachers' => Teacher::with('user:id,name,is_active')->get()
+            'rooms' => Room::orderBy('building')->orderBy('name')->get(['id', 'name']),
+            'teachers' => Teacher::with(['user:id,name,is_active', 'assignments'])->get()
                 ->filter(fn (Teacher $teacher) => $teacher->user !== null)
                 ->map(fn (Teacher $teacher) => [
                     'id' => $teacher->id,
                     'name' => $teacher->user->name,
                     'is_active' => $teacher->user->is_active,
+                    'subject_ids' => $teacher->assignments
+                        ->pluck('subject_id')
+                        ->unique()
+                        ->values()
+                        ->all(),
                 ])
                 ->sortBy('name')
                 ->values(),
@@ -115,9 +123,11 @@ class TimetableController extends Controller
             'class_name' => $slot->classRoom?->name,
             'subject_id' => $slot->subject_id,
             'subject_name' => $slot->subject?->name,
-            'teacher_id' => $slot->teacher_id,
+'teacher_id' => $slot->teacher_id,
             'teacher_name' => $slot->teacher?->user?->name,
             'teacher_photo_url' => $slot->teacher?->user?->photoUrl(),
+            'room_id' => $slot->room_id,
+            'room_name' => $slot->room?->name,
             'academic_year_id' => $slot->academic_year_id,
         ];
     }

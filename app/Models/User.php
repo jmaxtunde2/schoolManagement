@@ -117,6 +117,11 @@ class User extends Authenticatable
         return $this->role === Role::Censeur;
     }
 
+    public function isSurveillant(): bool
+    {
+        return $this->role === Role::Surveillant;
+    }
+
     public function isSecretary(): bool
     {
         return $this->role === Role::Secretary;

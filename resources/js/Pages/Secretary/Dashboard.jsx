@@ -15,6 +15,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Card from '@/Components/UI/Card';
 import Badge from '@/Components/UI/Badge';
 import EmptyState from '@/Components/UI/EmptyState';
+import ExecutionBrief from '@/Components/Timetable/ExecutionBrief';
+import RecentIncidents from '@/Components/Attendance/RecentIncidents';
 
 const statusTones = {
     draft: 'slate',
@@ -30,7 +32,12 @@ const statusLabels = {
     returned: 'Retournée pour correction',
 };
 
-export default function Dashboard({ stats, recentEvaluations }) {
+export default function Dashboard({
+    stats,
+    recentEvaluations,
+    timetableBrief,
+    recentIncidents,
+}) {
     const { auth } = usePage().props;
 
     const cards = [
@@ -124,6 +131,15 @@ export default function Dashboard({ stats, recentEvaluations }) {
                     );
                 })}
             </div>
+
+            {/* Timetable execution brief */}
+            <ExecutionBrief brief={timetableBrief} routePrefix="secretary" />
+
+            {/* Latest delays & absences */}
+            <RecentIncidents
+                incidents={recentIncidents}
+                attendanceRoutePrefix="teacher"
+            />
 
             {/* Recent evaluations */}
             <Card className="mt-6 overflow-hidden">

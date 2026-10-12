@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Academic\BuildResultsPerformance;
 use App\Actions\Academic\GenerateReportCards;
 use App\Http\Controllers\Controller;
 use App\Models\AcademicPeriod;
+use App\Models\AcademicYear;
 use App\Models\ClassRoom;
 use App\Models\ReportCard;
 use App\Services\Academic\AcademicCalculationService;
@@ -17,12 +19,22 @@ use Inertia\Response;
 
 class AcademicResultController extends Controller
 {
-    public function index(Request $request, AcademicCalculationService $calculator): Response
-    {
+    public function index(
+        Request $request,
+        AcademicCalculationService $calculator,
+        BuildResultsPerformance $performance,
+    ): Response {
         $schoolId = $request->user()->school_id;
         $filters = $request->validate([
             'class_id' => ['nullable', 'integer', Rule::exists('classes', 'id')->where('school_id', $schoolId)],
             'period_id' => ['nullable', 'integer', Rule::exists('academic_periods', 'id')->where('school_id', $schoolId)],
+        ]);
+
+        $performanceFilters = $request->validate([
+            'tab' => ['nullable', Rule::in(['results', 'performance'])],
+            'perf_mode' => ['nullable', Rule::in(BuildResultsPerformance::MODES)],
+            'perf_class_id' => ['nullable', 'integer', Rule::exists('classes', 'id')->where('school_id', $schoolId)],
+            'perf_academic_year_id' => ['nullable', 'integer', Rule::exists('academic_years', 'id')->where('school_id', $schoolId)],
         ]);
 
         $classesQuery = ClassRoom::query()->orderBy('name');
@@ -36,6 +48,20 @@ class AcademicResultController extends Controller
             ->orderByDesc('academic_year_id')
             ->orderBy('position')
             ->get(['id', 'academic_year_id', 'name', 'position', 'is_closed']);
+
+        $perfClassId = isset($performanceFilters['perf_class_id'])
+            ? (int) $performanceFilters['perf_class_id']
+            : null;
+        $perfMode = $performanceFilters['perf_mode'] ?? 'periods';
+        $perfYearId = isset($performanceFilters['perf_academic_year_id'])
+            ? (int) $performanceFilters['perf_academic_year_id']
+            : null;
+
+        $allowedClassIds = $classes->pluck('id')->all();
+
+        if ($perfClassId !== null && ! in_array($perfClassId, $allowedClassIds, true)) {
+            abort(403);
+        }
 
         $results = null;
         $reportCards = collect();
@@ -52,6 +78,23 @@ class AcademicResultController extends Controller
                 ->keyBy('student_id');
         }
 
+        $performanceData = ($performanceFilters['tab'] ?? null) === 'performance'
+            || $request->filled('perf_mode')
+            || $request->filled('perf_class_id')
+            || $request->filled('perf_academic_year_id')
+            ? $performance->handle(
+                (int) $schoolId,
+                $allowedClassIds,
+                $perfMode,
+                $perfClassId,
+                $perfYearId,
+            )
+            : null;
+
+        $academicYears = AcademicYear::query()
+            ->orderByDesc('starts_on')
+            ->get(['id', 'name']);
+
         return Inertia::render('Admin/Academic/Results', [
             'classes' => $classes,
             'periods' => $periods->map(fn (AcademicPeriod $period) => [
@@ -62,6 +105,16 @@ class AcademicResultController extends Controller
                 'academic_year' => $period->academicYear?->name,
             ]),
             'filters' => $filters,
+            'performance' => $performanceData,
+            'performanceFilters' => [
+                'mode' => $perfMode,
+                'class_id' => $perfClassId,
+                'academic_year_id' => $perfYearId,
+            ],
+            'academicYears' => $academicYears,
+            'initialTab' => ($performanceFilters['tab'] ?? 'results') === 'performance'
+                ? 'performance'
+                : 'results',
             'results' => $results ? [
                 ...$results,
                 'students' => $results['students']->map(function (array $student) use ($reportCards) {

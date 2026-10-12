@@ -3,6 +3,7 @@
 namespace Tests\Feature\Evaluations;
 
 use App\Jobs\SendSmsNotificationJob;
+use App\Models\AcademicPeriod;
 use App\Models\AcademicYear;
 use App\Models\ClassRoom;
 use App\Models\Evaluation;
@@ -104,6 +105,23 @@ class EvaluationWorkflowTest extends TestCase
 
         $this->assertSame('draft', $evaluation->fresh()->status->value);
         $this->assertSame($this->teacher->user->id, $evaluation->fresh()->entered_by);
+    }
+
+    public function test_teacher_evaluation_is_linked_to_current_academic_year_and_period(): void
+    {
+        $year = $this->school->academicYears()->where('is_current', true)->firstOrFail();
+        $period = AcademicPeriod::factory()->forYear($year)->create([
+            'starts_at' => now()->startOfMonth(),
+            'ends_at' => now()->addMonth()->endOfMonth(),
+            'is_closed' => false,
+        ]);
+
+        $this->actingAs($this->teacher->user)->post('/teacher/evaluations', $this->payload());
+
+        $evaluation = Evaluation::firstOrFail();
+
+        $this->assertSame($year->id, $evaluation->academic_year_id);
+        $this->assertSame($period->id, $evaluation->academic_period_id);
     }
 
     public function test_teacher_submits_only_after_all_grades_are_entered(): void

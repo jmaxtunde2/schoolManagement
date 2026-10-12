@@ -1,0 +1,4 @@
+﻿name,email,password,phone,employee_number,hire_date,subjects
+Jean DUPONT,jean.dupont@ecole.test,password123,+229 01 23 45 67,ENS001,09-01-20,MATH,FR
+Marie MARTIN,marie.martin@ecole.test,password123,+229 01 23 45 68,ENS002,09-01-19,ANG,FR
+Karine Huyo,karineuy@ecole.test,password123,+229 01 26 45 67,ENS003,09-01-19,FRA,FR

@@ -45,6 +45,7 @@ class UserController extends Controller
             'roles' => collect([
                 Role::Admin,
                 Role::Censeur,
+                Role::Surveillant,
                 Role::Secretary,
                 Role::Teacher,
             ])->map(
@@ -82,6 +83,7 @@ class UserController extends Controller
                 Rule::in([
                     'admin',
                     'censeur',
+                    'surveillant',
                     'secretary',
                 ]),
             ],
@@ -153,6 +155,7 @@ class UserController extends Controller
                 Rule::in([
                     'admin',
                     'censeur',
+                    'surveillant',
                     'secretary',
                     'teacher',
                 ]),

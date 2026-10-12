@@ -1,0 +1,15 @@
+﻿student_number,first_name,last_name,gender,birth_date,birth_place,address,phone,class
+ELE001,Amadou,TRAORE,M,2010-05-15,Cotonou,Quartier Haie Vive,+229 01 23 45 69,6ème A
+ELE002,Fatou,ADJOVA,F,2010-08-22,Porto-Novo,Quartier Ganhi,+229 01 23 45 70,6ème A
+ELE003,Gigo,KIOL,M,2010-08-22,Porto-Novo,Quartier Ganhi,+229 01 23 45 71,6ème A
+ELE004,Denis,KOLP,M,2010-08-22,Porto-Novo,Quartier Ganhi,+229 01 23 45 72,6ème A
+ELE005,Hilo,MOLU,M,2010-08-22,Porto-Novo,Quartier Ganhi,+229 01 23 45 73,6ème A
+ELE006,Nuom,KILU,M,2010-08-22,Porto-Novo,Quartier Ganhi,+229 01 23 45 74,6ème B
+ELE007,Piro,YUPO,M,2010-08-22,Porto-Novo,Quartier Ganhi,+229 01 23 45 75,6ème B
+ELE008,Jiro,TRIBO,F,2010-08-22,Porto-Novo,Quartier Ganhi,+229 01 23 45 76,6ème B
+ELE009,Juka,VIBI,F,2010-08-22,Porto-Novo,Quartier Ganhi,+229 01 23 45 77,6ème B
+ELE010,Paul,RETU,M,2010-08-22,Porto-Novo,Quartier Ganhi,+229 01 23 45 78,4ème A
+ELE011,Kimo,PILA,M,2010-08-22,Porto-Novo,Quartier Ganhi,+229 01 23 45 82,4ème A
+ELE012,Reuni,MANU,F,2010-08-22,Porto-Novo,Quartier Ganhi,+229 01 23 45 79,4ème A
+ELE013,Yenu,POLE,F,2010-08-22,Porto-Novo,Quartier Ganhi,+229 01 23 45 80,3ème A
+ELE014,Pert,TETOU,M,2010-08-22,Porto-Novo,Quartier Ganhi,+229 01 23 45 81,3ème A

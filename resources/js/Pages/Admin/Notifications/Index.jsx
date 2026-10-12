@@ -277,9 +277,15 @@ export default function NotificationsIndex({
                                                 {r.guardian.name}
                                             </p>
 
-                                            <p className="text-xs text-slate-400">
-                                                {r.guardian.phone}
-                                            </p>
+                                            <div className="mt-0.5 flex items-center gap-1.5">
+                                                <p className="text-xs text-slate-400">
+                                                    {r.guardian.phone}
+                                                </p>
+
+                                                <Badge tone={r.channel === 'whatsapp' ? 'green' : 'slate'}>
+                                                    {r.channel === 'whatsapp' ? 'WhatsApp' : 'SMS'}
+                                                </Badge>
+                                            </div>
                                         </div>
                                     </div>
                                 ),

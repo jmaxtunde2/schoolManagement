@@ -431,6 +431,22 @@ export default function Grades({ evaluation, results }) {
                             value={total}
                         />
                     </div>
+
+                    <div className="grid grid-cols-2 divide-x divide-slate-100 border-t border-slate-100">
+                        <Info
+                            icon={GraduationCap}
+                            iconClass="bg-slate-100 text-slate-600"
+                            label="Année académique"
+                            value={evaluation.academic_year_name || '—'}
+                        />
+
+                        <Info
+                            icon={CalendarDays}
+                            iconClass="bg-slate-100 text-slate-600"
+                            label="Période"
+                            value={evaluation.academic_period_name || '—'}
+                        />
+                    </div>
                 </Card.Body>
             </Card>
 

@@ -27,7 +27,7 @@ class SendSmsNotificationJob implements ShouldQueue
     {
         $notification = Notification::withoutGlobalScopes()->find($this->notificationId);
 
-        if (! $notification || $notification->channel !== 'sms' || $notification->status === NotificationStatus::Sent || $notification->status === NotificationStatus::Delivered) {
+        if (! $notification || ! in_array($notification->channel, ['sms', 'whatsapp'], true) || $notification->status === NotificationStatus::Sent || $notification->status === NotificationStatus::Delivered) {
             return;
         }
 

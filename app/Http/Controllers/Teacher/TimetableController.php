@@ -33,7 +33,7 @@ class TimetableController extends Controller
             ?: $academicYears->firstWhere('is_current', true)?->id
             ?: $academicYears->first()?->id;
 
-        $slots = Timetable::with(['classRoom:id,name', 'subject:id,name'])
+        $slots = Timetable::with(['classRoom:id,name', 'subject:id,name', 'room:id,name'])
             ->where('teacher_id', $teacher->id)
             ->when($selectedYearId, fn ($q) => $q->where('academic_year_id', $selectedYearId))
             ->orderBy('day_of_week')
@@ -46,7 +46,7 @@ class TimetableController extends Controller
                 'starts_at' => $slot->formatTime($slot->starts_at),
                 'ends_at' => $slot->formatTime($slot->ends_at),
                 'time_range' => $slot->time_range,
-                'room' => $slot->room,
+                'room_name' => $slot->room?->name,
                 'class_name' => $slot->classRoom?->name,
                 'subject_name' => $slot->subject?->name,
             ]);

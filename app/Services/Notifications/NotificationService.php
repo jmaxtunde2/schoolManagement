@@ -29,15 +29,13 @@ class NotificationService
                 $guardians = $result->student->guardians;
 
                 foreach ($guardians as $guardian) {
-                    $message = $this->buildEvaluationMessage(
-                        $evaluation,
-                        $result
-                    );
-
                     /*
-                     * SMS
+                     * WhatsApp / SMS (canal téléphonique : WhatsApp si le
+                     * fournisseur actif est la Meta Cloud API, sinon SMS).
                      */
                     if ($guardian->phone) {
+                        $channel = $this->phoneChannel();
+
                         $smsCount = $this->getStudentSmsCount(
                             $evaluation,
                             $result->student_id
@@ -48,10 +46,15 @@ class NotificationService
                                 evaluation: $evaluation,
                                 result: $result,
                                 guardian: $guardian,
-                                channel: 'sms',
+                                channel: $channel,
                                 phone: $guardian->phone,
                                 email: null,
-                                message: $message
+                                message: $this->buildEvaluationMessage(
+                                    $evaluation,
+                                    $result,
+                                    $guardian,
+                                    $channel
+                                )
                             );
                         }
                     }
@@ -67,7 +70,12 @@ class NotificationService
                             channel: 'email',
                             phone: null,
                             email: $guardian->email,
-                            message: $message
+                            message: $this->buildEvaluationMessage(
+                                $evaluation,
+                                $result,
+                                $guardian,
+                                'email'
+                            )
                         );
                     }
                 }
@@ -91,7 +99,19 @@ class NotificationService
     }
 
     /**
-     * Get the SMS quota configured for the school.
+     * Canal téléphonique utilisé : « whatsapp » lorsque le fournisseur actif
+     * est la Meta Cloud API (SMS_PROVIDER=whatsapp), sinon « sms ».
+     */
+    private function phoneChannel(): string
+    {
+        return config('services.sms.provider', 'log') === 'whatsapp'
+            ? 'whatsapp'
+            : 'sms';
+    }
+
+    /**
+     * Get the phone notification quota configured for the school
+     * (SMS ou WhatsApp, selon le fournisseur actif).
      */
     private function getSmsLimit(Evaluation $evaluation): int
     {
@@ -107,7 +127,7 @@ class NotificationService
     }
 
     /**
-     * Count SMS notifications already created for a student
+     * Count phone notifications already created for a student
      * during the current academic year.
      */
     private function getStudentSmsCount(
@@ -116,7 +136,7 @@ class NotificationService
     ): int {
         return Notification::withoutGlobalScopes()
             ->where('student_id', $studentId)
-            ->where('channel', 'sms')
+            ->whereIn('channel', ['sms', 'whatsapp'])
             ->whereHas(
                 'evaluation',
                 fn ($query) => $query->where(
@@ -208,23 +228,39 @@ class NotificationService
         Notification $notification,
         string $channel
     ): void {
-        if ($channel === 'sms') {
-            SendSmsNotificationJob::dispatch(
+        if ($channel === 'email') {
+            SendEmailNotificationJob::dispatch(
                 $notification->id
             );
 
             return;
         }
 
-        SendEmailNotificationJob::dispatch(
+        SendSmsNotificationJob::dispatch(
             $notification->id
         );
     }
 
     /**
      * Build the message sent to the student's guardian.
+     * Le canal « whatsapp » reçoit un message riche et mis en forme
+     * (gras, retours à la ligne, formule de politesse) ; les autres canaux
+     * reçoivent un message court et compact.
      */
     private function buildEvaluationMessage(
+        Evaluation $evaluation,
+        $result,
+        $guardian,
+        string $channel
+    ): string {
+        if ($channel === 'whatsapp') {
+            return $this->buildWhatsAppMessage($evaluation, $result, $guardian);
+        }
+
+        return $this->buildCompactMessage($evaluation, $result);
+    }
+
+    private function buildCompactMessage(
         Evaluation $evaluation,
         $result
     ): string {
@@ -248,5 +284,34 @@ class NotificationService
             $evaluation->title,
             $score
         );
+    }
+
+    private function buildWhatsAppMessage(
+        Evaluation $evaluation,
+        $result,
+        $guardian
+    ): string {
+        $student = $result->student;
+
+        $score = $result->is_absent
+            ? 'Absent(e) 😕'
+            : number_format(
+                (float) $result->score,
+                1
+            ).'/'.number_format(
+                (float) $evaluation->max_score,
+                0
+            );
+
+        return implode("\n", [
+            '🎓 *'.$evaluation->school->name.'*',
+            '',
+            'Bonjour '.($guardian->name ?: 'cher parent').',',
+            '',
+            'Nous vous informons que '.$student->full_name.' a obtenu '.$score.' en '.$evaluation->subject->name.' ('.$evaluation->title.').',
+            '',
+            'Merci pour votre confiance 🙏',
+            '— '.$evaluation->school->name,
+        ]);
     }
 }

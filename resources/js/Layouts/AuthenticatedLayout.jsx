@@ -3,7 +3,7 @@ import { Link, usePage, router } from '@inertiajs/react';
 import {
     LayoutDashboard, Building2, CalendarRange, School as SchoolIcon, BookOpen, Users, UserRound,
     GraduationCap, ClipboardList, BellRing, Globe2, ClipboardCheck, BookOpenCheck, FileText, Menu, X, LogOut, ChevronDown, CheckCheck, Layers, UserCircle,
-    CalendarDays, UserCog, Upload,
+    CalendarDays, UserCog, Upload, DoorOpen, Wallet, BadgeEuro, ShoppingCart, HandCoins, Activity,
 } from 'lucide-react';
 import Dropdown from '@/Components/UI/Dropdown';
 import Toast from '@/Components/UI/Toast';
@@ -11,79 +11,198 @@ import { useFlash } from '@/Hooks/useFlash';
 import { cn } from '@/Utils/cn';
 
 const adminNav = [
-    { href: 'admin.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-    { href: 'admin.evaluations.index', label: 'Évaluations', icon: ClipboardList },
-    { href: 'admin.attendance.index', label: 'Absences & retards', icon: ClipboardCheck },
-    { href: 'admin.academic.results.index', label: 'Résultats académiques', icon: BookOpenCheck },
-    { href: 'admin.report-cards.index', label: 'Bulletins', icon: FileText },
-    { href: 'admin.notifications.index', label: 'Notifications', icon: BellRing },
-    { href: 'admin.students.index', label: 'Élèves', icon: GraduationCap },
-    { href: 'admin.guardians.index', label: 'Parents', icon: UserRound },
-    { href: 'admin.teachers.index', label: 'Enseignants', icon: Users },
-    { href: 'admin.classes.index', label: 'Classes', icon: SchoolIcon },
-    { href: 'admin.subjects.index', label: 'Matières', icon: BookOpen },
-    { href: 'admin.academic-years.index', label: 'Années scolaires', icon: CalendarRange },
-    { href: 'admin.academic-periods.index', label: 'Périodes scolaires', icon: Layers },
-    { href: 'admin.billing.index', label: 'Services & contributions', icon: Building2 },
-    { href: 'admin.staff.index', label: 'Personnel', icon: UserCog },
-    { href: 'admin.users.index', label: 'Utilisateurs', icon: Users },
-    { href: 'admin.timetables.index', label: 'Emploi du temps', icon: CalendarDays },
-    { href: 'admin.settings.edit', label: 'Établissement', icon: Building2 },
-    { href: 'admin.settings.public-site.edit', label: 'Site public', icon: Globe2 },
+    {
+        section: 'Aperçu',
+        items: [
+            { href: 'admin.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+            { href: 'admin.performance.index', label: 'Performance', icon: Activity },
+        ],
+    },
+    {
+        section: 'Gestion académique',
+        items: [
+            { href: 'admin.evaluations.index', label: 'Évaluations', icon: ClipboardList },
+            { href: 'admin.attendance.index', label: 'Absences & retards', icon: ClipboardCheck },
+            { href: 'admin.academic.results.index', label: 'Résultats académiques', icon: BookOpenCheck },
+            { href: 'admin.report-cards.index', label: 'Bulletins', icon: FileText },
+            { href: 'admin.timetables.index', label: 'Emploi du temps', icon: CalendarDays },
+            { href: 'admin.rooms.index', label: 'Salles', icon: DoorOpen },
+            { href: 'admin.classes.index', label: 'Classes', icon: SchoolIcon },
+            { href: 'admin.subjects.index', label: 'Matières', icon: BookOpen },
+        ],
+    },
+    {
+        section: 'Finance',
+        items: [
+            { href: 'admin.expenses.index', label: 'Dépenses', icon: Wallet },
+            { href: 'admin.salaries.index', label: 'Salaires', icon: BadgeEuro },
+            { href: 'admin.sales.index', label: 'Ventes', icon: ShoppingCart },
+            { href: 'admin.contributions.index', label: 'Contributions', icon: HandCoins },
+            { href: 'admin.billing.index', label: 'Services & contributions', icon: Building2 },
+        ],
+    },
+    {
+        section: 'Élèves & parents',
+        items: [
+            { href: 'admin.students.index', label: 'Élèves', icon: GraduationCap },
+            { href: 'admin.guardians.index', label: 'Parents', icon: UserRound },
+        ],
+    },
+    {
+        section: 'Personnel',
+        items: [
+            { href: 'admin.teachers.index', label: 'Enseignants', icon: Users },
+            { href: 'admin.staff.index', label: 'Personnel', icon: UserCog },
+        ],
+    },
+    {
+        section: 'Communication',
+        items: [{ href: 'admin.notifications.index', label: 'Notifications', icon: BellRing }],
+    },
+    {
+        section: 'Paramètres',
+        items: [
+            { href: 'admin.academic-years.index', label: 'Années scolaires', icon: CalendarRange },
+            { href: 'admin.academic-periods.index', label: 'Périodes scolaires', icon: Layers },
+            { href: 'admin.settings.edit', label: 'Établissement', icon: Building2 },
+            { href: 'admin.settings.public-site.edit', label: 'Site public', icon: Globe2 },
+        ],
+    },
 ];
 
-
 const censeurNav = [
-    { href: 'censeur.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-    { href: 'censeur.evaluations.index', label: 'Évaluations à contrôler', icon: ClipboardList },
-    { href: 'censeur.attendance.index', label: 'Absences & retards', icon: ClipboardCheck },
-    { href: 'censeur.academic.results.index', label: 'Résultats académiques', icon: BookOpenCheck },
-    { href: 'censeur.report-cards.index', label: 'Bulletins', icon: FileText },
-    { href: 'censeur.students.index', label: 'Élèves', icon: GraduationCap },
-    { href: 'censeur.guardians.index', label: 'Parents', icon: UserRound },
-    { href: 'censeur.teachers.index', label: 'Enseignants', icon: Users },
-    { href: 'censeur.classes.index', label: 'Classes', icon: SchoolIcon },
-    { href: 'censeur.subjects.index', label: 'Matières', icon: BookOpen },
-    { href: 'censeur.timetables.index', label: 'Emploi du temps', icon: CalendarDays },
+    {
+        section: 'Aperçu',
+        items: [{ href: 'censeur.dashboard', label: 'Tableau de bord', icon: LayoutDashboard }],
+    },
+    {
+        section: 'Gestion académique',
+        items: [
+            { href: 'censeur.evaluations.index', label: 'Évaluations à contrôler', icon: ClipboardList },
+            { href: 'censeur.attendance.index', label: 'Absences & retards', icon: ClipboardCheck },
+            { href: 'censeur.academic.results.index', label: 'Résultats académiques', icon: BookOpenCheck },
+            { href: 'censeur.report-cards.index', label: 'Bulletins', icon: FileText },
+            { href: 'censeur.timetables.index', label: 'Emploi du temps', icon: CalendarDays },
+            { href: 'censeur.classes.index', label: 'Classes', icon: SchoolIcon },
+            { href: 'censeur.subjects.index', label: 'Matières', icon: BookOpen },
+        ],
+    },
+    {
+        section: 'Élèves & parents',
+        items: [
+            { href: 'censeur.students.index', label: 'Élèves', icon: GraduationCap },
+            { href: 'censeur.guardians.index', label: 'Parents', icon: UserRound },
+            
+        ],
+    },
+    {
+        section: 'Personnel',
+        items: [{ href: 'censeur.teachers.index', label: 'Enseignants', icon: Users }],
+    },
 ];
 
 const directorNav = [
-    { href: 'director.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+    {
+        section: 'Aperçu',
+        items: [{ href: 'director.dashboard', label: 'Tableau de bord', icon: LayoutDashboard }],
+    },
 ];
 
 const accountantNav = [
-    { href: 'accountant.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+    {
+        section: 'Aperçu',
+        items: [{ href: 'accountant.dashboard', label: 'Tableau de bord', icon: LayoutDashboard }],
+    },
 ];
 
 const secretaryNav = [
-    { href: 'secretary.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-    { href: 'teacher.evaluations.index', label: 'Évaluations', icon: ClipboardList },
-    { href: 'teacher.evaluations.create', label: 'Saisir une évaluation', icon: ClipboardList },
-    { href: 'teacher.attendance.index', label: 'Absences & retards', icon: ClipboardCheck },
-    { href: 'teacher.academic.results.index', label: 'Résultats académiques', icon: BookOpenCheck },
-    { href: 'teacher.report-cards.index', label: 'Bulletins', icon: FileText },
+    {
+        section: 'Aperçu',
+        items: [{ href: 'secretary.dashboard', label: 'Tableau de bord', icon: LayoutDashboard }],
+    },
+    {
+        section: 'Finance',
+        items: [
+            { href: 'secretary.expenses.index', label: 'Dépenses', icon: Wallet },
+            { href: 'secretary.salaries.index', label: 'Salaires', icon: BadgeEuro },
+            { href: 'secretary.sales.index', label: 'Ventes', icon: ShoppingCart },
+            { href: 'secretary.contributions.index', label: 'Contributions', icon: HandCoins },
+        ],
+    },
+    {
+        section: 'Vie académique',
+        items: [
+            { href: 'teacher.evaluations.index', label: 'Évaluations', icon: ClipboardList },
+            { href: 'teacher.evaluations.create', label: 'Saisir une évaluation', icon: ClipboardList },
+            { href: 'teacher.attendance.index', label: 'Absences & retards', icon: ClipboardCheck },
+            { href: 'teacher.academic.results.index', label: 'Résultats académiques', icon: BookOpenCheck },
+            { href: 'teacher.report-cards.index', label: 'Bulletins', icon: FileText },
+            { href: 'secretary.timetables.index', label: 'Emploi du temps', icon: CalendarDays },
+        ],
+    },
+];
+
+const surveillantNav = [
+    {
+        section: 'Aperçu',
+        items: [{ href: 'surveillant.dashboard', label: 'Tableau de bord', icon: LayoutDashboard }],
+    },
+    {
+        section: 'Vie académique',
+        items: [
+            { href: 'surveillant.attendance.index', label: 'Absences & retards', icon: ClipboardCheck },
+            { href: 'surveillant.timetables.index', label: 'Emploi du temps', icon: CalendarDays },
+        ],
+    },
+    {
+        section: 'Élèves',
+        items: [
+            { href: 'surveillant.students.index', label: 'Élèves', icon: GraduationCap },
+            { href: 'surveillant.classes.index', label: 'Classes', icon: SchoolIcon },
+        ],
+    },
 ];
 
 const teacherNav = [
-    { href: 'teacher.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-    { href: 'teacher.evaluations.index', label: 'Mes évaluations', icon: ClipboardList },
-    { href: 'teacher.attendance.index', label: 'Assiduité des classes', icon: ClipboardCheck },
-    { href: 'teacher.academic.results.index', label: 'Résultats académiques', icon: BookOpenCheck },
-    { href: 'teacher.report-cards.index', label: 'Bulletins', icon: FileText },
-    { href: 'teacher.timetable', label: 'Mon emploi du temps', icon: CalendarDays },
+    {
+        section: 'Aperçu',
+        items: [{ href: 'teacher.dashboard', label: 'Tableau de bord', icon: LayoutDashboard }],
+    },
+    {
+        section: 'Vie académique',
+        items: [
+            { href: 'teacher.evaluations.index', label: 'Mes évaluations', icon: ClipboardList },
+            { href: 'teacher.attendance.index', label: 'Assiduité des classes', icon: ClipboardCheck },
+            ],
+    },
+    {
+        section: 'Mon emploi du temps',
+        items: [{ href: 'teacher.timetable', label: 'Emploi du temps', icon: CalendarDays }],
+    },
 ];
 
 const parentNav = [
-    { href: 'parent.dashboard', label: 'Mes enfants', icon: LayoutDashboard },
+    {
+        section: 'Aperçu',
+        items: [{ href: 'parent.dashboard', label: 'Mes enfants', icon: LayoutDashboard }],
+    },
 ];
 
 const platformNav = [
-    { href: 'platform.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-    { href: 'platform.demo-requests.index', label: 'Demandes de démo', icon: ClipboardList },
-    { href: 'platform.schools.index', label: 'Écoles', icon: Building2 },
-    { href: 'platform.licenses.index', label: 'Licences', icon: FileText },
-    { href: 'platform.audit-logs.index', label: 'Journaux d\'audit', icon: BellRing },
-    { href: 'platform.imports.index', label: 'Import en masse', icon: Upload },
+    {
+        section: 'Aperçu',
+        items: [{ href: 'platform.dashboard', label: 'Tableau de bord', icon: LayoutDashboard }],
+    },
+    {
+        section: 'Administration',
+        items: [
+            { href: 'platform.demo-requests.index', label: 'Demandes de démo', icon: ClipboardList },
+            { href: 'platform.schools.index', label: 'Écoles', icon: Building2 },
+            { href: 'platform.licenses.index', label: 'Licences', icon: FileText },
+            { href: 'platform.audit-logs.index', label: 'Journaux d\'audit', icon: BellRing },
+            { href: 'platform.imports.index', label: 'Import en masse', icon: Upload },
+        ],
+    },
 ];
 
 export default function AuthenticatedLayout({ children, title }) {
@@ -100,15 +219,17 @@ export default function AuthenticatedLayout({ children, title }) {
             ? adminNav
             : auth.user.role === 'censeur'
                 ? censeurNav
-                : auth.user.role === 'director'
-                    ? directorNav
-                    : auth.user.role === 'accountant'
-                        ? accountantNav
-                        : auth.user.role === 'secretary'
-                            ? secretaryNav
-                            : auth.user.role === 'parent'
-                                ? parentNav
-                                : teacherNav;
+                : auth.user.role === 'surveillant'
+                    ? surveillantNav
+                    : auth.user.role === 'director'
+                        ? directorNav
+                        : auth.user.role === 'accountant'
+                            ? accountantNav
+                            : auth.user.role === 'secretary'
+                                ? secretaryNav
+                                : auth.user.role === 'parent'
+                                    ? parentNav
+                                    : teacherNav;
 
     function logout() {
         router.post(route('logout'));
@@ -252,6 +373,24 @@ export default function AuthenticatedLayout({ children, title }) {
 }
 
 function SidebarContent({ nav, school, currentUrl, onNavigate }) {
+    const [collapsed, setCollapsed] = useState({});
+
+    const hrefFor = (item) => {
+        try {
+            return route(item.href);
+        } catch (error) {
+            return null;
+        }
+    };
+
+    const isActive = (item) => {
+        const href = hrefFor(item);
+
+        return href && currentUrl.startsWith(new URL(href, window.location.origin).pathname);
+    };
+
+    const toggle = (label) => setCollapsed((prev) => ({ ...prev, [label]: !prev[label] }));
+
     return (
         <>
             <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-5">
@@ -270,26 +409,48 @@ function SidebarContent({ nav, school, currentUrl, onNavigate }) {
                     <p className="truncate text-xs text-slate-500">{school.name}</p>
                 </div>
             </div>
-            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-                {nav.map((item) => {
-                    const href = route(item.href);
-                    const active = currentUrl.startsWith(new URL(href, window.location.origin).pathname);
-                    const Icon = item.icon;
+            <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+                {nav.map((group) => {
+                    const isOpen = collapsed[group.section] === undefined
+                        ? group.items.some(isActive)
+                        : !collapsed[group.section];
 
                     return (
-                        <Link
-                            key={item.href}
-                            href={href}
-                            onClick={onNavigate}
-                            className={cn(
-                                'flex min-h-[44px] items-center gap-3 rounded-lg px-3 text-sm font-medium transition',
-                                active ? 'text-white' : 'text-slate-600 hover:bg-slate-100',
+                        <div key={group.section}>
+                            <button
+                                type="button"
+                                onClick={() => toggle(group.section)}
+                                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 transition hover:text-slate-700"
+                            >
+                                {group.section}
+                                <ChevronDown className={cn('h-3.5 w-3.5 text-slate-400 transition-transform', isOpen && 'rotate-180')} />
+                            </button>
+
+                            {isOpen && (
+                                <div className="mt-1 space-y-1">
+                                    {group.items.map((item) => {
+                                        const active = isActive(item);
+                                        const Icon = item.icon;
+
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={hrefFor(item)}
+                                                onClick={onNavigate}
+                                                className={cn(
+                                                    'flex min-h-[44px] items-center gap-3 rounded-lg px-3 text-sm font-medium transition',
+                                                    active ? 'text-white' : 'text-slate-600 hover:bg-slate-100',
+                                                )}
+                                                style={active ? { backgroundColor: 'var(--color-primary)' } : undefined}
+                                            >
+                                                <Icon className="h-4.5 w-4.5 shrink-0" />
+                                                {item.label}
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
                             )}
-                            style={active ? { backgroundColor: 'var(--color-primary)' } : undefined}
-                        >
-                            <Icon className="h-4.5 w-4.5 shrink-0" />
-                            {item.label}
-                        </Link>
+                        </div>
                     );
                 })}
             </nav>

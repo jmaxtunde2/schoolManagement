@@ -45,9 +45,13 @@ class RecordDailyAttendance
                     'reason' => $row['reason'] ?? null,
                     'note' => $row['note'] ?? null,
                     'recorded_by' => $recorderId,
+                    'recorded_at' => now(),
                 ]);
 
-                if ($status !== AttendanceStatus::Absent) {
+                if ($status === AttendanceStatus::Permission) {
+                    $record->justified_at = now();
+                    $record->justified_by = $recorderId;
+                } elseif ($status !== AttendanceStatus::Absent) {
                     $record->justified_at = null;
                     $record->justified_by = null;
                 }

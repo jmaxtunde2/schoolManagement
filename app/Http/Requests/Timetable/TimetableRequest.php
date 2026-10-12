@@ -66,12 +66,16 @@ class TimetableRequest extends FormRequest
                 Rule::exists('teachers', 'id')->where('school_id', $schoolId),
             ],
 
+            'room_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('rooms', 'id')->where('school_id', $schoolId),
+            ],
+
             'day_of_week' => ['required', 'integer', Rule::in(array_keys(Timetable::days()))],
 
             'starts_at' => ['required', 'string', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
             'ends_at' => ['required', 'string', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
-
-            'room' => ['nullable', 'string', 'max:60'],
         ];
     }
 
@@ -82,10 +86,10 @@ class TimetableRequest extends FormRequest
             'class_id' => 'classe',
             'subject_id' => 'matière',
             'teacher_id' => 'enseignant',
+            'room_id' => 'salle',
             'day_of_week' => 'jour',
             'starts_at' => 'heure de début',
             'ends_at' => 'heure de fin',
-            'room' => 'salle',
         ];
     }
 
@@ -152,8 +156,8 @@ class TimetableRequest extends FormRequest
             $this->addOverlapError($validator, 'teacher_id', 'Cet enseignant a déjà un cours sur ce créneau.');
         }
 
-        if (filled($data['room'] ?? null) && (clone $query)->where('room', $data['room'])->exists()) {
-            $this->addOverlapError($validator, 'room', 'Cette salle est déjà occupée sur ce créneau.');
+        if (filled($data['room_id'] ?? null) && (clone $query)->where('room_id', $data['room_id'])->exists()) {
+            $this->addOverlapError($validator, 'room_id', 'Cette salle est déjà occupée sur ce créneau.');
         }
     }
 

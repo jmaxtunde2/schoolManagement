@@ -47,6 +47,20 @@ return [
         'token' => env('ESMS_TOKEN', env('SMS_API_KEY')),
         'api_secret' => env('SMS_API_SECRET'),
         'sender_id' => env('SMS_SENDER_ID'),
+        // Indicatif téléphonique utilisée pour normaliser les numéros au format
+        // international (E.164) exigé par l'API WhatsApp avant l'envoi.
+        'country_code' => env('SMS_COUNTRY_CODE', '228'),
+    ],
+
+    /*
+     | WhatsApp Business Cloud API (Meta). Activée via SMS_PROVIDER=whatsapp.
+     | https://developers.facebook.com/docs/whatsapp/cloud-api
+     */
+    'whatsapp' => [
+        'token' => env('WHATSAPP_TOKEN'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com'),
+        'api_version' => env('WHATSAPP_API_VERSION', 'v21.0'),
     ],
 
 ];

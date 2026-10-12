@@ -14,6 +14,7 @@ class AttendancePolicy
     {
         return $user->isAdmin()
             || $user->isCenseur()
+            || $user->isSurveillant()
             || $user->isSecretary()
             || $user->isTeacher();
     }
@@ -24,7 +25,7 @@ class AttendancePolicy
             return false;
         }
 
-        if ($user->isAdmin() || $user->isCenseur() || $user->isSecretary()) {
+        if ($user->isAdmin() || $user->isCenseur() || $user->isSurveillant() || $user->isSecretary()) {
             return true;
         }
 
@@ -42,7 +43,7 @@ class AttendancePolicy
             return false;
         }
 
-        if ($user->isAdmin() || $user->isCenseur() || $user->isSecretary()) {
+        if ($user->isAdmin() || $user->isCenseur() || $user->isSurveillant() || $user->isSecretary()) {
             return true;
         }
 
@@ -56,22 +57,14 @@ class AttendancePolicy
             return false;
         }
 
-        if ($user->isAdmin() || $user->isCenseur() || $user->isSecretary()) {
-            return true;
-        }
-
-        if (! $user->isTeacher() || ! $this->teacherCanAccessClass($user, (int) $record->class_room_id)) {
-            return false;
-        }
-
-        return ! $record->period?->is_closed;
+        return $user->isAdmin() || $user->isSurveillant();
     }
 
     public function justify(User $user, AttendanceRecord $record): bool
     {
         return (int) $record->school_id === (int) $user->school_id
             && $record->status === AttendanceStatus::Absent
-            && ($user->isAdmin() || $user->isCenseur() || $user->isSecretary());
+            && ($user->isAdmin() || $user->isCenseur() || $user->isSurveillant() || $user->isSecretary());
     }
 
     public function submitJustification(User $user, AttendanceRecord $record): bool

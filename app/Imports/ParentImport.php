@@ -32,7 +32,7 @@ class ParentImport implements ToCollection, WithHeadingRow, WithValidation, Skip
     protected function loadStudentCache(): void
     {
         $this->studentCache = Student::where('school_id', $this->school->id)
-            ->pluck('id', 'student_number')
+            ->pluck('id', 'matricule')
             ->toArray();
     }
 
@@ -53,7 +53,7 @@ class ParentImport implements ToCollection, WithHeadingRow, WithValidation, Skip
                 $user = User::firstOrNew(['email' => strtolower($email)]);
                 $isNewUser = ! $user->exists;
 
-                $user->fill([
+                $user->forceFill([
                     'name' => $data['name'],
                     'email' => strtolower($email),
                     'password' => Hash::make($data['password'] ?? 'password123'),
@@ -73,8 +73,7 @@ class ParentImport implements ToCollection, WithHeadingRow, WithValidation, Skip
                 ['school_id' => $this->school->id, 'phone' => $data['phone']],
                 [
                     'user_id' => $user?->id,
-                    'first_name' => $data['first_name'] ?? null,
-                    'last_name' => $data['last_name'] ?? null,
+                    'name' => $data['name'],
                     'email' => $email,
                     'phone' => $data['phone'],
                     'address' => $data['address'] ?? null,

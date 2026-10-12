@@ -41,10 +41,10 @@ class Timetable extends Model
         'class_id',
         'subject_id',
         'teacher_id',
+        'room_id',
         'day_of_week',
         'starts_at',
         'ends_at',
-        'room',
     ];
 
     protected function casts(): array
@@ -74,6 +74,11 @@ class Timetable extends Model
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(Teacher::class);
+    }
+
+    public function room(): BelongsTo
+    {
+        return $this->belongsTo(Room::class);
     }
 
     public function getDayLabelAttribute(): string
