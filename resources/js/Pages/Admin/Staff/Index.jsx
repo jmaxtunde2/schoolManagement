@@ -50,8 +50,8 @@ export default function Index({ staff = [], roles = [], counts = {}, filters = {
     const [role, setRole] = useState(filters.role ?? '');
     const [status, setStatus] = useState(filters.status ?? '');
 
-    const createForm = useForm(emptyMember, { forceFormData: true });
-    const editForm = useForm(emptyMember, { forceFormData: true });
+    const createForm = useForm(emptyMember);
+    const editForm = useForm(emptyMember);
 
     const hasFilters = Boolean(search || role || status);
 
@@ -88,6 +88,7 @@ export default function Index({ staff = [], roles = [], counts = {}, filters = {
         event.preventDefault();
 
         createForm.post(route('admin.staff.store'), {
+            forceFormData: true,
             onSuccess: () => createForm.reset(),
         });
     }
@@ -112,7 +113,10 @@ export default function Index({ staff = [], roles = [], counts = {}, filters = {
     function submitEdit(event) {
         event.preventDefault();
 
-        editForm.put(route('admin.staff.update', editing.id), {
+        editForm.transform((data) => ({ ...data, _method: 'put' }));
+
+        editForm.post(route('admin.staff.update', editing.id), {
+            forceFormData: true,
             onSuccess: () => setEditing(null),
         });
     }

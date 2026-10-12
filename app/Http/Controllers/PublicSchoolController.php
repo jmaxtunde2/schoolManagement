@@ -139,6 +139,9 @@ class PublicSchoolController extends Controller
         ];
 
         $heroImagePath = $publicSite['hero_image_path'] ?? null;
+        $heroImageUrl = $heroImagePath
+            ? Storage::disk('public')->url($heroImagePath)
+            : null;
         $website = $setting?->website;
         if (! in_array(parse_url((string) $website, PHP_URL_SCHEME), ['http', 'https'], true)) {
             $website = null;
@@ -148,12 +151,46 @@ class PublicSchoolController extends Controller
             ->where('verified', true)
             ->orderByDesc('is_primary')
             ->value('domain');
+        $customDomainUrl = $verifiedDomain ? 'https://'.$verifiedDomain : null;
+
+        $canonicalUrl = $school->publicUrl();
+        $platformUrl = rtrim((string) config('app.url'), '/');
+        $logoUrl = $setting?->logo_url ?: $branding['logo_url'];
 
         $metaDescription = Str::limit(
             strip_tags($description ?: ($setting?->slogan ?: "Bienvenue à {$name}.")),
             170,
             ''
         );
+
+        $metaTitle = $setting?->slogan
+            ? $name.' – '.strip_tags($setting->slogan)
+            : $name;
+
+        $postalAddress = array_filter([
+            '@type' => 'PostalAddress',
+            'streetAddress' => $setting?->address,
+            'addressLocality' => $setting?->city,
+            'addressCountry' => $setting?->country,
+        ], fn ($value) => filled($value));
+
+        $structuredData = array_filter([
+            '@context' => 'https://schema.org',
+            '@type' => 'EducationalOrganization',
+            'name' => $name,
+            'alternateName' => $setting?->short_name ?: null,
+            'url' => $canonicalUrl,
+            'logo' => $logoUrl,
+            'image' => $heroImageUrl,
+            'description' => $metaDescription,
+            'slogan' => $setting?->slogan,
+            'foundingDate' => $foundedYear ? (string) $foundedYear : null,
+            'address' => count($postalAddress) > 1 ? $postalAddress : null,
+            'telephone' => $setting?->phone,
+            'email' => $setting?->email,
+            'numberOfStudents' => $stats['students'] ?: null,
+            'sameAs' => $website ? [$website] : null,
+        ], fn ($value) => filled($value) || is_array($value));
 
         return Inertia::render('Public/SchoolLanding', [
             'school' => [
@@ -168,10 +205,8 @@ class PublicSchoolController extends Controller
                     ? strip_tags($publicSite['vision'])
                     : null,
                 'values' => $values,
-                'logo_url' => $setting?->logo_url ?: $branding['logo_url'],
-                'hero_image_url' => $heroImagePath
-                    ? Storage::disk('public')->url($heroImagePath)
-                    : null,
+                'logo_url' => $logoUrl,
+                'hero_image_url' => $heroImageUrl,
                 'primary_color' => $setting?->primary_color ?: '#059669',
                 'secondary_color' => $setting?->secondary_color ?: '#2563EB',
                 'accent_color' => $setting?->accent_color ?: '#D97706',
@@ -181,11 +216,16 @@ class PublicSchoolController extends Controller
                 'phone' => $setting?->phone,
                 'email' => $setting?->email,
                 'website' => $website,
+                'custom_domain_url' => $customDomainUrl,
                 'founded_year' => $foundedYear,
+                'meta_title' => $metaTitle,
                 'meta_description' => $metaDescription,
-                'canonical_url' => $request->url(),
-                'public_url' => $verifiedDomain ? 'https://'.$verifiedDomain : null,
+                'canonical_url' => $canonicalUrl,
+                'public_url' => $canonicalUrl,
+                'platform_url' => $platformUrl,
+                'demo_url' => $platformUrl.'/demander-une-demonstration',
             ],
+            'structuredData' => $structuredData,
             'features' => $features,
             'stats' => $stats,
             'testimonials' => $testimonials,

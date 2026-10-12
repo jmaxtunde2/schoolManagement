@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Role;
+use App\Support\ReservedSchoolSlugs;
 use Database\Factories\SchoolFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,9 +27,37 @@ class School extends Model
     {
         static::creating(function (School $school) {
             if (empty($school->slug)) {
-                $school->slug = Str::slug($school->name).'-'.Str::lower(Str::random(4));
+                $school->slug = static::generateUniqueSlug($school->name);
             }
         });
+    }
+
+    /** Slug public unique dérivé du nom (ex. « Ketry School » → ketry-school-1up6). */
+    public static function generateUniqueSlug(string $name, ?int $ignoreId = null): string
+    {
+        $base = Str::slug($name) ?: 'ecole';
+        $reserved = ReservedSchoolSlugs::all();
+
+        do {
+            $slug = $base.'-'.Str::lower(Str::random(4));
+        } while (
+            in_array($slug, $reserved, true)
+            || static::query()
+                ->where('slug', $slug)
+                ->when($ignoreId, fn ($query) => $query->whereKeyNot($ignoreId))
+                ->exists()
+        );
+
+        return $slug;
+    }
+
+    /**
+     * URL publique canonique de l'établissement sur la plateforme
+     * (ex. https://www.corischool.com/ketry-school).
+     */
+    public function publicUrl(): string
+    {
+        return rtrim((string) config('app.url'), '/').'/'.$this->slug;
     }
 
     public function users(): HasMany

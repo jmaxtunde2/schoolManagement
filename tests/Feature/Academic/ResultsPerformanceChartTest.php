@@ -92,9 +92,40 @@ class ResultsPerformanceChartTest extends TestCase
                 ->where('performance.academic_year', '2025-2026')
                 ->where('performance.series.0.label', 'Trimestre 1')
                 ->where('performance.series.0.average', 15)
+                ->where('performance.series.0.distribution.graded', 2)
+                ->where('performance.series.0.distribution.excellent', 1)
+                ->where('performance.series.0.distribution.bien', 1)
+                ->where('performance.series.0.distribution.success_rate', 100)
+                ->where('performance.series.0.distribution.failure_rate', 0)
                 ->where('performance.series.1.label', 'Trimestre 2')
                 ->where('performance.series.1.average', 11)
+                ->where('performance.series.1.distribution.assez', 1)
+                ->where('performance.series.1.distribution.passable', 1)
+                ->where('performance.series.1.distribution.success_rate', 100)
                 ->where('performance.overall', 13));
+    }
+
+    public function test_the_distribution_summarises_mentions_and_failure_rate(): void
+    {
+        $teacher = $this->teacher();
+        $period = $this->period($this->yearOne, 'Trimestre 1', 1);
+
+        $studentA = $this->student($this->classA);
+        $studentB = $this->student($this->classA);
+        $this->score($this->evaluation($period, $this->classA, $teacher), $studentA, 8);
+        $this->score($this->evaluation($period, $this->classA, $teacher), $studentB, 18);
+
+        $this->actingAs(User::factory()->admin()->forSchool($this->school)->create())
+            ->get('/admin/academic/results?tab=performance&perf_mode=periods&perf_class_id='.$this->classA->id)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('performance.series.0.distribution.graded', 2)
+                ->where('performance.series.0.distribution.echec', 1)
+                ->where('performance.series.0.distribution.excellent', 1)
+                ->where('performance.series.0.distribution.success', 1)
+                ->where('performance.series.0.distribution.failure', 1)
+                ->where('performance.series.0.distribution.success_rate', 50)
+                ->where('performance.series.0.distribution.failure_rate', 50));
     }
 
     public function test_the_performance_can_be_limited_to_a_single_class(): void
@@ -142,8 +173,12 @@ class ResultsPerformanceChartTest extends TestCase
                 ->where('performance.mode', 'years')
                 ->where('performance.series.0.label', '2025-2026')
                 ->where('performance.series.0.average', 13)
+                ->where('performance.series.0.distribution.graded', 2)
+                ->where('performance.series.0.distribution.assez', 1)
+                ->where('performance.series.0.distribution.bien', 1)
                 ->where('performance.series.1.label', '2026-2027')
-                ->where('performance.series.1.average', 18));
+                ->where('performance.series.1.average', 18)
+                ->where('performance.series.1.distribution.excellent', 1));
     }
 
     public function test_a_teacher_cannot_open_the_chart_for_an_unassigned_class(): void

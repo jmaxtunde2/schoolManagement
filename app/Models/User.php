@@ -48,6 +48,7 @@ class User extends Authenticatable
             'two_factor_enabled_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
             'two_factor_last_used_at' => 'datetime',
+            'two_factor_last_counter' => 'integer',
         ];
     }
 

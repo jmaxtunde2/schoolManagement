@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { ArrowLeft, Download, FileCheck2, RefreshCw, Save } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Download, FileCheck2, RefreshCw, Save } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Badge from '@/Components/UI/Badge';
@@ -12,8 +12,29 @@ import Textarea from '@/Components/UI/Textarea';
 const labels = { draft: 'Brouillon', generated: 'À vérifier', published: 'Publié' };
 const tones = { draft: 'slate', generated: 'amber', published: 'green' };
 
-export default function ReportCardShow({ reportCard, routePrefix, canEditComments, canPublish, canRegenerate }) {
+function formatEmitted(value) {
+    if (!value) {
+        return '—';
+    }
+
+    const date = new Date(String(value).replace(' ', 'T'));
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    const datePart = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+        .format(date)
+        .replace('.', '');
+    const timePart = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+        .format(date);
+
+    return `${datePart} à ${timePart}`;
+}
+
+export default function ReportCardShow({ reportCard, routePrefix, canEditComments, canPublish, canRegenerate, fee }) {
     const [confirmPublish, setConfirmPublish] = useState(false);
+    const feeBlocked = Boolean(fee?.configured && !fee?.settled);
     const form = useForm({
         appreciation: reportCard.appreciation ?? '',
         items: reportCard.items.map((item) => ({
@@ -72,6 +93,16 @@ export default function ReportCardShow({ reportCard, routePrefix, canEditComment
                         <Identity label="Période" value={snapshot.period.name} detail={snapshot.academic_year.name} />
                     </div>
 
+                    {feeBlocked && (
+                        <div className="flex items-start gap-3 border-b border-amber-200 bg-amber-50 p-5 text-sm text-amber-800 sm:p-7">
+                            <AlertTriangle className="h-5 w-5 shrink-0" />
+                            <div>
+                                <p className="font-semibold">Frais de scolarité non soldés</p>
+                                <p className="mt-0.5">La publication, la régénération et le téléchargement sont bloqués tant que le solde restant ({formatAmount(fee.remaining)}) n'est pas réglé.</p>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="p-5 sm:p-7">
                         <div className="overflow-x-auto">
                             <table className="min-w-full text-sm"><thead className="text-left text-xs font-semibold uppercase text-slate-500"><tr><th className="py-3 pr-4">Matière</th><th className="py-3 pr-4 text-right">Moyenne</th><th className="py-3 pr-4 text-center">Coef.</th><th className="py-3 pr-4">Appréciation</th><th className="py-3">Commentaire</th></tr></thead><tbody className="divide-y divide-slate-100">{reportCard.items.map((item, index) => <tr key={item.id} className="align-top"><td className="py-3 pr-4"><p className="font-semibold text-slate-800">{item.subject_name}</p><p className="text-xs text-slate-500">{item.evaluation_count} évaluation(s)</p></td><td className="py-3 pr-4 text-right font-bold">{item.average?.toFixed(2) ?? '—'} / 20</td><td className="py-3 pr-4 text-center">{item.coefficient}</td><td className="py-3 pr-4">{canEditComments ? <Textarea rows={2} value={form.data.items[index].appreciation} onChange={(event) => updateItem(index, 'appreciation', event.target.value)} /> : item.appreciation || '—'}</td><td className="py-3">{canEditComments ? <Textarea rows={2} value={form.data.items[index].teacher_comment} onChange={(event) => updateItem(index, 'teacher_comment', event.target.value)} /> : item.teacher_comment || '—'}</td></tr>)}</tbody></table>
@@ -80,7 +111,7 @@ export default function ReportCardShow({ reportCard, routePrefix, canEditComment
                         <div className="mt-6 grid gap-4 sm:grid-cols-3">
                             <Metric label="Moyenne générale" value={`${Number(reportCard.general_average).toFixed(2)} / 20`} />
                             <Metric label="Classement" value={reportCard.rank ? `${reportCard.rank}e / ${reportCard.total_students}` : '—'} />
-                            <Metric label="Émis le" value={reportCard.published_at || reportCard.generated_at} />
+                            <Metric label="Émis le" value={formatEmitted(reportCard.published_at || reportCard.generated_at)} />
                         </div>
 
                         <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -93,10 +124,12 @@ export default function ReportCardShow({ reportCard, routePrefix, canEditComment
                         {canEditComments && <label className="mt-6 block text-sm font-semibold text-slate-700">Appréciation générale<Textarea className="mt-1.5" rows={3} value={form.data.appreciation} onChange={(event) => form.setData('appreciation', event.target.value)} /></label>}
 
                         <div className="mt-7 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-5">
-                            {reportCard.status === 'published' && <a href={route(`${routePrefix}.report-cards.pdf`, reportCard.id)} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"><Download className="h-4 w-4" />Télécharger le PDF</a>}
+                            {reportCard.status === 'published' && (feeBlocked
+                                ? <span title="Frais de scolarité non soldés" className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-400"><Download className="h-4 w-4" />Télécharger le PDF</span>
+                                : <a href={route(`${routePrefix}.report-cards.pdf`, reportCard.id)} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"><Download className="h-4 w-4" />Télécharger le PDF</a>)}
                             {canEditComments && <Button variant="secondary" onClick={saveComments} loading={form.processing}><Save className="h-4 w-4" />Enregistrer les appréciations</Button>}
-                            {canPublish && <Button onClick={() => setConfirmPublish(true)}><FileCheck2 className="h-4 w-4" />Publier le bulletin</Button>}
-                            {canRegenerate && <Button variant="danger" onClick={regenerate}><RefreshCw className="h-4 w-4" />Régénérer une version</Button>}
+                            {canPublish && <Button onClick={() => setConfirmPublish(true)} disabled={feeBlocked}><FileCheck2 className="h-4 w-4" />Publier le bulletin</Button>}
+                            {canRegenerate && <Button variant="danger" onClick={regenerate} disabled={feeBlocked}><RefreshCw className="h-4 w-4" />Régénérer une version</Button>}
                         </div>
                     </div>
                     <div className="grid grid-cols-3 border-t border-slate-200 text-center text-xs text-slate-500"><div className="p-6">Professeur principal<div className="mt-8 border-t border-slate-300 pt-2">Signature</div></div><div className="p-6">Censeur<div className="mt-8 border-t border-slate-300 pt-2">Signature</div></div><div className="p-6">Direction<div className="mt-8 border-t border-slate-300 pt-2">Signature / cachet</div></div></div>
@@ -117,4 +150,8 @@ function Metric({ label, value }) {
 
 function Attendance({ label, value }) {
     return <div className="flex items-center justify-between border-b border-slate-100 py-2 text-sm"><span className="text-slate-600">{label}</span><span className="font-semibold text-slate-900">{value ?? 0}</span></div>;
+}
+
+function formatAmount(value) {
+    return `${Number(value ?? 0).toLocaleString('fr-FR')} FCFA`;
 }

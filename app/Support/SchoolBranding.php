@@ -49,6 +49,33 @@ class SchoolBranding
         });
     }
 
+    /**
+     * Identité complète de l'établissement pour les documents imprimés (bulletin).
+     * Toujours issue des paramètres courants afin que le nom, le logo et les
+     * coordonnées reflètent les derniers réglages.
+     */
+    public static function documentIdentity(?School $school): array
+    {
+        if (! $school) {
+            return [];
+        }
+
+        $s = $school->settings()->withoutGlobalScopes()->first();
+
+        return array_filter([
+            'name' => $s?->school_name ?: $school->name,
+            'address' => $s?->address,
+            'city' => $s?->city,
+            'country' => $s?->country,
+            'phone' => $s?->phone,
+            'email' => $s?->email,
+            'website' => $s?->website,
+            'slogan' => $s?->slogan,
+            'logo_path' => $s?->logo_path,
+            'primary_color' => $s?->primary_color,
+        ], fn ($value) => $value !== null);
+    }
+
     public static function guest(): array
     {
         return [

@@ -32,7 +32,10 @@ class GuardianRequest extends FormRequest
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->route('guardian')?->user_id)],
             'password' => [$this->isMethod('post') ? 'required' : 'nullable', 'string', 'min:8'],
             'student_ids' => ['nullable', 'array'],
-            'student_ids.*' => ['integer', 'exists:students,id'],
+            'student_ids.*' => [
+                'integer',
+                Rule::exists('students', 'id')->where('school_id', $this->user()->school_id),
+            ],
         ];
     }
 

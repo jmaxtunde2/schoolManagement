@@ -20,6 +20,7 @@ class UpdateSchoolSettings
         $setting = DB::transaction(function () use ($school, $data, $logo, $removeLogo, &$oldLogo) {
             $setting = $school->settings()->withoutGlobalScopes()->firstOrNew();
             $oldLogo = $setting->logo_path;
+            $oldSchoolName = $setting->exists ? $setting->school_name : $school->name;
 
             $attributes = Arr::except($data, ['logo', 'remove_logo']);
 
@@ -30,6 +31,12 @@ class UpdateSchoolSettings
             }
 
             $setting->fill($attributes)->save();
+
+            // L'adresse publique suit le nom : on régénère le slug quand celui-ci change.
+            if ($setting->school_name && $setting->school_name !== $oldSchoolName) {
+                $school->slug = School::generateUniqueSlug($setting->school_name, $school->id);
+                $school->save();
+            }
 
             return $setting;
         });

@@ -46,6 +46,12 @@ class UpdatePublicSiteSettings
         $setting->options = $options;
         $setting->save();
 
+        $slug = $data['slug'] ?? null;
+        if (is_string($slug) && $slug !== '' && $slug !== $school->slug) {
+            $school->slug = $slug;
+            $school->save();
+        }
+
         $newHeroImage = $publicSite['hero_image_path'] ?? null;
         if ($oldHeroImage && $oldHeroImage !== $newHeroImage) {
             Storage::disk('public')->delete($oldHeroImage);

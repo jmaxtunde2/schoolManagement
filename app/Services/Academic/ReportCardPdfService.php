@@ -3,6 +3,8 @@
 namespace App\Services\Academic;
 
 use App\Models\ReportCard;
+use App\Models\School;
+use App\Support\SchoolBranding;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
 
@@ -12,6 +14,14 @@ class ReportCardPdfService
     {
         $reportCard->loadMissing(['items.subject', 'student', 'classRoom', 'period', 'academicYear']);
         $snapshot = $reportCard->snapshot ?? [];
+
+        // L'identité de l'établissement (nom, logo, coordonnées) suit toujours les
+        // paramètres actuels, même pour un bulletin généré auparavant.
+        $liveIdentity = SchoolBranding::documentIdentity(
+            School::find($reportCard->school_id)
+        );
+        $snapshot['school'] = array_merge($snapshot['school'] ?? [], $liveIdentity);
+
         $logoPath = data_get($snapshot, 'school.logo_path');
         $logoAbsolutePath = $logoPath && Storage::disk('public')->exists($logoPath)
             ? Storage::disk('public')->path($logoPath)

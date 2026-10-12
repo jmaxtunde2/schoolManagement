@@ -79,6 +79,9 @@ class TimetableController extends Controller
                 ->values(),
             'filters' => $request->only(['academic_year_id', 'class_id']),
             'canManage' => $request->user()->can('create', Timetable::class),
+            'routePrefix' => $request->routeIs('censeur.*')
+                ? 'censeur'
+                : ($request->routeIs('surveillant.*') ? 'surveillant' : 'admin'),
         ]);
     }
 

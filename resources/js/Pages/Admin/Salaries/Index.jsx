@@ -64,7 +64,9 @@ export default function Salaries({ month, salaries, history, routePrefix, can_ma
             lines: salaries
                 .map((member) => ({ staff_id: member.id, amount: Number(local[member.id]) || null }))
                 .filter((line) => line.amount !== null),
-        })).post(route(`${routePrefix}.salaries.save`), {
+        }));
+
+        form.post(route(`${routePrefix}.salaries.save`), {
             preserveScroll: true,
         });
     }

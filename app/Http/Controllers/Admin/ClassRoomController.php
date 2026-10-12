@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Students\BuildGenderDistribution;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Reference\ClassRoomRequest;
 use App\Models\ClassRoom;
@@ -11,10 +12,11 @@ use Inertia\Response;
 
 class ClassRoomController extends Controller
 {
-    public function index(): Response
+    public function index(BuildGenderDistribution $genderDistribution): Response
     {
         return Inertia::render('Admin/Classes/Index', [
             'classes' => ClassRoom::withCount('students')->orderBy('name')->get(),
+            'genderDistribution' => $genderDistribution->handle(),
         ]);
     }
 

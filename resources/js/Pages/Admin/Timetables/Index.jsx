@@ -44,6 +44,7 @@ export default function Index({
     teachers = [],
     filters = {},
     canManage = false,
+    routePrefix = 'admin',
 }) {
     const [creating, setCreating] = useState(false);
     const [editing, setEditing] = useState(null);
@@ -56,7 +57,7 @@ export default function Index({
 
     function applyFilters(next) {
         router.get(
-            route('admin.timetables.index'),
+            route(`${routePrefix}.timetables.index`),
             {
                 academic_year_id:
                     next.academic_year_id ?? selectedAcademicYearId,
@@ -83,7 +84,7 @@ export default function Index({
     function submitCreate(event) {
         event.preventDefault();
 
-        form.post(route('admin.timetables.store'), {
+        form.post(route(`${routePrefix}.timetables.store`), {
             onSuccess: () => setCreating(false),
         });
     }
@@ -107,13 +108,13 @@ export default function Index({
     function submitEdit(event) {
         event.preventDefault();
 
-        form.put(route('admin.timetables.update', editing.id), {
+        form.put(route(`${routePrefix}.timetables.update`, editing.id), {
             onSuccess: () => setEditing(null),
         });
     }
 
     function destroy() {
-        router.delete(route('admin.timetables.destroy', deleting.id), {
+        router.delete(route(`${routePrefix}.timetables.destroy`, deleting.id), {
             onStart: () => setDeletingProcessing(true),
             onFinish: () => {
                 setDeletingProcessing(false);

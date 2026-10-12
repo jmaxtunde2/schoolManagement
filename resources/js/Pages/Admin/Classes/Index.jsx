@@ -10,6 +10,7 @@ import {
     UserCheck,
     UserX,
     GraduationCap,
+    PieChart,
     X,
     SlidersHorizontal,
 } from 'lucide-react';
@@ -24,6 +25,8 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog';
 import EmptyState from '@/Components/UI/EmptyState';
 import Field from '@/Components/UI/Field';
 import Input from '@/Components/UI/Input';
+import Tabs from '@/Components/UI/Tabs';
+import StudentGenderChart from '@/Components/Students/StudentGenderChart';
 
 const empty = {
     name: '',
@@ -31,9 +34,10 @@ const empty = {
     capacity: '',
 };
 
-export default function ClassesIndex({ classes }) {
+export default function ClassesIndex({ classes, genderDistribution }) {
     const isCenseur = usePage().props.auth.user.role === 'censeur';
     const routePrefix = isCenseur ? 'censeur' : 'admin';
+    const [activeTab, setActiveTab] = useState('classes');
     const [editing, setEditing] = useState(null);
     const [showForm, setShowForm] = useState(false);
     const [toDelete, setToDelete] = useState(null);
@@ -304,6 +308,31 @@ export default function ClassesIndex({ classes }) {
                 </div>
 
                 {/* =====================================================
+                    ONGLETS
+                ====================================================== */}
+
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 pt-3 shadow-sm sm:px-5">
+                    <Tabs
+                        active={activeTab}
+                        onChange={setActiveTab}
+                        tabs={[
+                            {
+                                key: 'classes',
+                                label: 'Classes',
+                            },
+                            {
+                                key: 'distribution',
+                                label: 'Répartition filles / garçons',
+                            },
+                        ]}
+                    />
+                </div>
+
+                {activeTab === 'distribution' ? (
+                    <DistributionPanel distribution={genderDistribution} />
+                ) : (
+                    <>
+                {/* =====================================================
                     STATISTIQUES
                 ====================================================== */}
 
@@ -509,7 +538,7 @@ export default function ClassesIndex({ classes }) {
                                 {
                                     key: 'name',
                                     header: 'Classe',
-                                    render: (classroom) => !isCenseur && (
+                                    render: (classroom) => (
                                         <div className="flex items-center gap-3">
                                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm">
                                                 <SchoolIcon className="h-5 w-5" />
@@ -779,6 +808,8 @@ export default function ClassesIndex({ classes }) {
                         />
                     </Card.Body>
                 </Card>
+                    </>
+                )}
             </div>
 
             {/* =========================================================
@@ -1017,5 +1048,28 @@ function FilterButton({
         >
             {children}
         </button>
+    );
+}
+
+function DistributionPanel({ distribution }) {
+    return (
+        <Card className="overflow-hidden">
+            <Card.Header
+                title="Répartition des élèves"
+                actions={
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1.5 text-sm font-bold text-purple-700">
+                        <PieChart className="h-4 w-4" />
+                        {distribution?.totals?.students ?? 0} élève
+                        {(distribution?.totals?.students ?? 0) > 1
+                            ? 's'
+                            : ''}
+                    </span>
+                }
+            />
+
+            <Card.Body className="p-5 sm:p-6">
+                <StudentGenderChart distribution={distribution} />
+            </Card.Body>
+        </Card>
     );
 }

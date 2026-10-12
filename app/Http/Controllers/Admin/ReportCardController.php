@@ -8,8 +8,10 @@ use App\Http\Controllers\Controller;
 use App\Models\AcademicPeriod;
 use App\Models\ClassRoom;
 use App\Models\ReportCard;
+use App\Models\School;
 use App\Services\Academic\ReportCardPdfService;
 use App\Services\AuditService;
+use App\Support\SchoolBranding;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -96,6 +98,7 @@ class ReportCardController extends Controller
             'canEditComments' => Gate::allows('updateComments', $reportCard),
             'canPublish' => Gate::allows('publish', $reportCard),
             'canRegenerate' => Gate::allows('regenerate', $reportCard),
+            'fee' => $reportCard->feeStatus(),
         ]);
     }
 
@@ -142,6 +145,11 @@ class ReportCardController extends Controller
     public function regenerate(Request $request, ReportCard $reportCard, GenerateReportCards $action): RedirectResponse
     {
         Gate::authorize('regenerate', $reportCard);
+
+        if (! $reportCard->hasSettledFees()) {
+            return back()->with('error', 'Frais de scolarité non soldés : le bulletin ne peut pas être régénéré.');
+        }
+
         $classRoom = ClassRoom::withoutGlobalScopes()->where('school_id', $request->user()->school_id)->findOrFail($reportCard->class_room_id);
         $period = AcademicPeriod::withoutGlobalScopes()->where('school_id', $request->user()->school_id)->findOrFail($reportCard->academic_period_id);
 
@@ -166,10 +174,14 @@ class ReportCardController extends Controller
         )->with('success', 'Une nouvelle version du bulletin a été générée.');
     }
 
-    public function download(Request $request, ReportCard $reportCard, ReportCardPdfService $pdf, AuditService $audit): StreamedResponse
+    public function download(Request $request, ReportCard $reportCard, ReportCardPdfService $pdf, AuditService $audit): StreamedResponse|RedirectResponse
     {
         Gate::authorize('view', $reportCard);
         abort_unless($reportCard->status->value === 'published' || ! $request->user()->isParent(), 403);
+
+        if (! $reportCard->hasSettledFees()) {
+            return back()->with('error', 'Frais de scolarité non soldés : le bulletin ne peut pas être téléchargé.');
+        }
 
         $path = $reportCard->pdf_path;
         if (! $path || ! Storage::disk('local')->exists($path)) {
@@ -197,6 +209,15 @@ class ReportCardController extends Controller
 
     private function serialize(ReportCard $reportCard): array
     {
+        $snapshot = $reportCard->snapshot ?? [];
+
+        // Identité de l'établissement (nom, logo, coordonnées) issue des paramètres
+        // actuels, pour que le bulletin reflète toujours les derniers réglages.
+        $snapshot['school'] = array_merge(
+            $snapshot['school'] ?? [],
+            SchoolBranding::documentIdentity(School::find($reportCard->school_id))
+        );
+
         return [
             'id' => $reportCard->id,
             'version' => $reportCard->version,
@@ -206,7 +227,7 @@ class ReportCardController extends Controller
             'total_students' => $reportCard->total_students,
             'appreciation' => $reportCard->appreciation,
             'attendance_summary' => $reportCard->attendance_summary ?? [],
-            'snapshot' => $reportCard->snapshot ?? [],
+            'snapshot' => $snapshot,
             'generated_at' => $reportCard->generated_at?->toDateTimeString(),
             'published_at' => $reportCard->published_at?->toDateTimeString(),
             'items' => $reportCard->items->map(fn ($item) => [

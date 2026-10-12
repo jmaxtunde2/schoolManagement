@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ResultsDistributionChart from '@/Components/Academic/ResultsDistributionChart';
 import ResultsPerformanceChart from '@/Components/Academic/ResultsPerformanceChart';
 import Badge from '@/Components/UI/Badge';
 import Button from '@/Components/UI/Button';
@@ -691,6 +692,24 @@ function PerformancePanel({
                             </Button>
                         </div>
                     </form>
+                </Card.Body>
+            </Card>
+
+            <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-slate-200">
+                <Card.Header
+                    title="Répartition & taux de réussite"
+                    description={`${performance?.scope_label ?? ''} · répartition des élèves par mention et taux de réussite (seuil de 10/20)`}
+                    actions={
+                        <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-sm font-bold text-emerald-700">
+                            {overall === null || overall === undefined
+                                ? '—'
+                                : `${overall.toFixed(2)} / 20`}
+                        </span>
+                    }
+                />
+
+                <Card.Body className="p-4 sm:p-6">
+                    <ResultsDistributionChart performance={performance} />
                 </Card.Body>
             </Card>
 

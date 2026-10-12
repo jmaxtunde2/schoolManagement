@@ -21,6 +21,7 @@ import Input from '@/Components/UI/Input';
 import Select from '@/Components/UI/Select';
 import Textarea from '@/Components/UI/Textarea';
 import ColorPicker from '@/Components/UI/ColorPicker';
+import CountrySelect from '@/Components/UI/CountrySelect';
 import FileUpload from '@/Components/UI/FileUpload';
 import Button from '@/Components/UI/Button';
 
@@ -50,6 +51,7 @@ export default function SchoolSettings({
         data,
         setData,
         post,
+        transform,
         processing,
         errors,
     } = useForm({
@@ -94,9 +96,10 @@ export default function SchoolSettings({
     function submit(e) {
         e.preventDefault();
 
+        transform((data) => ({ ...data, _method: 'put' }));
+
         post(route('admin.settings.update'), {
             forceFormData: true,
-            method: 'put',
             onSuccess: () => {
                 setData('logo', null);
             },
@@ -517,6 +520,7 @@ function GeneralTab({
                 <Field
                     label="Description"
                     error={errors.description}
+                    hint={`${(data.description ?? '').length}/300 caractères — ce texte s'affiche sur votre page publique.`}
                 >
                     <Textarea
                         value={data.description}
@@ -528,6 +532,7 @@ function GeneralTab({
                         }
                         placeholder="Présentez brièvement l'établissement..."
                         rows={5}
+                        maxLength={300}
                     />
                 </Field>
             </Section>
@@ -613,15 +618,15 @@ function ContactTab({
                         label="Pays"
                         error={errors.country}
                     >
-                        <Input
+                        <CountrySelect
                             value={data.country}
-                            onChange={(e) =>
+                            onChange={(country) =>
                                 setData(
                                     'country',
-                                    e.target.value
+                                    country
                                 )
                             }
-                            placeholder="Pays"
+                            placeholder="Sélectionner un pays"
                         />
                     </Field>
                 </div>

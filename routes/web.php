@@ -10,22 +10,25 @@ use App\Http\Controllers\DemoRequestController;
 use App\Http\Controllers\Finance;
 use App\Http\Controllers\Parent\ChildController;
 use App\Http\Controllers\Parent\TimetableController;
+use App\Http\Controllers\Platform\AcademicPeriodController;
+use App\Http\Controllers\Platform\AcademicYearController;
+use App\Http\Controllers\Platform\AuditLogController;
 use App\Http\Controllers\Platform\DashboardController;
 use App\Http\Controllers\Platform\DemoRequestController as PlatformDemoRequestController;
-use App\Http\Controllers\Platform\SchoolController;
-use App\Http\Controllers\Platform\LicenseController;
-use App\Http\Controllers\Platform\AuditLogController;
 use App\Http\Controllers\Platform\ImportController;
-use App\Http\Controllers\Platform\AcademicYearController;
-use App\Http\Controllers\Platform\AcademicPeriodController;
+use App\Http\Controllers\Platform\LicenseController;
+use App\Http\Controllers\Platform\SchoolController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicSchoolController;
+use App\Http\Controllers\RobotsController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\Staff\AttendanceController;
 use App\Http\Controllers\Staff\EvaluationController as StaffEvaluationController;
 use App\Http\Controllers\Staff\ManagementDashboardController;
 use App\Http\Controllers\Teacher;
 use App\Http\Controllers\UserNotificationController;
 use App\Services\Tenancy\TenantResolver;
+use App\Support\ReservedSchoolSlugs;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -52,7 +55,10 @@ Route::get('/', function (Request $request) {
 Route::get('/ecole/{slug}', [
     PublicSchoolController::class,
     'bySlug',
-])->name('public.school.slug');
+])->name('public.school.slug.legacy');
+
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+Route::get('/robots.txt', RobotsController::class)->name('robots');
 
 /*
 |--------------------------------------------------------------------------
@@ -153,7 +159,7 @@ Route::middleware('auth')
         Route::post('/setup', [
             TwoFactorController::class,
             'confirm',
-        ])->name('setup.confirm');
+        ])->middleware('throttle:6,1')->name('setup.confirm');
 
         // Codes de récupération
         Route::get('/recovery', [
@@ -170,7 +176,7 @@ Route::middleware('auth')
         Route::post('/challenge', [
             TwoFactorController::class,
             'verify',
-        ])->name('verify');
+        ])->middleware('throttle:6,1')->name('verify');
 
         Route::post('/challenge/cancel', [
             TwoFactorController::class,
@@ -1073,16 +1079,31 @@ Route::middleware([
             ])->name('students.index');
 
             /*
-            | Emploi du temps — lecture seule
+            | Emploi du temps — contrôle et planification
             |
-            | Le censeur contrôle l'emploi du temps mais ne le modifie pas :
-            | seule l'administration dispose des routes d'écriture.
+            | Le censeur gère l'emploi du temps : création, modification et
+            | suppression des créneaux, comme l'administration.
             */
 
             Route::get('/timetables', [
                 Admin\TimetableController::class,
                 'index',
             ])->name('timetables.index');
+
+            Route::post('/timetables', [
+                Admin\TimetableController::class,
+                'store',
+            ])->name('timetables.store');
+
+            Route::put('/timetables/{timetable}', [
+                Admin\TimetableController::class,
+                'update',
+            ])->name('timetables.update');
+
+            Route::delete('/timetables/{timetable}', [
+                Admin\TimetableController::class,
+                'destroy',
+            ])->name('timetables.destroy');
         });
 
     /*
@@ -1433,3 +1454,29 @@ Route::middleware([
             ])->name('contributions.store');
         });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Site public des établissements (URL à la racine)
+|--------------------------------------------------------------------------
+|
+| Ex. https://www.corischool.com/ketry-school
+|
+| Cette route est déclarée en dernier : elle ne doit capturer que les
+| premiers segments non reconnus, afin de ne jamais masquer une route
+| applicative existante (d'où l'exclusion des slugs réservés).
+|
+*/
+
+Route::get('/{slug}', [
+    PublicSchoolController::class,
+    'bySlug',
+])
+    ->where(
+        'slug',
+        '(?!(?:'.implode('|', array_map(
+            fn (string $slug) => preg_quote($slug, '/'),
+            ReservedSchoolSlugs::all()
+        )).')$)[a-z0-9][a-z0-9\-]*'
+    )
+    ->name('public.school.slug');

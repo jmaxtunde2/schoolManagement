@@ -99,6 +99,44 @@ class ReferenceDataTest extends TestCase
         $this->assertFalse($student->guardians()->exists());
     }
 
+    public function test_admin_cannot_link_a_student_from_another_school_to_a_guardian(): void
+    {
+        $school = School::factory()->create();
+        $otherSchool = School::factory()->create();
+        $foreignStudent = Student::factory()->create(['school_id' => $otherSchool->id]);
+
+        $this->actingAs($this->admin($school))
+            ->post('/admin/guardians', [
+                'name' => 'Parent Test',
+                'phone' => '+237600000000',
+                'email' => 'parent.test@example.com',
+                'password' => 'password123',
+                'student_ids' => [$foreignStudent->id],
+            ])
+            ->assertSessionHasErrors('student_ids.0');
+
+        $this->assertDatabaseMissing('parents', ['email' => 'parent.test@example.com']);
+    }
+
+    public function test_admin_can_link_a_student_from_their_own_school_to_a_guardian(): void
+    {
+        $school = School::factory()->create();
+        $student = Student::factory()->create(['school_id' => $school->id]);
+
+        $this->actingAs($this->admin($school))
+            ->post('/admin/guardians', [
+                'name' => 'Parent Local',
+                'phone' => '+237611111111',
+                'email' => 'parent.local@example.com',
+                'password' => 'password123',
+                'student_ids' => [$student->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $guardian = ParentGuardian::where('email', 'parent.local@example.com')->firstOrFail();
+        $this->assertTrue($guardian->students()->whereKey($student->id)->exists());
+    }
+
     public function test_admin_cannot_assign_a_class_from_another_school_to_a_student(): void
     {
         $school = School::factory()->create();

@@ -87,4 +87,34 @@ class ReportCard extends Model
     {
         return $this->pdf_path ? Storage::disk('local')->url($this->pdf_path) : null;
     }
+
+    public function hasSettledFees(): bool
+    {
+        $student = $this->student;
+
+        return $student === null || $student->hasSettledFees((int) $this->academic_year_id);
+    }
+
+    /**
+     * @return array{configured: bool, settled: bool, amount_due: int, amount_paid: int, remaining: int}
+     */
+    public function feeStatus(): array
+    {
+        $contribution = $this->student?->contributionFor((int) $this->academic_year_id);
+
+        if ($contribution === null) {
+            return ['configured' => false, 'settled' => true, 'amount_due' => 0, 'amount_paid' => 0, 'remaining' => 0];
+        }
+
+        $due = (int) $contribution->amount_due;
+        $paid = (int) $contribution->amount_paid;
+
+        return [
+            'configured' => true,
+            'settled' => $contribution->isPaid(),
+            'amount_due' => $due,
+            'amount_paid' => $paid,
+            'remaining' => max(0, $due - $paid),
+        ];
+    }
 }

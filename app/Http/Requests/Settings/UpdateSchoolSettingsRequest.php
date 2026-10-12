@@ -31,7 +31,7 @@ class UpdateSchoolSettingsRequest extends FormRequest
             'school_name' => ['required', 'string', 'max:255'],
             'short_name' => ['nullable', 'string', 'max:50'],
             'slogan' => ['nullable', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:2000'],
+            'description' => ['nullable', 'string', 'max:300'],
             'school_type' => ['nullable', Rule::in(array_keys(SchoolSetting::SCHOOL_TYPES))],
             'founded_year' => ['nullable', 'integer', 'between:1800,'.now()->year],
 
@@ -79,6 +79,7 @@ class UpdateSchoolSettingsRequest extends FormRequest
             'logo.mimes' => 'Le logo doit être une image JPG, PNG ou WebP.',
             'logo.max' => 'Le logo ne doit pas dépasser 2 Mo.',
             'logo.dimensions' => 'Le logo doit mesurer entre 64×64 et 2000×2000 pixels.',
+            'description.max' => 'La description ne doit pas dépasser 300 caractères.',
         ];
     }
 }

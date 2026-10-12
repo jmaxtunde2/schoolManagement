@@ -68,11 +68,11 @@ export default function StudentsIndex({
         data,
         setData,
         post,
-        put,
+        transform,
         processing,
         errors,
         reset,
-    } = useForm(empty, { forceFormData: true });
+    } = useForm(empty);
 
     /*
      * Statistiques de la page courante.
@@ -158,6 +158,7 @@ export default function StudentsIndex({
         e.preventDefault();
 
         const options = {
+            forceFormData: true,
             onSuccess: () => {
                 setShowForm(false);
                 setEditing(null);
@@ -166,7 +167,9 @@ export default function StudentsIndex({
         };
 
         if (editing) {
-            put(
+            transform((data) => ({ ...data, _method: 'put' }));
+
+            post(
                 route(
                     'admin.students.update',
                     editing.id
@@ -174,6 +177,8 @@ export default function StudentsIndex({
                 options
             );
         } else {
+            transform((data) => data);
+
             post(
                 route('admin.students.store'),
                 options
@@ -384,7 +389,7 @@ export default function StudentsIndex({
                             {
                                 key: 'name',
                                 header: 'Élève',
-                                render: (row) => !isCenseur && (
+                                render: (row) => (
                                     <div className="flex items-center gap-3">
                                         {row.photo_url ? (
                                             <img

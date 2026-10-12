@@ -13,18 +13,28 @@ class TotpService
 
     public function verify(string $secret, string $code, int $window = 1): bool
     {
+        return $this->matchingCounter($secret, $code, $window) !== null;
+    }
+
+    /**
+     * Renvoie le pas de temps (compteur) TOTP correspondant au code,
+     * ou null si le code n'est valide dans aucune fenêtre.
+     */
+    public function matchingCounter(string $secret, string $code, int $window = 1): ?int
+    {
         $code = preg_replace('/\D/', '', $code ?? '');
         if (strlen($code) !== 6) {
-            return false;
+            return null;
         }
         $time = intdiv(time(), 30);
         for ($offset = -$window; $offset <= $window; $offset++) {
-            if (hash_equals($this->code($secret, $time + $offset), $code)) {
-                return true;
+            $counter = $time + $offset;
+            if (hash_equals($this->code($secret, $counter), $code)) {
+                return $counter;
             }
         }
 
-        return false;
+        return null;
     }
 
     public function code(string $secret, int $counter): string

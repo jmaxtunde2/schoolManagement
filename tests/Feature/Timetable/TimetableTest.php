@@ -464,19 +464,40 @@ class TimetableTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_the_censeur_sees_the_timetable_without_being_able_to_manage_it(): void
+    public function test_a_censeur_can_manage_the_timetable(): void
     {
         $this->actingAs(
             User::factory()->create([
                 'school_id' => $this->school->id,
                 'role' => Role::Censeur,
             ])
-        )
-            ->get(route('censeur.timetables.index'))
+        );
+
+        $this->get(route('censeur.timetables.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Timetables/Index')
-                ->where('canManage', false)
+                ->where('canManage', true)
+                ->where('routePrefix', 'censeur')
             );
+
+        $this->post(route('censeur.timetables.store'), $this->payload())
+            ->assertSessionHasNoErrors();
+
+        $slot = Timetable::where('school_id', $this->school->id)->firstOrFail();
+
+        $otherRoom = Room::factory()->create([
+            'school_id' => $this->school->id,
+            'name' => 'Salle censeur',
+        ]);
+
+        $this->put(route('censeur.timetables.update', $slot), $this->payload([
+            'room_id' => $otherRoom->id,
+        ]))->assertSessionHasNoErrors();
+
+        $this->delete(route('censeur.timetables.destroy', $slot))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('timetables', ['id' => $slot->id]);
     }
 }

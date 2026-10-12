@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Staff;
 
+use App\Actions\Students\BuildGenderDistribution;
 use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
@@ -26,7 +27,7 @@ use Inertia\Response;
  */
 class ManagementDashboardController extends Controller
 {
-    public function __invoke(Request $request, BillingService $billing): Response
+    public function __invoke(Request $request, BillingService $billing, BuildGenderDistribution $genderDistribution): Response
     {
         $school = $request->user()->school;
         $role = $request->user()->role;
@@ -57,6 +58,7 @@ class ManagementDashboardController extends Controller
                     fn ($q) => $q->where('academic_year_id', $currentYear->id)
                 )->count(),
             ],
+            'genderDistribution' => $genderDistribution->handle(),
         ];
 
         if ($role === Role::Accountant) {

@@ -107,6 +107,7 @@
             <td><div class="sign-line">Direction · Cachet de l’établissement</div></td>
         </tr>
     </table>
-    <div class="footer">Document émis le {{ optional($reportCard->published_at ?? $reportCard->generated_at)->format('d/m/Y à H:i') }}</div>
+    @php($emittedAt = $reportCard->published_at ?? $reportCard->generated_at)
+    <div class="footer">Document émis le {{ $emittedAt ? str_replace('.', '', $emittedAt->translatedFormat('d M Y')).' à '.$emittedAt->format('H:i:s') : '—' }}</div>
 </body>
 </html>

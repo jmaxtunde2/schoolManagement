@@ -474,7 +474,7 @@ export default function SubjectsIndex({
                                 {
                                     key: 'name',
                                     header: 'Matière',
-                                    render: (subject) => !isCenseur && (
+                                    render: (subject) => (
                                         <div className="flex items-center gap-3">
                                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
                                                 <BookOpen className="h-5 w-5" />

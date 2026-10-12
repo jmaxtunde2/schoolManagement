@@ -39,9 +39,12 @@ class PublicSiteController extends Controller
                 'address' => $setting->address,
                 'phone' => $setting->phone,
                 'email' => $setting->email,
-                'public_url' => $verifiedDomain
+                'slug' => $school->slug,
+                'public_url' => $school->publicUrl(),
+                'public_url_root' => rtrim((string) config('app.url'), '/'),
+                'custom_domain_url' => $verifiedDomain
                     ? 'https://'.$verifiedDomain
-                    : route('public.school.slug', $school->slug),
+                    : null,
             ],
             'publicSite' => [
                 'mission' => $publicSite['mission'] ?? '',

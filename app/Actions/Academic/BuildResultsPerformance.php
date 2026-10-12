@@ -16,12 +16,23 @@ use Illuminate\Support\Collection;
  *    le long des trimestres / semestres de l'année sélectionnée ;
  *  - « years »   : moyenne générale cumulée de chaque année académique.
  *
+ * Chaque point porte aussi la répartition des élèves (excellent, bien, assez,
+ * passable, échec) et les taux de réussite / d'échec (seuil de 10/20).
+ *
  * Le calcul s'appuie sur AcademicCalculationService afin de rester cohérent
  * avec la moyenne affichée dans la liste des résultats.
  */
 class BuildResultsPerformance
 {
     public const MODES = ['periods', 'years'];
+
+    /** Bornes inférieures des mentions (le seuil de réussite est 10/20). */
+    public const BRACKETS = [
+        'excellent' => 16.0,
+        'bien' => 14.0,
+        'assez' => 12.0,
+        'passable' => 10.0,
+    ];
 
     public function __construct(private AcademicCalculationService $calculator) {}
 
@@ -106,6 +117,7 @@ class BuildResultsPerformance
                 'label' => $period->name,
                 'average' => $bucket['average'],
                 'students' => $bucket['count'],
+                'distribution' => $this->distribution($bucket['averages']),
                 'academic_year' => $year->name,
             ];
         })->values()->all();
@@ -128,20 +140,32 @@ class BuildResultsPerformance
                 ->where('academic_year_id', $year->id)
                 ->get(['id', 'name', 'academic_year_id', 'school_id']);
 
-            $sum = 0.0;
-            $count = 0;
+            $byStudent = [];
 
             foreach ($periods as $period) {
-                $bucket = $this->bucket($classes, $period, $schoolId);
-                $sum += $bucket['sum'];
-                $count += $bucket['count'];
+                foreach ($classes as $classRoom) {
+                    $results = $this->calculator->calculateClassResults($classRoom, $period, $schoolId);
+
+                    foreach ($results['students'] as $student) {
+                        if ($student['general_average'] !== null) {
+                            $byStudent[$student['student_id']][] = (float) $student['general_average'];
+                        }
+                    }
+                }
             }
+
+            $averages = array_map(
+                fn (array $values) => array_sum($values) / count($values),
+                $byStudent,
+            );
+            $count = count($averages);
 
             return [
                 'key' => 'year-'.$year->id,
                 'label' => $year->name,
-                'average' => $count > 0 ? round($sum / $count, 2) : null,
+                'average' => $count > 0 ? round(array_sum($averages) / $count, 2) : null,
                 'students' => $count,
+                'distribution' => $this->distribution($averages),
                 'academic_year' => $year->name,
             ];
         })->values()->all();
@@ -151,28 +175,69 @@ class BuildResultsPerformance
      * Moyennes cumulées des élèves d'un ensemble de classes sur une période.
      *
      * @param  Collection<int, ClassRoom>  $classes
-     * @return array{sum: float, count: int, average: float|null}
+     * @return array{sum: float, count: int, average: float|null, averages: array<int, float>}
      */
     private function bucket(Collection $classes, AcademicPeriod $period, int $schoolId): array
     {
-        $sum = 0.0;
-        $count = 0;
+        $averages = [];
 
         foreach ($classes as $classRoom) {
             $results = $this->calculator->calculateClassResults($classRoom, $period, $schoolId);
 
             foreach ($results['students'] as $student) {
                 if ($student['general_average'] !== null) {
-                    $sum += (float) $student['general_average'];
-                    $count++;
+                    $averages[] = (float) $student['general_average'];
                 }
             }
         }
 
+        $count = count($averages);
+
         return [
-            'sum' => $sum,
+            'sum' => array_sum($averages),
             'count' => $count,
-            'average' => $count > 0 ? round($sum / $count, 2) : null,
+            'average' => $count > 0 ? round(array_sum($averages) / $count, 2) : null,
+            'averages' => $averages,
+        ];
+    }
+
+    /**
+     * Répartition des moyennes par mention et taux de réussite / d'échec.
+     *
+     * @param  array<int, float>  $averages
+     * @return array<string, int|null>
+     */
+    private function distribution(array $averages): array
+    {
+        $brackets = [
+            'excellent' => 0,
+            'bien' => 0,
+            'assez' => 0,
+            'passable' => 0,
+            'echec' => 0,
+        ];
+
+        foreach ($averages as $average) {
+            $brackets[match (true) {
+                $average >= self::BRACKETS['excellent'] => 'excellent',
+                $average >= self::BRACKETS['bien'] => 'bien',
+                $average >= self::BRACKETS['assez'] => 'assez',
+                $average >= self::BRACKETS['passable'] => 'passable',
+                default => 'echec',
+            }]++;
+        }
+
+        $graded = count($averages);
+        $success = $brackets['excellent'] + $brackets['bien'] + $brackets['assez'] + $brackets['passable'];
+        $failure = $brackets['echec'];
+
+        return [
+            ...$brackets,
+            'graded' => $graded,
+            'success' => $success,
+            'failure' => $failure,
+            'success_rate' => $graded > 0 ? (int) round($success / $graded * 100) : null,
+            'failure_rate' => $graded > 0 ? (int) round($failure / $graded * 100) : null,
         ];
     }
 }

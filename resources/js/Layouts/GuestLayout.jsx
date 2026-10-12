@@ -92,21 +92,23 @@ export default function GuestLayout({ children }) {
                             <div className="flex items-center gap-3">
 
                                 {/* CoriSchool logo */}
-                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-sm font-bold shadow-lg">
-                                    <span style={{ color: primaryColor }}>
-                                        CO
-                                    </span>
-                                </div>
+                                <a href="/" className="flex items-center gap-3">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-sm font-bold shadow-lg">
+                                        <span style={{ color: primaryColor }}>
+                                            CO
+                                        </span>
+                                    </div>
 
-                                <div>
-                                    <p className="text-base font-bold text-white">
-                                        CoriSchool
-                                    </p>
+                                    <div>
+                                        <p className="text-base font-bold text-white">
+                                            CoriSchool
+                                        </p>
 
-                                    <p className="text-xs text-white/60">
-                                        La plateforme numérique scolaire
-                                    </p>
-                                </div>
+                                        <p className="text-xs text-white/60">
+                                            La plateforme numérique scolaire
+                                        </p>
+                                    </div>
+                                </a>
                             </div>
                         </div>
 

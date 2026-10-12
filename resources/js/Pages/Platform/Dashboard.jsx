@@ -75,59 +75,6 @@ export default function Dashboard({ stats, schools }) {
                 </div>
             </div>
 
-            {/* Statistiques principales */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-7 mb-6">
-                <StatCard
-                    icon={Building2}
-                    label="Établissements"
-                    value={stats.schools}
-                    description="Total enregistré"
-                    className="from-blue-500 to-indigo-600"
-                />
-                <StatCard
-                    icon={CheckCircle2}
-                    label="Actifs"
-                    value={stats.active_schools}
-                    description="Écoles accessibles"
-                    className="from-emerald-500 to-teal-600"
-                />
-                <StatCard
-                    icon={GraduationCap}
-                    label="Élèves"
-                    value={stats.students}
-                    description="Sur la plateforme"
-                    className="from-violet-500 to-purple-600"
-                />
-                <StatCard
-                    icon={Users}
-                    label="Payants"
-                    value={stats.paid_contributions}
-                    description="Contributions réglées"
-                    className="from-cyan-500 to-blue-600"
-                />
-                <StatCard
-                    icon={Wallet}
-                    label="Collecté"
-                    value={`${stats.collected.toLocaleString('fr-FR')} F`}
-                    description="Total encaissé"
-                    className="from-amber-500 to-orange-600"
-                />
-                <StatCard
-                    icon={BadgeDollarSign}
-                    label="Part Coriyase"
-                    value={`${stats.coriyase_share.toLocaleString('fr-FR')} F`}
-                    description="Revenus plateforme"
-                    className="from-teal-500 to-cyan-600"
-                />
-                <StatCard
-                    icon={Bell}
-                    label="Notifications"
-                    value={stats.notifications}
-                    description="Envoyées globalement"
-                    className="from-rose-500 to-pink-600"
-                />
-            </div>
-
             {/* Actions rapides */}
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-6">
                 {quickActions.map(({ label, href, icon: Icon, color }) => (
@@ -194,6 +141,59 @@ export default function Dashboard({ stats, schools }) {
                     </div>
                 </Card.Body>
             </Card>
+
+                        {/* Statistiques principales */}
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-7 mb-6">
+                <StatCard
+                    icon={Building2}
+                    label="Établissements"
+                    value={stats.schools}
+                    description="Total enregistré"
+                    className="from-blue-500 to-indigo-600"
+                />
+                <StatCard
+                    icon={CheckCircle2}
+                    label="Actifs"
+                    value={stats.active_schools}
+                    description="Écoles accessibles"
+                    className="from-emerald-500 to-teal-600"
+                />
+                <StatCard
+                    icon={GraduationCap}
+                    label="Élèves"
+                    value={stats.students}
+                    description="Sur la plateforme"
+                    className="from-violet-500 to-purple-600"
+                />
+                <StatCard
+                    icon={Users}
+                    label="Payants"
+                    value={stats.paid_contributions}
+                    description="Contributions réglées"
+                    className="from-cyan-500 to-blue-600"
+                />
+                <StatCard
+                    icon={Wallet}
+                    label="Collecté"
+                    value={`${stats.collected.toLocaleString('fr-FR')} F`}
+                    description="Total encaissé"
+                    className="from-amber-500 to-orange-600"
+                />
+                <StatCard
+                    icon={BadgeDollarSign}
+                    label="Part Coriyase"
+                    value={`${stats.coriyase_share.toLocaleString('fr-FR')} F`}
+                    description="Revenus plateforme"
+                    className="from-teal-500 to-cyan-600"
+                />
+                <StatCard
+                    icon={Bell}
+                    label="Notifications"
+                    value={stats.notifications}
+                    description="Envoyées globalement"
+                    className="from-rose-500 to-pink-600"
+                />
+            </div>
         </AuthenticatedLayout>
     );
 }

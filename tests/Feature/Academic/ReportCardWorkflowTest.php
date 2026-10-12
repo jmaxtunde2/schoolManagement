@@ -16,6 +16,7 @@ use App\Models\ReportCard;
 use App\Models\School;
 use App\Models\SchoolSetting;
 use App\Models\Student;
+use App\Models\StudentContribution;
 use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
@@ -343,6 +344,107 @@ class ReportCardWorkflowTest extends TestCase
         $this->actingAsVerified($guardianUser)
             ->get(route('parent.report-cards.show', $otherReportCard->id))
             ->assertNotFound();
+    }
+
+    public function test_unpaid_student_cannot_publish_or_download_report_card(): void
+    {
+        $this->evaluation(15);
+        StudentContribution::create([
+            'school_id' => $this->school->id,
+            'student_id' => $this->student->id,
+            'academic_year_id' => $this->year->id,
+            'amount_due' => 100000,
+            'amount_paid' => 40000,
+            'status' => 'partial',
+        ]);
+
+        $admin = User::factory()->admin()->forSchool($this->school)->create();
+        $this->actingAsVerified($admin);
+        $reportCard = app(GenerateReportCards::class)->handle(
+            $this->school,
+            $this->classRoom,
+            $this->period,
+            $admin->id
+        )['report_cards'][0];
+
+        $this->assertSame(ReportCardStatus::Generated, $reportCard->status);
+
+        $this->withSession(['two_factor_sensitive.publish_report_card' => now()->timestamp])
+            ->actingAs($admin)
+            ->post(route('admin.report-cards.publish', $reportCard->id))
+            ->assertSessionHas('error');
+        $this->assertSame(ReportCardStatus::Generated, $reportCard->fresh()->status);
+
+        $this->actingAsVerified($admin)
+            ->get(route('admin.report-cards.pdf', $reportCard->id))
+            ->assertRedirect();
+    }
+
+    public function test_report_card_can_be_published_once_fees_are_settled(): void
+    {
+        $this->evaluation(15);
+        StudentContribution::create([
+            'school_id' => $this->school->id,
+            'student_id' => $this->student->id,
+            'academic_year_id' => $this->year->id,
+            'amount_due' => 50000,
+            'amount_paid' => 50000,
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+
+        $admin = User::factory()->admin()->forSchool($this->school)->create();
+        $this->actingAsVerified($admin);
+        $reportCard = app(GenerateReportCards::class)->handle(
+            $this->school,
+            $this->classRoom,
+            $this->period,
+            $admin->id
+        )['report_cards'][0];
+
+        $this->withSession(['two_factor_sensitive.publish_report_card' => now()->timestamp])
+            ->actingAs($admin)
+            ->post(route('admin.report-cards.publish', $reportCard->id))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(ReportCardStatus::Published, $reportCard->fresh()->status);
+
+        $this->actingAsVerified($admin)
+            ->get(route('admin.report-cards.pdf', $reportCard->id))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_unpaid_student_cannot_regenerate_published_report_card(): void
+    {
+        StudentContribution::create([
+            'school_id' => $this->school->id,
+            'student_id' => $this->student->id,
+            'academic_year_id' => $this->year->id,
+            'amount_due' => 100000,
+            'amount_paid' => 0,
+            'status' => 'pending',
+        ]);
+
+        $admin = User::factory()->admin()->forSchool($this->school)->create();
+        $reportCard = ReportCard::create([
+            'school_id' => $this->school->id,
+            'student_id' => $this->student->id,
+            'class_room_id' => $this->classRoom->id,
+            'academic_year_id' => $this->year->id,
+            'academic_period_id' => $this->period->id,
+            'status' => ReportCardStatus::Published,
+            'version' => 1,
+            'general_average' => 12,
+            'verification_token' => str()->random(64),
+        ]);
+
+        $this->withSession(['two_factor_sensitive.regenerate_report_card' => now()->timestamp])
+            ->actingAs($admin)
+            ->post(route('admin.report-cards.regenerate', $reportCard->id))
+            ->assertSessionHas('error');
+
+        $this->assertSame(1, ReportCard::where('student_id', $this->student->id)->count());
     }
 
     public function test_secretary_can_generate_but_cannot_publish_report_cards(): void

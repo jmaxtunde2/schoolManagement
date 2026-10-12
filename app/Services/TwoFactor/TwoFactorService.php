@@ -5,6 +5,8 @@ namespace App\Services\TwoFactor;
 use App\Models\TwoFactorEvent;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
 
 class TwoFactorService
 {
@@ -71,13 +73,17 @@ class TwoFactorService
         string $code,
         Request $request
     ): bool {
+        $this->ensureNotLocked($user);
+
         if (
             ! $user->two_factor_secret ||
-            ! $this->totp->verify(
+            ($counter = $this->totp->matchingCounter(
                 $user->two_factor_secret,
                 $code
-            )
+            )) === null
         ) {
+            $this->recordFailure($user);
+
             $this->event(
                 $user,
                 'login_failed',
@@ -87,10 +93,13 @@ class TwoFactorService
             return false;
         }
 
+        $this->clearFailures($user);
+
         $user->forceFill([
             'two_factor_enabled_at' => now(),
             'two_factor_confirmed_at' => now(),
             'two_factor_last_used_at' => now(),
+            'two_factor_last_counter' => $counter,
         ])->save();
 
         $this->markLoginVerified($request);
@@ -112,16 +121,25 @@ class TwoFactorService
         string $code,
         Request $request
     ): bool {
+        $this->ensureNotLocked($user);
+
         // Vérification avec l'application Authenticator.
+        $counter = $user->two_factor_secret
+            ? $this->totp->matchingCounter($user->two_factor_secret, $code)
+            : null;
+
+        // Protection anti-rejeu : seul un pas de temps strictement
+        // supérieur au dernier code consommé est accepté.
         if (
-            $user->two_factor_secret &&
-            $this->totp->verify(
-                $user->two_factor_secret,
-                $code
-            )
+            $counter !== null
+            && ($user->two_factor_last_counter === null
+                || $counter > $user->two_factor_last_counter)
         ) {
+            $this->clearFailures($user);
+
             $user->forceFill([
                 'two_factor_last_used_at' => now(),
+                'two_factor_last_counter' => $counter,
             ])->save();
 
             $this->markLoginVerified($request);
@@ -144,6 +162,8 @@ class TwoFactorService
             );
 
             if ($valid) {
+                $this->clearFailures($user);
+
                 $user->forceFill([
                     'two_factor_recovery_codes' => $remainingCodes,
                     'two_factor_last_used_at' => now(),
@@ -162,6 +182,8 @@ class TwoFactorService
         }
 
         // Aucun moyen de vérification valide.
+        $this->recordFailure($user);
+
         $this->event(
             $user,
             'login_failed',
@@ -169,6 +191,41 @@ class TwoFactorService
         );
 
         return false;
+    }
+
+    /**
+     * Clé de limitation par utilisateur (indépendante de l'IP),
+     * afin d'empêcher le brute-force du code 2FA.
+     */
+    private function throttleKey(User $user): string
+    {
+        return 'two-factor-verify:'.$user->getAuthIdentifier();
+    }
+
+    /**
+     * Bloque temporairement l'utilisateur après trop d'échecs.
+     */
+    private function ensureNotLocked(User $user): void
+    {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey($user), 10)) {
+            return;
+        }
+
+        $seconds = RateLimiter::availableIn($this->throttleKey($user));
+
+        throw ValidationException::withMessages([
+            'code' => "Trop de tentatives. Réessayez dans {$seconds} secondes.",
+        ]);
+    }
+
+    private function recordFailure(User $user): void
+    {
+        RateLimiter::hit($this->throttleKey($user), 600);
+    }
+
+    private function clearFailures(User $user): void
+    {
+        RateLimiter::clear($this->throttleKey($user));
     }
 
     /**

@@ -62,6 +62,30 @@ class Student extends Model
         return $this->hasMany(EvaluationResult::class);
     }
 
+    public function contributions(): HasMany
+    {
+        return $this->hasMany(StudentContribution::class);
+    }
+
+    public function contributionFor(int $academicYearId): ?StudentContribution
+    {
+        return $this->contributions()->withoutGlobalScopes()
+            ->where('academic_year_id', $academicYearId)
+            ->first();
+    }
+
+    /**
+     * Les frais sont réputés soldés si aucune contribution n'est configurée
+     * pour l'année : une école qui n'utilise pas le module finances n'est
+     * jamais bloquée.
+     */
+    public function hasSettledFees(int $academicYearId): bool
+    {
+        $contribution = $this->contributionFor($academicYearId);
+
+        return $contribution === null || $contribution->isPaid();
+    }
+
     public function attendanceRecords(): HasMany
     {
         return $this->hasMany(AttendanceRecord::class);

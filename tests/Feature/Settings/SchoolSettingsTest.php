@@ -108,6 +108,30 @@ class SchoolSettingsTest extends TestCase
             ->assertSessionHasErrors('primary_color');
     }
 
+    public function test_changing_the_school_name_regenerates_the_public_slug(): void
+    {
+        $original = $this->school->slug;
+
+        $this->actingAs($this->admin)
+            ->post('/admin/settings', $this->payload(['school_name' => 'Complexe La Sagesse']))
+            ->assertSessionHasNoErrors();
+
+        $slug = $this->school->fresh()->slug;
+
+        $this->assertNotSame($original, $slug);
+        $this->assertStringStartsWith('complexe-la-sagesse-', $slug);
+    }
+
+    public function test_saving_settings_without_renaming_keeps_the_slug(): void
+    {
+        $original = $this->school->slug;
+
+        $this->actingAs($this->admin)->post('/admin/settings', $this->payload(['school_name' => 'Ecole A']));
+        $this->actingAs($this->admin)->post('/admin/settings', $this->payload(['school_name' => 'Ecole A']));
+
+        $this->assertSame($original, $this->school->fresh()->slug);
+    }
+
     public static function invalidColors(): array
     {
         return [['red'], ['#12345'], ['#GGGGGG'], ['123ABC'], ['url(javascript:alert(1))']];
@@ -118,6 +142,17 @@ class SchoolSettingsTest extends TestCase
         $this->actingAs($this->admin)
             ->post('/admin/settings', $this->payload(['school_name' => '']))
             ->assertSessionHasErrors('school_name');
+    }
+
+    public function test_description_is_limited_to_300_characters(): void
+    {
+        $this->actingAs($this->admin)
+            ->post('/admin/settings', $this->payload(['description' => str_repeat('a', 301)]))
+            ->assertSessionHasErrors('description');
+
+        $this->actingAs($this->admin)
+            ->post('/admin/settings', $this->payload(['description' => str_repeat('a', 300)]))
+            ->assertSessionHasNoErrors();
     }
 
     public function test_admin_can_upload_a_logo(): void

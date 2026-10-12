@@ -4,6 +4,7 @@ namespace App\Services\Academic;
 
 use App\Enums\AttendanceStatus;
 use App\Enums\EvaluationStatus;
+use App\Enums\EvaluationType;
 use App\Models\AcademicPeriod;
 use App\Models\AcademicYear;
 use App\Models\AttendanceRecord;
@@ -59,7 +60,7 @@ class AcademicCalculationService
                 ->where('is_absent', false)
                 ->whereNotNull('score')
                 ->getQuery()])
-            ->get(['id', 'subject_id', 'coefficient', 'max_score']);
+            ->get(['id', 'subject_id', 'type', 'coefficient', 'max_score']);
 
         $evaluationsBySubject = $validatedEvaluations
             ->groupBy('subject_id')
@@ -104,8 +105,8 @@ class AcademicCalculationService
 
             foreach ($subjects as $subject) {
                 $evaluations = $evaluationsBySubject->get($subject->id, collect());
-                $weightedScore = 0.0;
-                $evaluationCoefficientTotal = 0.0;
+                $interrogationScores = [];
+                $componentScores = [];
                 $subjectEvaluationCount = 0;
 
                 foreach ($evaluations as $evaluation) {
@@ -114,22 +115,29 @@ class AcademicCalculationService
                         continue;
                     }
 
-                    $evaluationCoefficient = max(0.0, (float) $evaluation->coefficient);
-                    if ($evaluationCoefficient === 0.0) {
-                        continue;
-                    }
-
                     $normalizedScore = ((float) $result->score / (float) $evaluation->max_score) * 20;
-                    $weightedScore += $normalizedScore * $evaluationCoefficient;
-                    $evaluationCoefficientTotal += $evaluationCoefficient;
                     $subjectEvaluationCount++;
+
+                    if ($evaluation->type === EvaluationType::Interrogation) {
+                        $interrogationScores[] = $normalizedScore;
+                    } else {
+                        $componentScores[] = $normalizedScore;
+                    }
                 }
 
-                if ($subjectEvaluationCount === 0 || $evaluationCoefficientTotal === 0.0) {
+                if ($subjectEvaluationCount === 0) {
                     continue;
                 }
 
-                $average = $weightedScore / $evaluationCoefficientTotal;
+                if ($interrogationScores !== []) {
+                    $componentScores[] = array_sum($interrogationScores) / count($interrogationScores);
+                }
+
+                if ($componentScores === []) {
+                    continue;
+                }
+
+                $average = array_sum($componentScores) / count($componentScores);
                 $subjectCoefficient = max(0.0, (float) $pivot->get($subject->id)->default_coefficient);
                 if ($subjectCoefficient === 0.0) {
                     continue;

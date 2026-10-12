@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Attendance\BuildRecentIncidents;
+use App\Actions\Students\BuildGenderDistribution;
 use App\Actions\Timetable\BuildTimetableBrief;
-use App\Enums\ExpenseStatus;
 use App\Http\Controllers\Controller;
 use App\Models\ClassRoom;
 use App\Models\Evaluation;
@@ -20,7 +20,7 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, BuildTimetableBrief $brief, BuildRecentIncidents $incidents): Response
+    public function __invoke(Request $request, BuildTimetableBrief $brief, BuildRecentIncidents $incidents, BuildGenderDistribution $genderDistribution): Response
     {
         return Inertia::render('Admin/Dashboard', [
             'stats' => [
@@ -36,6 +36,7 @@ class DashboardController extends Controller
             'routePrefix' => 'admin',
             'timetableBrief' => $brief->handle(),
             'recentIncidents' => $incidents->handle(10),
+            'genderDistribution' => $genderDistribution->handle(),
             'finance' => true,
             'recentExpenses' => Expense::query()
                 ->with('creator:id,name')

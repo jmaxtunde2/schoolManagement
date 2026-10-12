@@ -10,8 +10,9 @@ use App\Models\User;
  *
  * La lecture est ouverte à tous les rôles du personnel (l'enseignant voit son
  * propre emploi du temps, pas celui des autres) ; l'écriture est réservée à
- * l'administrateur de l'établissement. Les parents n'ont pas accès au modèle
- * mais passent par Parent\TimetableController, qui filtre sur leurs enfants.
+ * l'administrateur et au censeur de l'établissement. Les parents n'ont pas
+ * accès au modèle mais passent par Parent\TimetableController, qui filtre sur
+ * leurs enfants.
  */
 class TimetablePolicy
 {
@@ -27,17 +28,23 @@ class TimetablePolicy
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() && $user->school_id !== null;
+        return $this->canManage($user) && $user->school_id !== null;
     }
 
     public function update(User $user, Timetable $timetable): bool
     {
-        return $user->isAdmin() && $this->sameSchool($user, $timetable);
+        return $this->canManage($user) && $this->sameSchool($user, $timetable);
     }
 
     public function delete(User $user, Timetable $timetable): bool
     {
-        return $user->isAdmin() && $this->sameSchool($user, $timetable);
+        return $this->canManage($user) && $this->sameSchool($user, $timetable);
+    }
+
+    /** L'administrateur et le censeur pilotent l'emploi du temps. */
+    private function canManage(User $user): bool
+    {
+        return $user->isAdmin() || $user->isCenseur();
     }
 
     private function sameSchool(User $user, Timetable $timetable): bool

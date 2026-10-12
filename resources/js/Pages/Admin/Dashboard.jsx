@@ -11,6 +11,7 @@ import {
     Wallet,
     ShoppingCart,
     HandCoins,
+    PieChart,
 } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -19,6 +20,7 @@ import Badge from '@/Components/UI/Badge';
 import EmptyState from '@/Components/UI/EmptyState';
 import ExecutionBrief from '@/Components/Timetable/ExecutionBrief';
 import RecentIncidents from '@/Components/Attendance/RecentIncidents';
+import StudentGenderChart from '@/Components/Students/StudentGenderChart';
 
 const statusTones = {
     draft: 'slate',
@@ -49,6 +51,7 @@ export default function Dashboard({
     recentExpenses = [],
     recentSales = [],
     recentContributions = [],
+    genderDistribution = null,
 }) {
     const { auth } = usePage().props;
 
@@ -239,129 +242,150 @@ export default function Dashboard({
             <ExecutionBrief brief={timetableBrief} routePrefix={routePrefix} />
 
             {/* Latest delays & absences + recent evaluations */}
-            {finance ? (
-                <RecentIncidents
-                    incidents={recentIncidents}
-                    routePrefix={routePrefix}
-                />
-            ) : (
-                <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {finance ? (
                     <RecentIncidents
                         incidents={recentIncidents}
                         routePrefix={routePrefix}
-                        className=""
+                    />
+                ) : (
+                    <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        <RecentIncidents
+                            incidents={recentIncidents}
+                            routePrefix={routePrefix}
+                            className=""
+                        />
+
+                        {recentEvaluationsCard}
+                    </div>
+                )}
+
+                {/* Recent finance */}
+                {finance && (
+                    <section className="mt-6">
+                        <div className="mb-4 flex items-end justify-between">
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-wider text-violet-600">Gestion financière</p>
+                                <h2 className="mt-1 text-lg font-bold tracking-tight text-slate-950">Finances récentes</h2>
+                            </div>
+                            <Link
+                                href={route(`${routePrefix}.expenses.index`)}
+                                className="inline-flex items-center gap-1.5 text-sm font-medium hover:opacity-80"
+                                style={{ color: 'var(--color-primary)' }}
+                            >
+                                Ouvrir la finance
+                                <ArrowRight className="h-4 w-4" />
+                            </Link>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                            <FinanceCard
+                                title="Dépenses récentes"
+                                icon={Wallet}
+                                href={route(`${routePrefix}.expenses.index`)}
+                                items={recentExpenses}
+                                emptyTitle="Aucune dépense enregistrée"
+                                renderItem={(expense) => (
+                                    <>
+                                        <div className="flex min-w-0 items-center gap-4">
+                                            <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600 sm:flex">
+                                                <Wallet className="h-5 w-5" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-slate-800">{expense.label}</p>
+                                                <p className="mt-0.5 truncate text-xs text-slate-500">
+                                                    {expense.category_label} · {expense.expense_date}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex shrink-0 items-center gap-3">
+                                            <Badge tone={expenseTones[expense.status] ?? 'slate'}>{expense.status_label}</Badge>
+                                            <span className="whitespace-nowrap text-sm font-bold text-slate-800">{money(expense.amount)}</span>
+                                        </div>
+                                    </>
+                                )}
+                            />
+
+                            <FinanceCard
+                                title="Ventes récentes"
+                                icon={ShoppingCart}
+                                href={route(`${routePrefix}.sales.index`)}
+                                items={recentSales}
+                                emptyTitle="Aucune vente enregistrée"
+                                renderItem={(sale) => (
+                                    <>
+                                        <div className="flex min-w-0 items-center gap-4">
+                                            <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 sm:flex">
+                                                <ShoppingCart className="h-5 w-5" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-slate-800">{sale.item}</p>
+                                                <p className="mt-0.5 truncate text-xs text-slate-500">
+                                                    {sale.category_label} · {sale.quantity} article(s) · {sale.sold_at}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <span className="whitespace-nowrap text-sm font-bold text-emerald-700">{money(sale.total)}</span>
+                                    </>
+                                )}
+                            />
+
+                            <FinanceCard
+                                title="Contributions récentes"
+                                icon={HandCoins}
+                                href={route(`${routePrefix}.contributions.index`)}
+                                items={recentContributions}
+                                emptyTitle="Aucune contribution enregistrée"
+                                renderItem={(contribution) => (
+                                    <>
+                                        <div className="flex min-w-0 items-center gap-4">
+                                            <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 sm:flex">
+                                                <HandCoins className="h-5 w-5" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-slate-800">{contribution.student}</p>
+                                                <p className="mt-0.5 truncate text-xs text-slate-500">{contribution.academic_year}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex shrink-0 items-center gap-3">
+                                            <Badge tone={contributionTones[contribution.status] ?? 'slate'}>
+                                                {contribution.status === 'paid' ? 'Payée' : contribution.status === 'partial' ? 'Partielle' : 'En attente'}
+                                            </Badge>
+                                            <span className="whitespace-nowrap text-sm font-bold text-slate-800">
+                                                {money(contribution.amount_paid)}<span className="font-normal text-slate-400"> / {money(contribution.amount_due)}</span>
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
+                            />
+
+                            {recentEvaluationsCard}
+                        </div>
+                    </section>
+                )}
+
+            {/* Gender distribution */}
+            {genderDistribution && (
+                <Card className="mt-6 overflow-hidden">
+                    <Card.Header
+                        title="Répartition des élèves"
+                        description="Filles / garçons par classe, pour tout l’établissement."
+                        actions={
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-pink-100 px-3 py-1.5 text-sm font-bold text-pink-700">
+                                <PieChart className="h-4 w-4" />
+                                {genderDistribution.totals.students} élève
+                                {genderDistribution.totals.students > 1
+                                    ? 's'
+                                    : ''}
+                            </span>
+                        }
                     />
 
-                    {recentEvaluationsCard}
-                </div>
-            )}
-
-            {/* Recent finance */}
-            {finance && (
-                <section className="mt-6">
-                    <div className="mb-4 flex items-end justify-between">
-                        <div>
-                            <p className="text-xs font-bold uppercase tracking-wider text-violet-600">Gestion financière</p>
-                            <h2 className="mt-1 text-lg font-bold tracking-tight text-slate-950">Finances récentes</h2>
-                        </div>
-                        <Link
-                            href={route(`${routePrefix}.expenses.index`)}
-                            className="inline-flex items-center gap-1.5 text-sm font-medium hover:opacity-80"
-                            style={{ color: 'var(--color-primary)' }}
-                        >
-                            Ouvrir la finance
-                            <ArrowRight className="h-4 w-4" />
-                        </Link>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <FinanceCard
-                            title="Dépenses récentes"
-                            icon={Wallet}
-                            href={route(`${routePrefix}.expenses.index`)}
-                            items={recentExpenses}
-                            emptyTitle="Aucune dépense enregistrée"
-                            renderItem={(expense) => (
-                                <>
-                                    <div className="flex min-w-0 items-center gap-4">
-                                        <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600 sm:flex">
-                                            <Wallet className="h-5 w-5" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold text-slate-800">{expense.label}</p>
-                                            <p className="mt-0.5 truncate text-xs text-slate-500">
-                                                {expense.category_label} · {expense.expense_date}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex shrink-0 items-center gap-3">
-                                        <Badge tone={expenseTones[expense.status] ?? 'slate'}>{expense.status_label}</Badge>
-                                        <span className="whitespace-nowrap text-sm font-bold text-slate-800">{money(expense.amount)}</span>
-                                    </div>
-                                </>
-                            )}
+                    <Card.Body className="p-5 sm:p-6">
+                        <StudentGenderChart
+                            distribution={genderDistribution}
                         />
-
-                        <FinanceCard
-                            title="Ventes récentes"
-                            icon={ShoppingCart}
-                            href={route(`${routePrefix}.sales.index`)}
-                            items={recentSales}
-                            emptyTitle="Aucune vente enregistrée"
-                            renderItem={(sale) => (
-                                <>
-                                    <div className="flex min-w-0 items-center gap-4">
-                                        <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 sm:flex">
-                                            <ShoppingCart className="h-5 w-5" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold text-slate-800">{sale.item}</p>
-                                            <p className="mt-0.5 truncate text-xs text-slate-500">
-                                                {sale.category_label} · {sale.quantity} article(s) · {sale.sold_at}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <span className="whitespace-nowrap text-sm font-bold text-emerald-700">{money(sale.total)}</span>
-                                </>
-                            )}
-                        />
-
-                        <FinanceCard
-                            title="Contributions récentes"
-                            icon={HandCoins}
-                            href={route(`${routePrefix}.contributions.index`)}
-                            items={recentContributions}
-                            emptyTitle="Aucune contribution enregistrée"
-                            className="lg:col-span-2"
-                            renderItem={(contribution) => (
-                                <>
-                                    <div className="flex min-w-0 items-center gap-4">
-                                        <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 sm:flex">
-                                            <HandCoins className="h-5 w-5" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold text-slate-800">{contribution.student}</p>
-                                            <p className="mt-0.5 truncate text-xs text-slate-500">{contribution.academic_year}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex shrink-0 items-center gap-3">
-                                        <Badge tone={contributionTones[contribution.status] ?? 'slate'}>
-                                            {contribution.status === 'paid' ? 'Payée' : contribution.status === 'partial' ? 'Partielle' : 'En attente'}
-                                        </Badge>
-                                        <span className="whitespace-nowrap text-sm font-bold text-slate-800">
-                                            {money(contribution.amount_paid)}<span className="font-normal text-slate-400"> / {money(contribution.amount_due)}</span>
-                                        </span>
-                                    </div>
-                                </>
-                            )}
-                        />
-                    </div>
-                </section>
-            )}
-
-            {/* Recent evaluations */}
-            {finance && (
-                <div className="mt-6">{recentEvaluationsCard}</div>
+                    </Card.Body>
+                </Card>
             )}
         </AuthenticatedLayout>
     );

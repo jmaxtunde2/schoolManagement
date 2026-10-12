@@ -4,6 +4,7 @@ import {
     CalendarDays,
     GraduationCap,
     Info,
+    PieChart,
     Receipt,
     School as SchoolIcon,
     TrendingUp,
@@ -16,6 +17,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Card from '@/Components/UI/Card';
 import Badge from '@/Components/UI/Badge';
 import EmptyState from '@/Components/UI/EmptyState';
+import StudentGenderChart from '@/Components/Students/StudentGenderChart';
 
 const statusTones = {
     paid: 'green',
@@ -34,6 +36,7 @@ export default function ManagementDashboard({
     currentAcademicYear: currentYear,
     stats,
     billing,
+    genderDistribution = null,
 }) {
     const money = (value) => `${Number(value ?? 0).toLocaleString('fr-FR')} F`;
 
@@ -355,6 +358,31 @@ export default function ManagementDashboard({
                             </Card.Body>
                         </Card>
                     </>
+                )}
+
+                {/* Répartition des élèves */}
+                {genderDistribution && (
+                    <Card className="overflow-hidden">
+                        <Card.Header
+                            title="Répartition des élèves"
+                            description="Filles / garçons par classe, pour tout l’établissement."
+                            actions={
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-pink-100 px-3 py-1.5 text-sm font-bold text-pink-700">
+                                    <PieChart className="h-4 w-4" />
+                                    {genderDistribution.totals.students} élève
+                                    {genderDistribution.totals.students > 1
+                                        ? 's'
+                                        : ''}
+                                </span>
+                            }
+                        />
+
+                        <Card.Body className="p-5 sm:p-6">
+                            <StudentGenderChart
+                                distribution={genderDistribution}
+                            />
+                        </Card.Body>
+                    </Card>
                 )}
             </div>
         </AuthenticatedLayout>

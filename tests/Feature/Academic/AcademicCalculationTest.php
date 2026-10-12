@@ -3,6 +3,7 @@
 namespace Tests\Feature\Academic;
 
 use App\Enums\EvaluationStatus;
+use App\Enums\EvaluationType;
 use App\Models\AcademicPeriod;
 use App\Models\AcademicYear;
 use App\Models\ClassRoom;
@@ -22,7 +23,7 @@ class AcademicCalculationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_only_validated_non_absent_scores_are_weighted_and_ranked(): void
+    public function test_only_validated_non_absent_scores_are_averaged_and_ranked(): void
     {
         $school = School::factory()->create();
         $year = AcademicYear::factory()->create([
@@ -103,14 +104,96 @@ class AcademicCalculationTest extends TestCase
 
         $mathAverage = collect($byStudent[$topStudent->id]['subjects'])
             ->firstWhere('subject_name', 'Mathématiques')['average'];
-        $this->assertSame(16.0, $mathAverage);
-        $this->assertSame(14.67, $byStudent[$topStudent->id]['general_average']);
+        $this->assertSame(17.0, $mathAverage);
+        $this->assertSame(15.33, $byStudent[$topStudent->id]['general_average']);
         $this->assertSame(3, $byStudent[$topStudent->id]['evaluation_count']);
         $this->assertSame(1, $byStudent[$topStudent->id]['rank']);
         $this->assertSame(1, $byStudent[$tiedStudent->id]['rank']);
         $this->assertSame(3, $byStudent[$thirdStudent->id]['rank']);
         $this->assertNull($byStudent[$noGradeStudent->id]['general_average']);
         $this->assertNull($byStudent[$noGradeStudent->id]['rank']);
+    }
+
+    public function test_subject_average_groups_interrogations_and_counts_each_devoir(): void
+    {
+        $school = School::factory()->create();
+        $year = AcademicYear::factory()->create([
+            'school_id' => $school->id,
+            'is_current' => true,
+        ]);
+        $period = AcademicPeriod::create([
+            'school_id' => $school->id,
+            'academic_year_id' => $year->id,
+            'name' => 'Trimestre 1',
+            'position' => 1,
+        ]);
+        $classRoom = ClassRoom::factory()->create(['school_id' => $school->id]);
+        $math = Subject::factory()->create(['school_id' => $school->id, 'name' => 'Mathématiques']);
+        $teacherUser = User::factory()->teacher()->forSchool($school)->create();
+        $teacher = Teacher::factory()->create([
+            'school_id' => $school->id,
+            'user_id' => $teacherUser->id,
+        ]);
+        $classRoom->subjects()->sync([
+            $math->id => ['default_coefficient' => 3],
+        ]);
+
+        $student = Student::factory()->create([
+            'school_id' => $school->id,
+            'class_id' => $classRoom->id,
+        ]);
+
+        // Moyenne interros = (10 + 20) / 2 = 15 ; puis (15 + devoir 1 + devoir 2) / 3.
+        $this->score($this->typedEvaluation($school, $year, $period, $classRoom, $math, $teacher, EvaluationType::Interrogation, 20), $student, 10);
+        $this->score($this->typedEvaluation($school, $year, $period, $classRoom, $math, $teacher, EvaluationType::Interrogation, 20), $student, 20);
+        $this->score($this->typedEvaluation($school, $year, $period, $classRoom, $math, $teacher, EvaluationType::Devoir, 20), $student, 15);
+        $this->score($this->typedEvaluation($school, $year, $period, $classRoom, $math, $teacher, EvaluationType::Devoir, 20), $student, 5);
+
+        $result = app(AcademicCalculationService::class)->calculateClassResults($classRoom, $period, (int) $school->id);
+        $row = collect($result['students'])->firstWhere('student_id', $student->id);
+
+        $this->assertSame(11.67, collect($row['subjects'])->firstWhere('subject_name', 'Mathématiques')['average']);
+        $this->assertSame(11.67, $row['general_average']);
+        $this->assertSame(4, $row['evaluation_count']);
+    }
+
+    public function test_subject_average_uses_only_interrogations_when_no_devoir_exists(): void
+    {
+        $school = School::factory()->create();
+        $year = AcademicYear::factory()->create([
+            'school_id' => $school->id,
+            'is_current' => true,
+        ]);
+        $period = AcademicPeriod::create([
+            'school_id' => $school->id,
+            'academic_year_id' => $year->id,
+            'name' => 'Trimestre 1',
+            'position' => 1,
+        ]);
+        $classRoom = ClassRoom::factory()->create(['school_id' => $school->id]);
+        $english = Subject::factory()->create(['school_id' => $school->id, 'name' => 'Anglais']);
+        $teacherUser = User::factory()->teacher()->forSchool($school)->create();
+        $teacher = Teacher::factory()->create([
+            'school_id' => $school->id,
+            'user_id' => $teacherUser->id,
+        ]);
+        $classRoom->subjects()->sync([
+            $english->id => ['default_coefficient' => 2],
+        ]);
+
+        $student = Student::factory()->create([
+            'school_id' => $school->id,
+            'class_id' => $classRoom->id,
+        ]);
+
+        $this->score($this->typedEvaluation($school, $year, $period, $classRoom, $english, $teacher, EvaluationType::Interrogation, 20), $student, 8);
+        $this->score($this->typedEvaluation($school, $year, $period, $classRoom, $english, $teacher, EvaluationType::Interrogation, 20), $student, 12);
+
+        $result = app(AcademicCalculationService::class)->calculateClassResults($classRoom, $period, (int) $school->id);
+        $row = collect($result['students'])->firstWhere('student_id', $student->id);
+
+        $this->assertSame(10.0, collect($row['subjects'])->firstWhere('subject_name', 'Anglais')['average']);
+        $this->assertSame(10.0, $row['general_average']);
     }
 
     public function test_teacher_results_are_limited_to_assigned_classes(): void
@@ -203,6 +286,31 @@ class AcademicCalculationTest extends TestCase
             'student_id' => $student->id,
             'score' => $score,
             'is_absent' => $absent,
+        ]);
+    }
+
+    private function typedEvaluation(
+        School $school,
+        AcademicYear $year,
+        AcademicPeriod $period,
+        ClassRoom $classRoom,
+        Subject $subject,
+        Teacher $teacher,
+        EvaluationType $type,
+        float $maxScore,
+    ): Evaluation {
+        return Evaluation::factory()->create([
+            'school_id' => $school->id,
+            'academic_year_id' => $year->id,
+            'academic_period_id' => $period->id,
+            'class_id' => $classRoom->id,
+            'subject_id' => $subject->id,
+            'teacher_id' => $teacher->id,
+            'type' => $type->value,
+            'max_score' => $maxScore,
+            'coefficient' => 1,
+            'status' => EvaluationStatus::Validated->value,
+            'validated_at' => now(),
         ]);
     }
 }

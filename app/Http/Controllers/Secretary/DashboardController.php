@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Secretary;
 
 use App\Actions\Attendance\BuildRecentIncidents;
+use App\Actions\Students\BuildGenderDistribution;
 use App\Actions\Timetable\BuildTimetableBrief;
 use App\Http\Controllers\Controller;
 use App\Models\Evaluation;
@@ -10,7 +11,7 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-    public function __invoke(BuildTimetableBrief $brief, BuildRecentIncidents $incidents)
+    public function __invoke(BuildTimetableBrief $brief, BuildRecentIncidents $incidents, BuildGenderDistribution $genderDistribution)
     {
         return Inertia::render('Secretary/Dashboard', [
             'stats' => [
@@ -25,6 +26,7 @@ class DashboardController extends Controller
                 ->get(),
             'timetableBrief' => $brief->handle(),
             'recentIncidents' => $incidents->handle(10),
+            'genderDistribution' => $genderDistribution->handle(),
         ]);
     }
 }

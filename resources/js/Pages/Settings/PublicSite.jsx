@@ -5,6 +5,7 @@ import {
     Check,
     Eye,
     FileImage,
+    Globe,
     ImagePlus,
     LayoutDashboard,
     Plus,
@@ -31,6 +32,7 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
     const [deleteTarget, setDeleteTarget] = useState(null);
 
     const contentForm = useForm({
+        slug: school.slug ?? '',
         mission: publicSite.mission ?? '',
         vision: publicSite.vision ?? '',
         values: [...(publicSite.values ?? []), ''].slice(0, 5),
@@ -41,6 +43,12 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
         hero_image: null,
         remove_hero_image: false,
     });
+
+    const slugBase = school.public_url_root;
+    const slugPreview =
+        slugBase && contentForm.data.slug
+            ? `${slugBase}/${contentForm.data.slug}`
+            : school.public_url;
 
     const testimonialForm = useForm({
         name: '',
@@ -64,16 +72,16 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
     function saveContent(event) {
         event.preventDefault();
 
-        contentForm
-            .transform((data) => ({
-                ...data,
-                values: data.values.filter((value) => value.trim()),
-                features: data.features.filter((feature) => feature.title.trim()),
-            }))
-            .post(route('admin.settings.public-site.update'), {
-                forceFormData: true,
-                method: 'put',
-            });
+        contentForm.transform((data) => ({
+            ...data,
+            _method: 'put',
+            values: data.values.filter((value) => value.trim()),
+            features: data.features.filter((feature) => feature.title.trim()),
+        }));
+
+        contentForm.post(route('admin.settings.public-site.update'), {
+            forceFormData: true,
+        });
     }
 
     function resetTestimonial() {
@@ -116,9 +124,13 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
               )
             : route('admin.settings.public-site.testimonials.store');
 
+        testimonialForm.transform((data) => ({
+            ...data,
+            ...(testimonialEditing ? { _method: 'put' } : {}),
+        }));
+
         testimonialForm.post(url, {
             forceFormData: true,
-            ...(testimonialEditing ? { method: 'put' } : {}),
             onSuccess: resetTestimonial,
         });
     }
@@ -161,9 +173,13 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
               )
             : route('admin.settings.public-site.gallery.store');
 
+        galleryForm.transform((data) => ({
+            ...data,
+            ...(galleryEditing ? { _method: 'put' } : {}),
+        }));
+
         galleryForm.post(url, {
             forceFormData: true,
-            ...(galleryEditing ? { method: 'put' } : {}),
             onSuccess: resetGallery,
         });
     }
@@ -345,6 +361,64 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
                     <form onSubmit={saveContent} className="space-y-6">
                         <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-slate-200">
                             <Card.Header
+                                title="Adresse du site"
+                                description="L'adresse publique de votre vitrine, indexée par les moteurs de recherche."
+                            />
+
+                            <Card.Body className="space-y-4">
+                                <Field label="Adresse personnalisée">
+                                    <Input
+                                        value={contentForm.data.slug}
+                                        maxLength={60}
+                                        onChange={(event) =>
+                                            contentForm.setData(
+                                                'slug',
+                                                event.target.value
+                                                    .toLowerCase()
+                                                    .replace(/[^a-z0-9-]/g, '-')
+                                                    .replace(/-+/g, '-'),
+                                            )
+                                        }
+                                        error={contentForm.errors.slug}
+                                        placeholder="ketry-school"
+                                    />
+                                </Field>
+
+                                <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                                        <Globe className="h-4 w-4" />
+                                    </div>
+
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                            Adresse publique
+                                        </p>
+                                        <p className="mt-1 break-all text-sm font-semibold text-emerald-800">
+                                            {slugPreview}
+                                        </p>
+                                        {school.custom_domain_url && (
+                                            <p className="mt-1 break-all text-xs text-slate-500">
+                                                Domaine personnalisé :{' '}
+                                                <a
+                                                    href={school.custom_domain_url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="font-medium text-slate-600 underline decoration-slate-300 underline-offset-2 hover:text-slate-900"
+                                                >
+                                                    {school.custom_domain_url.replace(
+                                                        /^https?:\/\//,
+                                                        '',
+                                                    )}
+                                                </a>
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </Card.Body>
+                        </Card>
+
+                        <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-slate-200">
+                            <Card.Header
                                 title="Présentation de l'établissement"
                                 description="Présentez l'identité, la mission et les principaux atouts de votre établissement."
                             />
@@ -403,11 +477,36 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
                                 </div>
 
                                 <div className="border-t border-slate-100 pt-6">
-                                    <SectionHeading
-                                        icon={Star}
-                                        title="Nos valeurs"
-                                        description="Jusqu'à cinq valeurs qui représentent l'identité de l'établissement."
-                                    />
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <SectionHeading
+                                            icon={Star}
+                                            title="Nos valeurs"
+                                            description="Jusqu'à cinq valeurs qui représentent l'identité de l'établissement."
+                                        />
+
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="sm"
+                                            disabled={
+                                                contentForm.data.values
+                                                    .length >= 5
+                                            }
+                                            onClick={() =>
+                                                contentForm.setData(
+                                                    'values',
+                                                    [
+                                                        ...contentForm.data
+                                                            .values,
+                                                        '',
+                                                    ],
+                                                )
+                                            }
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            Ajouter
+                                        </Button>
+                                    </div>
 
                                     <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                         {contentForm.data.values.map(
@@ -416,13 +515,39 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
                                                     key={index}
                                                     className="group relative rounded-xl border border-slate-200 bg-slate-50/60 p-3 transition focus-within:border-emerald-300 focus-within:bg-white"
                                                 >
-                                                    <div className="mb-2 flex items-center gap-2">
-                                                        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-100 text-[11px] font-bold text-emerald-700">
-                                                            {index + 1}
-                                                        </span>
-                                                        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                                                            Valeur
-                                                        </span>
+                                                    <div className="mb-2 flex items-center justify-between gap-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-100 text-[11px] font-bold text-emerald-700">
+                                                                {index + 1}
+                                                            </span>
+                                                            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                                                                Valeur
+                                                            </span>
+                                                        </div>
+
+                                                        {contentForm.data.values
+                                                            .length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    contentForm.setData(
+                                                                        'values',
+                                                                        contentForm.data.values.filter(
+                                                                            (
+                                                                                _,
+                                                                                itemIndex,
+                                                                            ) =>
+                                                                                itemIndex !==
+                                                                                index,
+                                                                        ),
+                                                                    )
+                                                                }
+                                                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                                                                aria-label="Retirer cette valeur"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </button>
+                                                        )}
                                                     </div>
 
                                                     <Input

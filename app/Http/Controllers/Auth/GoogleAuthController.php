@@ -20,9 +20,14 @@ class GoogleAuthController extends Controller
         $request->session()->put('google_oauth_state', $state);
         $request->session()->put('google_oauth_reauth', (bool) $request->boolean('reauth'));
         $return = $request->string('return')->toString();
-        if (! str_starts_with($return, '/')) {
+        if (
+            $return === ''
+            || ! str_starts_with($return, '/')
+            || str_starts_with($return, '//')
+        ) {
             $return = route('login');
-        } $request->session()->put('google_oauth_return', $return);
+        }
+        $request->session()->put('google_oauth_return', $return);
 
         return redirect()->away($this->google->authorizationUrl($state, $request->boolean('reauth')));
     }
@@ -36,13 +41,13 @@ class GoogleAuthController extends Controller
         $user = User::withoutGlobalScopes()->where('google_id', $profile['sub'] ?? '')->orWhere('email', strtolower($profile['email'] ?? ''))->first();
         abort_unless(($profile['email_verified'] ?? false) && $user && $user->is_active && ($user->school_id || $user->isPlatformAdmin()), 403, 'Votre compte Google n’est pas autorisé sur la plateforme. Contactez votre établissement.');
         $user->forceFill(['google_id' => $profile['sub'] ?? $user->google_id, 'google_email' => strtolower($profile['email'] ?? $user->email), 'google_avatar' => $profile['picture'] ?? null, 'google_verified_at' => now(), 'google_reauthenticated_at' => now()])->save();
-        Auth::login($user, true);
+        Auth::login($user);
         $request->session()->regenerate();
         $return = $request->session()->pull('google_oauth_return');
         if ($request->session()->pull('google_oauth_reauth')) {
             return redirect()->to($return ?: route($user->role->homeRoute()));
         }
 
-return redirect()->route('two-factor.challenge', ['return' => route($user->role->homeRoute())]);
+        return redirect()->route('two-factor.challenge', ['return' => route($user->role->homeRoute())]);
     }
 }

@@ -22,6 +22,10 @@ class PublishReportCard
             throw new RuntimeException('Seul un bulletin généré peut être publié.');
         }
 
+        if (! $reportCard->hasSettledFees()) {
+            throw new RuntimeException('Frais de scolarité non soldés : le bulletin ne peut pas être publié.');
+        }
+
         $reportCard->update([
             'status' => ReportCardStatus::Published,
             'published_at' => now(),
