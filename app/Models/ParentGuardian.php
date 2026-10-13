@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 /** Parent ou tuteur d'un ou plusieurs élèves (table `parents`). Ne se connecte pas en V1. */
@@ -45,5 +46,10 @@ class ParentGuardian extends Model
         return $this->belongsToMany(Student::class, 'parent_student', 'parent_id', 'student_id')
             ->withPivot('relationship')
             ->withTimestamps();
+    }
+
+    public function messages(): HasMany
+    {
+        return $this->hasMany(ParentMessage::class, 'parent_id');
     }
 }

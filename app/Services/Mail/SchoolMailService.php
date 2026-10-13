@@ -15,7 +15,8 @@ class SchoolMailService
         string $to,
         ?string $recipientName,
         string $subject,
-        string $message
+        string $message,
+        array $attachments = []
     ): void {
         $settings = $school->mailSettings()->first();
 
@@ -82,17 +83,25 @@ class SchoolMailService
         config()->set('mail.default', $mailerName);
 
         try {
-            $mailable = new class($subject, $message) extends Mailable
+            $mailable = new class($subject, $message, $attachments) extends Mailable
             {
                 public function __construct(
                     public string $subjectLine,
-                    public string $bodyText
+                    public string $bodyText,
+                    public array $fileAttachments = []
                 ) {
                     $this->subject($subjectLine);
                 }
 
                 public function build(): self
                 {
+                    foreach ($this->fileAttachments as $attachment) {
+                        $this->attach($attachment['path'], array_filter([
+                            'as' => $attachment['name'] ?? null,
+                            'mime' => $attachment['mime'] ?? null,
+                        ]));
+                    }
+
                     return $this->html($this->bodyText);
                 }
             };

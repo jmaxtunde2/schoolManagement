@@ -170,15 +170,15 @@ export default function AttendanceIndex({
 
     const cards = [
         {
-            label: "Absents aujourd’hui",
-            value: stats.absent_today,
-            icon: UserX,
+            label: "Assiduité (ce mois)",
+            value: stats.present_month,
+            icon: UserCheck,
             cardClass:
-                'bg-gradient-to-br from-rose-500 to-red-600',
+                'bg-gradient-to-br from-emerald-500 to-teal-600',
         },
         {
-            label: "Retards aujourd’hui",
-            value: stats.late_today,
+            label: "Retards ce mois",
+            value: stats.late_month,
             icon: Clock3,
             cardClass:
                 'bg-gradient-to-br from-amber-400 to-orange-500',
@@ -186,16 +186,16 @@ export default function AttendanceIndex({
         {
             label: "Absences ce mois",
             value: stats.absent_month,
-            icon: CalendarDays,
+            icon: UserX,
             cardClass:
-                'bg-gradient-to-br from-blue-500 to-indigo-600',
+                'bg-gradient-to-br from-rose-500 to-red-600',
         },
         {
-            label: "Non justifiées",
-            value: stats.unjustified,
+            label: "Permissions ce mois",
+            value: stats.permission_month,
             icon: ShieldCheck,
             cardClass:
-                'bg-gradient-to-br from-slate-600 to-slate-800',
+                'bg-gradient-to-br from-blue-500 to-indigo-600',
         },
     ];
 

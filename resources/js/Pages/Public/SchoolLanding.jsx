@@ -87,6 +87,8 @@ export default function SchoolLanding({
     structuredData = null,
     testimonials = [],
     gallery = [],
+    preview = false,
+    preview_dashboard_url = null,
 }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [lightboxItem, setLightboxItem] = useState(null);
@@ -200,6 +202,21 @@ export default function SchoolLanding({
                     />
                 )}
             </Head>
+
+            {preview && (
+                <div className="relative z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-slate-950 px-4 py-2 text-center text-xs font-medium text-white sm:text-sm">
+                    <span>Aperçu du site public — contenu non indexé</span>
+                    {preview_dashboard_url && (
+                        <Link
+                            href={preview_dashboard_url}
+                            className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white transition hover:bg-white/25"
+                        >
+                            <ArrowRight className="h-3.5 w-3.5" />
+                            Retour au tableau de bord
+                        </Link>
+                    )}
+                </div>
+            )}
 
             <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl">
                 <motion.div
@@ -318,10 +335,10 @@ export default function SchoolLanding({
                         </AnimatePresence>
                     </div>
 
-                    <div className="absolute inset-0 -z-10" style={{ background: `linear-gradient(115deg, ${withAlpha(primary, 0.92)} 0%, ${withAlpha(primary, 0.72)} 38%, ${withAlpha(secondary, 0.35)} 70%, rgba(2,6,23,0.35) 100%)` }} />
-                    <div className="absolute inset-0 -z-10 bg-gradient-to-t from-slate-950/85 via-slate-950/10 to-slate-950/40" />
-                    <div className="pointer-events-none absolute -right-24 top-10 -z-10 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: withAlpha(accent, 0.35) }} />
-                    <div className="pointer-events-none absolute -bottom-24 left-1/3 -z-10 h-80 w-80 rounded-full blur-3xl" style={{ backgroundColor: withAlpha(secondary, 0.3) }} />
+                    <div className="absolute inset-0 -z-10 bg-gradient-to-r from-slate-950/55 via-slate-950/20 to-transparent" />
+                    <div className="absolute inset-0 -z-10 bg-gradient-to-t from-slate-950/40 via-transparent to-slate-950/5" />
+                    <div className="pointer-events-none absolute -right-24 top-10 -z-10 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+                    <div className="pointer-events-none absolute -bottom-24 left-1/3 -z-10 h-80 w-80 rounded-full bg-slate-500/20 blur-3xl" />
 
                     <motion.div
                         variants={stagger}

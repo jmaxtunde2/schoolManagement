@@ -93,12 +93,8 @@ export default function Challenge({
                                     <LockKeyhole className="h-7 w-7" />
                                 </div>
 
-                                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                                    Vérification Authenticator
-                                </h1>
-
                                 <p className="mt-2 max-w-sm text-sm leading-6 text-emerald-50">
-                                    Confirmez votre identité pour continuer
+                                    Pour continuer, confirmez votre identité avec votre application Authenticator.
                                     {purpose !== 'login' && (
                                         <>
                                             {' '}

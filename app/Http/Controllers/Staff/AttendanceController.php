@@ -145,10 +145,12 @@ class AttendanceController extends Controller
                 $filters['end'] ?? null,
             ),
             'stats' => [
+                'present_month' => (clone $stats)->whereDate('attendance_date', '>=', $monthStart)->where('status', AttendanceStatus::Present->value)->count(),
+                'late_month' => (clone $stats)->whereDate('attendance_date', '>=', $monthStart)->where('status', AttendanceStatus::Late->value)->count(),
+                'absent_month' => (clone $stats)->whereDate('attendance_date', '>=', $monthStart)->where('status', AttendanceStatus::Absent->value)->count(),
+                'permission_month' => (clone $stats)->whereDate('attendance_date', '>=', $monthStart)->where('status', AttendanceStatus::Permission->value)->count(),
                 'absent_today' => (clone $stats)->whereDate('attendance_date', $today)->where('status', AttendanceStatus::Absent->value)->count(),
                 'late_today' => (clone $stats)->whereDate('attendance_date', $today)->where('status', AttendanceStatus::Late->value)->count(),
-                'absent_month' => (clone $stats)->whereDate('attendance_date', '>=', $monthStart)->where('status', AttendanceStatus::Absent->value)->count(),
-                'late_month' => (clone $stats)->whereDate('attendance_date', '>=', $monthStart)->where('status', AttendanceStatus::Late->value)->count(),
                 'unjustified' => (clone $stats)->where('status', AttendanceStatus::Absent->value)->whereNull('justified_at')->whereDoesntHave('justifications', fn ($justifications) => $justifications->where('status', AttendanceJustificationStatus::Approved->value))->count(),
             ],
         ]);

@@ -50,6 +50,12 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
             ? `${slugBase}/${contentForm.data.slug}`
             : school.public_url;
 
+    // Ouverture en mode aperçu : évite la redirection vers le tableau de bord
+    // lorsque l'administrateur (connecté) consulte le site public.
+    const previewUrl = school.public_url
+        ? `${school.public_url}${school.public_url.includes('?') ? '&' : '?'}preview=1`
+        : null;
+
     const testimonialForm = useForm({
         name: '',
         relationship: '',
@@ -260,9 +266,9 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
                         </div>
 
                         <div className="shrink-0">
-                            {school.public_url ? (
+                            {previewUrl ? (
                                 <a
-                                    href={school.public_url}
+                                    href={previewUrl}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-50"

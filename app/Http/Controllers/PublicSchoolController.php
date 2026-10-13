@@ -46,7 +46,7 @@ class PublicSchoolController extends Controller
         TenantResolver $resolver,
         string $slug
     ): Response|RedirectResponse {
-        if ($user = $request->user()) {
+        if (($user = $request->user()) && ! $request->boolean('preview')) {
             return redirect()->route($user->role->homeRoute());
         }
 
@@ -63,6 +63,11 @@ class PublicSchoolController extends Controller
         }
 
         abort_unless($school->is_active, 404);
+
+        $preview = $request->boolean('preview');
+        $previewDashboardUrl = $preview && $request->user()
+            ? route($request->user()->role->homeRoute())
+            : null;
 
         $setting = SchoolSetting::withoutGlobalScopes()
             ->where('school_id', $school->id)
@@ -230,6 +235,8 @@ class PublicSchoolController extends Controller
             'stats' => $stats,
             'testimonials' => $testimonials,
             'gallery' => $gallery,
+            'preview' => $preview,
+            'preview_dashboard_url' => $previewDashboardUrl,
         ]);
     }
 }

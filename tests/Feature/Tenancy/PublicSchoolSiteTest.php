@@ -183,6 +183,47 @@ class PublicSchoolSiteTest extends TestCase
         $this->get('/ecole/slug-inexistant')->assertNotFound();
     }
 
+    public function test_authenticated_user_can_preview_a_public_school_site(): void
+    {
+        $school = School::factory()->create(['name' => 'École Aperçu']);
+        SchoolSetting::withoutGlobalScopes()->create([
+            'school_id' => $school->id,
+            'school_name' => $school->name,
+        ]);
+        $user = User::factory()->admin()->forSchool($school)->create();
+        $url = route('public.school.slug', $school->slug);
+
+        $this->actingAs($user)
+            ->get($url)
+            ->assertRedirect(route($user->role->homeRoute()));
+
+        $this->actingAs($user)
+            ->get($url.'?preview=1')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Public/SchoolLanding')
+                ->where('school.name', 'École Aperçu')
+                ->where('preview', true)
+                ->where('preview_dashboard_url', route($user->role->homeRoute())));
+    }
+
+    public function test_authenticated_user_can_preview_the_platform_landing(): void
+    {
+        $user = User::factory()->admin()
+            ->forSchool(School::factory()->create())
+            ->create();
+
+        $this->actingAs($user)
+            ->get('/')
+            ->assertRedirect(route($user->role->homeRoute()));
+
+        $this->actingAs($user)
+            ->get('/?preview=1')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Public/CoriSchoolLanding'));
+    }
+
     public function test_school_admin_can_manage_only_its_public_site_content(): void
     {
         $schoolA = School::factory()->create(['name' => 'École A']);

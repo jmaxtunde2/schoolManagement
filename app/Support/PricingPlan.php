@@ -3,11 +3,11 @@
 namespace App\Support;
 
 /**
- * Offres commerciales CoriSchool.
+ * Offres commerciales CoriSchool (contenu marketing de la landing page).
  *
- * Les tarifs sont affichés à titre informatif : aucun module de facturation n'existe
- * à ce jour, ces offres servent la landing page et la position commerciale.
- * Le coût des SMS reste volontairement hors abonnement
+ * Ces paliers servent la présentation publique et la position commerciale ; la
+ * facturation réelle repose sur la licence d'établissement (voir config/cori.php)
+ * et sur les crédits SMS. Le coût des SMS reste volontairement hors abonnement
  * (crédits SMS prépayés par école) pour éviter une consommation illimitée non maîtrisée.
  */
 class PricingPlan
@@ -105,7 +105,7 @@ class PricingPlan
             ],
             [
                 'question' => 'Comment inscrire mon école ?',
-                'answer' => "Cliquez sur « Créer mon école », renseignez l'identité de l'établissement et le compte de votre administrateur. L'école et son espace de travail sont créés immédiatement.",
+                'answer' => "L'inscription se fait sur demande de démonstration : remplissez le formulaire « Demander une démonstration », l'équipe Coriyase vous contacte pour planifier une présentation, puis l'école et le compte administrateur sont activés après validation et règlement de la licence initiale.",
             ],
             [
                 'question' => 'Mes enseignants ont-ils leur propre compte ?',

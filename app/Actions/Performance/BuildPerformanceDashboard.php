@@ -5,6 +5,7 @@ namespace App\Actions\Performance;
 use App\Enums\AttendanceStatus;
 use App\Enums\ExpenseStatus;
 use App\Enums\Role;
+use App\Models\AcademicPeriod;
 use App\Models\AttendanceRecord;
 use App\Models\Expense;
 use App\Models\Notification;
@@ -16,8 +17,12 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 
 /**
- * Agrégats mensuels (12 derniers mois) par catégorie de l'établissement,
- * destinés à la page « Performance » (graphiques SVG).
+ * Agrégats mensuels par catégorie de l'établissement, destinés à la page
+ * « Performance » (graphiques SVG).
+ *
+ * La fenêtre démarre à la rentrée (premier mois de l'année scolaire) pour
+ * afficher d'emblée la période active sans défilement ; à défaut de période
+ * déclarée, on retombe sur les 12 derniers mois.
  *
  * L'agrégation est faite en PHP à partir des seuls couples (date, montant) afin
  * de rester portable entre SQLite (tests) et MySQL (production).
@@ -39,7 +44,7 @@ class BuildPerformanceDashboard
     public function handle(): array
     {
         $end = Carbon::today()->endOfMonth();
-        $start = $end->copy()->startOfMonth()->subMonths(self::MONTHS - 1);
+        $start = $this->windowStart($end);
 
         $cursor = $start->copy();
         while ($cursor->lessThanOrEqualTo($end)) {
@@ -57,6 +62,35 @@ class BuildPerformanceDashboard
             'personnel' => $this->personnel(),
             'communication' => $this->communication(),
         ];
+    }
+
+    /**
+     * Premier mois de la fenêtre : la rentrée (début de l'année scolaire en
+     * cours) afin de montrer la période active sans défilement. On retombe sur
+     * les 12 derniers mois si l'établissement n'a pas encore de période.
+     */
+    private function windowStart(Carbon $end): Carbon
+    {
+        $floor = $end->copy()->startOfMonth()->subMonths(self::MONTHS - 1);
+        $schoolId = auth()->user()?->school_id;
+
+        if ($schoolId === null) {
+            return $floor;
+        }
+
+        $rentree = AcademicPeriod::withoutGlobalScopes()
+            ->where('school_id', $schoolId)
+            ->whereNotNull('starts_at')
+            ->orderBy('starts_at')
+            ->value('starts_at');
+
+        if ($rentree === null) {
+            return $floor;
+        }
+
+        $start = Carbon::parse($rentree)->startOfMonth();
+
+        return $start->greaterThan($floor) ? $start : $floor;
     }
 
     /** @return array<string, mixed> */
@@ -82,28 +116,40 @@ class BuildPerformanceDashboard
         $revenueSum = array_sum($revenues);
         $expenseSum = array_sum($expenses['values']);
         $net = $revenueSum - $expenseSum;
+        $margin = $revenueSum > 0 ? (int) round($net / $revenueSum * 100) : 0;
+
+        $profits = [];
+        foreach ($revenues as $position => $value) {
+            $profits[$position] = $value - $expenses['values'][$position];
+        }
 
         return $this->category([
             'summary' => [
                 [
-                    'label' => 'Recettes (12 mois)',
+                    'label' => 'Recettes',
                     'value' => $this->money($revenueSum),
                     'tone' => null,
                 ],
                 [
-                    'label' => 'Sorties (12 mois)',
+                    'label' => 'Dépenses',
                     'value' => $this->money($expenseSum),
                     'tone' => null,
                 ],
                 [
-                    'label' => 'Actif net',
+                    'label' => 'Bénéfice',
                     'value' => ($net >= 0 ? '+ ' : '- ').$this->money(abs($net)),
                     'tone' => $net >= 0 ? 'positive' : 'negative',
+                ],
+                [
+                    'label' => 'Marge bénéficiaire',
+                    'value' => $this->percent($margin),
+                    'tone' => $margin >= 15 ? 'positive' : ($margin >= 0 ? 'neutral' : 'negative'),
                 ],
             ],
             'series' => [
                 ['label' => 'Recettes', 'color' => '#059669', 'values' => $revenues],
                 ['label' => 'Sorties', 'color' => '#e11d48', 'values' => $expenses['values']],
+                ['label' => 'Bénéfice', 'color' => '#2563eb', 'values' => array_values($profits)],
             ],
         ]);
     }
@@ -112,38 +158,41 @@ class BuildPerformanceDashboard
     private function academique(): array
     {
         $records = AttendanceRecord::query()->get(['attendance_date', 'status']);
-        $total = array_fill(0, count($this->keys), 0);
-        $present = array_fill(0, count($this->keys), 0);
+        $empty = array_fill(0, count($this->keys), 0);
+        $counts = [
+            AttendanceStatus::Present->value => $empty,
+            AttendanceStatus::Absent->value => $empty,
+            AttendanceStatus::Late->value => $empty,
+            AttendanceStatus::Permission->value => $empty,
+        ];
 
         foreach ($records as $record) {
             $position = $this->position($record->attendance_date);
             if ($position === null) {
                 continue;
             }
-            $total[$position]++;
-            if ($record->status === AttendanceStatus::Present) {
-                $present[$position]++;
-            }
+            $counts[$record->status->value][$position]++;
         }
 
-        $rates = [];
-        $populated = [];
-        foreach ($total as $position => $count) {
-            $rates[] = $count > 0 ? (int) round($present[$position] / $count * 100) : 0;
-            if ($count > 0) {
-                $populated[] = (int) round($present[$position] / $count * 100);
-            }
+        $total = 0;
+        foreach ($counts[AttendanceStatus::Present->value] as $position => $count) {
+            $total += $count
+                + $counts[AttendanceStatus::Absent->value][$position]
+                + $counts[AttendanceStatus::Late->value][$position]
+                + $counts[AttendanceStatus::Permission->value][$position];
         }
-
-        $average = $populated ? (int) round(array_sum($populated) / count($populated)) : 0;
+        $average = $total > 0 ? (int) round(array_sum($counts[AttendanceStatus::Present->value]) / $total * 100) : 0;
 
         return $this->category([
             'summary' => [
-                ['label' => 'Assiduité moyenne (12 mois)', 'value' => $this->percent($average), 'tone' => $average >= 90 ? 'positive' : ($average >= 75 ? 'neutral' : 'negative')],
-                ['label' => 'Registres saisis', 'value' => (string) array_sum($total), 'tone' => null],
+                ['label' => 'Assiduité moyenne', 'value' => $this->percent($average), 'tone' => $average >= 90 ? 'positive' : ($average >= 75 ? 'neutral' : 'negative')],
+                ['label' => 'Relevés saisis', 'value' => (string) $total, 'tone' => null],
             ],
             'series' => [
-                ['label' => 'Assiduité', 'color' => '#7c3aed', 'values' => $rates],
+                ['label' => 'Présents', 'color' => '#059669', 'values' => $counts[AttendanceStatus::Present->value]],
+                ['label' => 'Absences', 'color' => '#e11d48', 'values' => $counts[AttendanceStatus::Absent->value]],
+                ['label' => 'Retards', 'color' => '#f59e0b', 'values' => $counts[AttendanceStatus::Late->value]],
+                ['label' => 'Permissions', 'color' => '#2563eb', 'values' => $counts[AttendanceStatus::Permission->value]],
             ],
         ]);
     }
@@ -152,18 +201,20 @@ class BuildPerformanceDashboard
     private function eleves(): array
     {
         $students = $this->series(Student::query()->get(['created_at']), 'created_at', 'count');
+        $parents = $this->series(ParentGuardian::query()->get(['created_at']), 'created_at', 'count');
         $guardians = ParentGuardian::query()->count();
 
         $total = array_sum($students['values']);
 
         return $this->category([
             'summary' => [
-                ['label' => 'Élèves inscrits (12 mois)', 'value' => (string) $total, 'tone' => null],
+                ['label' => 'Élèves inscrits', 'value' => (string) $total, 'tone' => null],
                 ['label' => 'Élèves actifs au total', 'value' => (string) Student::query()->where('is_active', true)->count(), 'tone' => null],
                 ['label' => 'Parents', 'value' => (string) $guardians, 'tone' => null],
             ],
             'series' => [
                 ['label' => 'Nouvelles inscriptions', 'color' => '#0ea5e9', 'values' => $students['values']],
+                ['label' => 'Nouveaux parents', 'color' => '#8b5cf6', 'values' => $parents['values']],
             ],
         ]);
     }
@@ -171,16 +222,18 @@ class BuildPerformanceDashboard
     /** @return array<string, mixed> */
     private function personnel(): array
     {
-        $staff = $this->series(
-            User::query()->whereIn('role', array_map(fn (Role $role) => $role->value, Role::assignableStaff()))->get(['created_at']),
-            'created_at',
-            'count'
-        );
+        $schoolId = auth()->user()?->school_id;
+
+        $staffQuery = fn () => User::query()
+            ->whereIn('role', array_map(fn (Role $role) => $role->value, Role::assignableStaff()))
+            ->when($schoolId !== null, fn ($query) => $query->where('school_id', $schoolId));
+
+        $staff = $this->series($staffQuery()->get(['created_at']), 'created_at', 'count');
 
         return $this->category([
             'summary' => [
-                ['label' => 'Membres recrutés (12 mois)', 'value' => (string) array_sum($staff['values']), 'tone' => null],
-                ['label' => 'Effectif actuel', 'value' => (string) User::query()->whereIn('role', array_map(fn (Role $role) => $role->value, Role::assignableStaff()))->count(), 'tone' => null],
+                ['label' => 'Membres recrutés', 'value' => (string) array_sum($staff['values']), 'tone' => null],
+                ['label' => 'Effectif actuel', 'value' => (string) $staffQuery()->count(), 'tone' => null],
             ],
             'series' => [
                 ['label' => 'Recrutements', 'color' => '#f97316', 'values' => $staff['values']],
@@ -200,7 +253,7 @@ class BuildPerformanceDashboard
 
         return $this->category([
             'summary' => [
-                ['label' => 'SMS envoyés (12 mois)', 'value' => (string) array_sum($sent['values']), 'tone' => null],
+                ['label' => 'SMS envoyés', 'value' => (string) array_sum($sent['values']), 'tone' => null],
                 ['label' => 'Échecs sur la période', 'value' => (string) $failed, 'tone' => $failed > 0 ? 'negative' : 'positive'],
             ],
             'series' => [

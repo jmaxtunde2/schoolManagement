@@ -3,7 +3,7 @@ import { Link, usePage, router } from '@inertiajs/react';
 import {
     LayoutDashboard, Building2, CalendarRange, School as SchoolIcon, BookOpen, Users, UserRound,
     GraduationCap, ClipboardList, BellRing, Globe2, ClipboardCheck, BookOpenCheck, FileText, Menu, X, LogOut, ChevronDown, CheckCheck, Layers, UserCircle,
-    CalendarDays, UserCog, Upload, DoorOpen, Wallet, BadgeEuro, ShoppingCart, HandCoins, Activity,
+    CalendarDays, UserCog, Upload, DoorOpen, Wallet, BadgeEuro, ShoppingCart, HandCoins, Activity, Megaphone,
 } from 'lucide-react';
 import Dropdown from '@/Components/UI/Dropdown';
 import Toast from '@/Components/UI/Toast';
@@ -57,7 +57,11 @@ const adminNav = [
     },
     {
         section: 'Communication',
-        items: [{ href: 'admin.notifications.index', label: 'Notifications', icon: BellRing }],
+        items: [
+            { href: 'messages.index', label: 'Messages parents', icon: Megaphone },
+            { href: 'communication.announcements.index', label: 'Annonces parents', icon: Megaphone },
+            { href: 'admin.notifications.index', label: 'Notifications', icon: BellRing },
+        ],
     },
     {
         section: 'Paramètres',
@@ -99,6 +103,13 @@ const censeurNav = [
         section: 'Personnel',
         items: [{ href: 'censeur.teachers.index', label: 'Enseignants', icon: Users }],
     },
+    {
+        section: 'Communication',
+        items: [
+            { href: 'messages.index', label: 'Messages parents', icon: Megaphone },
+            { href: 'communication.announcements.index', label: 'Annonces parents', icon: Megaphone },
+        ],
+    },
 ];
 
 const directorNav = [
@@ -138,6 +149,13 @@ const secretaryNav = [
             { href: 'teacher.academic.results.index', label: 'Résultats académiques', icon: BookOpenCheck },
             { href: 'teacher.report-cards.index', label: 'Bulletins', icon: FileText },
             { href: 'secretary.timetables.index', label: 'Emploi du temps', icon: CalendarDays },
+        ],
+    },
+    {
+        section: 'Communication',
+        items: [
+            { href: 'messages.index', label: 'Messages parents', icon: Megaphone },
+            { href: 'communication.announcements.index', label: 'Annonces parents', icon: Megaphone },
         ],
     },
 ];
@@ -183,8 +201,15 @@ const teacherNav = [
 
 const parentNav = [
     {
-        section: 'Aperçu',
-        items: [{ href: 'parent.dashboard', label: 'Mes enfants', icon: LayoutDashboard }],
+        section: 'Mes enfants',
+        items: [{ href: 'parent.dashboard', label: 'Tableau de bord', icon: LayoutDashboard }],
+    },
+    {
+        section: 'Scolarité',
+        items: [
+            { href: 'parent.finance.index', label: 'Ma scolarité', icon: Wallet },
+            { href: 'parent.messages.index', label: 'Messages', icon: Megaphone },
+        ],
     },
 ];
 
@@ -304,25 +329,37 @@ export default function AuthenticatedLayout({ children, title }) {
                                     <p className="px-2 py-3 text-sm text-slate-500">Aucune notification récente.</p>
                                 ) : (
                                     <div className="space-y-2">
-                                        {notifications.map((notification) => (
-                                            <div
-                                                key={notification.id}
-                                                className={cn(
-                                                    'rounded-lg border p-2 text-left',
-                                                    notification.is_read ? 'border-slate-200 bg-slate-50' : 'border-emerald-200 bg-emerald-50'
-                                                )}
-                                            >
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <p className="text-sm font-medium text-slate-800">{notification.title}</p>
-                                                    {!notification.is_read && <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500" />}
+                                        {notifications.map((notification) => {
+                                            const url = notification.data?.url;
+                                            const classes = cn(
+                                                'block rounded-lg border p-2 text-left transition',
+                                                notification.is_read ? 'border-slate-200 bg-slate-50' : 'border-emerald-200 bg-emerald-50',
+                                                url && 'cursor-pointer hover:border-emerald-300 hover:bg-emerald-100/60'
+                                            );
+                                            const content = (
+                                                <>
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <p className="text-sm font-medium text-slate-800">{notification.title}</p>
+                                                        {!notification.is_read && <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500" />}
+                                                    </div>
+                                                    <p className="mt-1 text-xs text-slate-600">{notification.message}</p>
+                                                    <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                                                        <span>{notification.type}</span>
+                                                        <span>{notification.created_at}</span>
+                                                    </div>
+                                                </>
+                                            );
+
+                                            return url ? (
+                                                <Link key={notification.id} href={url} className={classes}>
+                                                    {content}
+                                                </Link>
+                                            ) : (
+                                                <div key={notification.id} className={classes}>
+                                                    {content}
                                                 </div>
-                                                <p className="mt-1 text-xs text-slate-600">{notification.message}</p>
-                                                <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
-                                                    <span>{notification.type}</span>
-                                                    <span>{notification.created_at}</span>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                                 <div className="mt-2 border-t border-slate-100 pt-2 text-center">
@@ -383,10 +420,37 @@ function SidebarContent({ nav, school, currentUrl, onNavigate }) {
         }
     };
 
-    const isActive = (item) => {
+    const normalizePath = (value) => value.replace(/\/+$/, '') || '/';
+
+    const currentPath = normalizePath(currentUrl.split(/[?#]/)[0]);
+
+    const itemPath = (item) => {
         const href = hrefFor(item);
 
-        return href && currentUrl.startsWith(new URL(href, window.location.origin).pathname);
+        if (!href) {
+            return null;
+        }
+
+        try {
+            return normalizePath(new URL(href, window.location.origin).pathname);
+        } catch (error) {
+            return null;
+        }
+    };
+
+    // Le lien le plus spécifique l'emporte : `/admin/settings` ne doit pas
+    // rester actif lorsqu'on est sur `/admin/settings/public-site`.
+    const activePath =
+        nav
+            .flatMap((group) => group.items)
+            .map(itemPath)
+            .filter((path) => path && (currentPath === path || currentPath.startsWith(`${path}/`)))
+            .sort((a, b) => b.length - a.length)[0] ?? null;
+
+    const isActive = (item) => {
+        const path = itemPath(item);
+
+        return path !== null && path === activePath;
     };
 
     const toggle = (label) => setCollapsed((prev) => ({ ...prev, [label]: !prev[label] }));

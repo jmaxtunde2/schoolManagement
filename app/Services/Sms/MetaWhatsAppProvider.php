@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Http;
  * de 24 h. L'envoi ci-dessous utilise le type « text » (valable pendant une
  * session). Pour un envoi hors session, basculer sur un template.
  */
-class MetaWhatsAppProvider implements SmsProviderInterface
+class MetaWhatsAppProvider implements SmsProviderInterface, SupportsDocuments
 {
     public function send(string $phone, string $message): SmsResponse
     {
@@ -52,6 +52,71 @@ class MetaWhatsAppProvider implements SmsProviderInterface
                 'to' => $to,
                 'type' => 'text',
                 'text' => ['body' => $message],
+            ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+
+            return SmsResponse::success($data['messages'][0]['id'] ?? null);
+        }
+
+        $error = $response->json('error.message')
+            ?? substr((string) $response->body(), 0, 500);
+
+        return SmsResponse::failure(
+            'WhatsApp HTTP '.$response->status().': '.$error
+        );
+    }
+
+    /**
+     * Envoie un document (PDF, image…) à partir d'un lien public.
+     * Le fichier doit être accessible par les serveurs Meta (URL https).
+     */
+    public function sendDocument(
+        string $phone,
+        string $link,
+        ?string $filename = null,
+        ?string $caption = null
+    ): SmsResponse {
+        $token = config('services.whatsapp.token');
+        $phoneNumberId = config('services.whatsapp.phone_number_id');
+
+        if (! is_string($token) || trim($token) === '') {
+            return SmsResponse::failure('WHATSAPP_TOKEN is not configured.');
+        }
+
+        if (! is_string($phoneNumberId) || trim($phoneNumberId) === '') {
+            return SmsResponse::failure('WHATSAPP_PHONE_NUMBER_ID is not configured.');
+        }
+
+        $to = $this->toE164($phone);
+
+        if ($to === null) {
+            return SmsResponse::failure("Numéro invalide pour WhatsApp : {$phone}");
+        }
+
+        $document = ['link' => $link];
+
+        if ($filename) {
+            $document['filename'] = $filename;
+        }
+
+        if ($caption) {
+            $document['caption'] = $caption;
+        }
+
+        $base = rtrim(config('services.whatsapp.api_url', 'https://graph.facebook.com'), '/');
+        $version = config('services.whatsapp.api_version', 'v21.0');
+        $url = "{$base}/{$version}/{$phoneNumberId}/messages";
+
+        $response = Http::withToken($token)
+            ->acceptJson()
+            ->asJson()
+            ->post($url, [
+                'messaging_product' => 'whatsapp',
+                'to' => $to,
+                'type' => 'document',
+                'document' => $document,
             ]);
 
         if ($response->successful()) {

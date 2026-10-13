@@ -5,9 +5,22 @@ import {
     Laptop,
     ShieldCheck,
     Sparkles,
-    BarChart3,
     Users,
+    Wallet,
+    HeartHandshake,
+    MessageSquare,
+    CalendarClock,
 } from 'lucide-react';
+
+/** Modules mis en orbite autour du logo sur la page de connexion. */
+const FEATURES = [
+    { label: 'Gestion académique', icon: BookOpen },
+    { label: 'Finance', icon: Wallet },
+    { label: 'Parents', icon: HeartHandshake },
+    { label: 'Élèves', icon: Users },
+    { label: 'Communication', icon: MessageSquare },
+    { label: 'Emploi du temps', icon: CalendarClock },
+];
 
 export default function GuestLayout({ children }) {
     const { school } = usePage().props;
@@ -104,7 +117,7 @@ export default function GuestLayout({ children }) {
                                             CoriSchool
                                         </p>
 
-                                        <p className="text-xs text-white/60">
+                                        <p className="text-xs text-white">
                                             La plateforme numérique scolaire
                                         </p>
                                     </div>
@@ -117,67 +130,54 @@ export default function GuestLayout({ children }) {
                         ================================================== */}
                         <div className="relative z-10">
 
-                            <div className="relative mx-auto mb-10 flex h-64 max-w-md items-center justify-center">
+                            <div className="relative mx-auto mb-10 flex h-80 w-80 max-w-full items-center justify-center sm:h-[22rem] sm:w-[22rem]">
 
                                 {/* Glow */}
-                                <div className="absolute h-60 w-60 rounded-full bg-white/10 blur-3xl" />
+                                <div className="absolute h-56 w-56 rounded-full bg-white/10 blur-3xl" />
 
-                                {/* Main circle */}
-                                <div className="relative flex h-48 w-48 items-center justify-center rounded-full border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md">
+                                {/* Orbit track */}
+                                <div className="absolute left-1/2 top-1/2 h-[15rem] w-[15rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-white/10" />
 
-                                    <div className="flex h-32 w-32 items-center justify-center rounded-full bg-white shadow-xl">
+                                {/* Orbiting feature cards */}
+                                <div className="absolute inset-0 animate-orbit motion-reduce:animate-none">
+                                    {FEATURES.map((feature, index) => {
+                                        const Icon = feature.icon;
+                                        const angle =
+                                            (360 / FEATURES.length) * index - 90;
+
+                                        return (
+                                            <div
+                                                key={feature.label}
+                                                className="absolute left-1/2 top-1/2"
+                                                style={{
+                                                    transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-7.5rem)`,
+                                                }}
+                                            >
+                                                <div style={{ transform: `rotate(${-angle}deg)` }}>
+                                                    <div className="animate-orbit-counter motion-reduce:animate-none">
+                                                        <div className="flex w-24 flex-col items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-2.5 py-3 text-center shadow-lg backdrop-blur-md">
+                                                            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white">
+                                                                <Icon className="h-5 w-5" />
+                                                            </span>
+                                                            <span className="text-[11px] font-semibold leading-tight text-white">
+                                                                {feature.label}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Center logo */}
+                                <div className="relative z-10 flex h-36 w-36 items-center justify-center rounded-full border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md">
+                                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-xl">
                                         <GraduationCap
-                                            size={68}
+                                            size={52}
                                             strokeWidth={1.4}
                                             style={{ color: primaryColor }}
                                         />
-                                    </div>
-
-                                </div>
-
-                                {/* =================================================
-                                    FLOATING CARD — ACADEMIC
-                                ================================================== */}
-                                <div className="absolute left-0 top-5 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 shadow-xl backdrop-blur-md">
-
-                                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
-                                        <BookOpen
-                                            size={18}
-                                            className="text-white"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <p className="text-xs font-semibold text-white">
-                                            Suivi académique
-                                        </p>
-
-                                        <p className="text-[10px] text-white/60">
-                                            Notes & résultats
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* =================================================
-                                    FLOATING CARD — CONNECTIVITY
-                                ================================================== */}
-                                <div className="absolute bottom-5 right-0 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 shadow-xl backdrop-blur-md">
-
-                                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
-                                        <Users
-                                            size={18}
-                                            className="text-white"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <p className="text-xs font-semibold text-white">
-                                            École connectée
-                                        </p>
-
-                                        <p className="text-[10px] text-white/60">
-                                            École & familles
-                                        </p>
                                     </div>
                                 </div>
 

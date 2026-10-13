@@ -15,6 +15,7 @@ import {
     ClipboardCheck,
     Clock3,
     GraduationCap,
+    Globe,
     LayoutDashboard,
     Menu,
     MessageSquare,
@@ -193,6 +194,19 @@ const features = [
             'Historique financier',
         ],
     },
+    {
+        id: 'site-public',
+        icon: Globe,
+        title: 'Site public de l’établissement',
+        description:
+            'Chaque école dispose de sa propre vitrine en ligne, à son image.',
+        points: [
+            'Page d’accueil personnalisée',
+            'Logo et couleurs de l’école',
+            'Présentation, valeurs et galerie',
+            'Contact et demande d’information',
+        ],
+    },
 ];
 
 const audiences = [
@@ -225,21 +239,21 @@ const audiences = [
 const workflow = [
     {
         number: '01',
-        title: 'Créez votre établissement',
+        title: 'Demandez une démonstration',
         description:
-            'Configurez votre école et personnalisez son environnement numérique.',
+            'Remplissez le formulaire : l’équipe Coriyase vous contacte et planifie une présentation de la plateforme.',
     },
     {
         number: '02',
-        title: 'Ajoutez votre équipe',
+        title: 'Nous activons votre école',
         description:
-            'Invitez administrateurs, enseignants et autres membres du personnel.',
+            'Après validation et règlement de la licence initiale, votre établissement et votre compte administrateur sont activés.',
     },
     {
         number: '03',
-        title: 'Gérez la vie scolaire',
+        title: 'Ajoutez votre équipe',
         description:
-            'Classes, matières, évaluations, notes, présences et documents.',
+            'Invitez administrateurs, enseignants et personnel, puis configurez classes, matières et évaluations.',
     },
     {
         number: '04',
@@ -1392,6 +1406,60 @@ function FeatureMiniMockup({ type }) {
         );
     }
 
+    if (type === 'site-public') {
+        return (
+            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5">
+                <div className="flex h-9 items-center gap-1.5 border-b border-slate-100 bg-slate-50 px-4">
+                    <span className="h-2 w-2 rounded-full bg-slate-300" />
+                    <span className="h-2 w-2 rounded-full bg-slate-300" />
+                    <span className="h-2 w-2 rounded-full bg-slate-300" />
+
+                    <div className="ml-3 hidden flex-1 rounded-md bg-white px-2 text-[8px] leading-4 text-slate-400 sm:block">
+                        ecole.corischool.com
+                    </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-emerald-600 to-teal-700 p-5 text-white">
+                    <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15">
+                            <School className="h-4 w-4" />
+                        </div>
+                        <span className="text-xs font-black">
+                            École La Sagesse
+                        </span>
+                    </div>
+
+                    <p className="mt-5 text-base font-black leading-tight">
+                        Une éducation d’excellence, ouverte sur le monde.
+                    </p>
+
+                    <div className="mt-4 flex gap-2">
+                        <span className="rounded-lg bg-white px-3 py-1.5 text-[9px] font-bold text-emerald-700">
+                            Nous contacter
+                        </span>
+                        <span className="rounded-lg border border-white/30 px-3 py-1.5 text-[9px] font-bold text-white">
+                            Nos valeurs
+                        </span>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 p-4">
+                    {['Présentation', 'Galerie', 'Actualités'].map((label) => (
+                        <div
+                            key={label}
+                            className="rounded-xl border border-slate-100 p-3"
+                        >
+                            <div className="mb-2 h-8 rounded-lg bg-emerald-50" />
+                            <p className="text-[8px] font-bold text-slate-600">
+                                {label}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-900/5">
             <div className="flex items-center justify-between">
@@ -1719,9 +1787,9 @@ function Security() {
 
                             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
                                 Contrôle des accès, rôles utilisateurs,
-                                authentification renforcée et séparation des
-                                données entre établissements font partie de
-                                l’architecture de CoriSchool.
+                                double authentification (2FA) et cloisonnement
+                                des données entre établissements : la sécurité
+                                fait partie de l’architecture de CoriSchool.
                             </p>
                         </div>
 

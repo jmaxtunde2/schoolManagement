@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Attendance\BuildRecentIncidents;
+use App\Actions\Finance\BuildFinanceSummary;
 use App\Actions\Students\BuildGenderDistribution;
 use App\Actions\Timetable\BuildTimetableBrief;
 use App\Http\Controllers\Controller;
@@ -20,7 +21,7 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, BuildTimetableBrief $brief, BuildRecentIncidents $incidents, BuildGenderDistribution $genderDistribution): Response
+    public function __invoke(Request $request, BuildTimetableBrief $brief, BuildRecentIncidents $incidents, BuildGenderDistribution $genderDistribution, BuildFinanceSummary $financeSummary): Response
     {
         return Inertia::render('Admin/Dashboard', [
             'stats' => [
@@ -38,6 +39,7 @@ class DashboardController extends Controller
             'recentIncidents' => $incidents->handle(10),
             'genderDistribution' => $genderDistribution->handle(),
             'finance' => true,
+            'financeSummary' => $financeSummary->handle(),
             'recentExpenses' => Expense::query()
                 ->with('creator:id,name')
                 ->latest('expense_date')->latest('id')->take(5)->get()

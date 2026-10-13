@@ -6,11 +6,10 @@ use App\Enums\ExpenseCategory;
 use App\Enums\ExpenseStatus;
 use App\Enums\SaleCategory;
 use App\Models\AcademicYear;
-use App\Models\AuditLog;
 use App\Models\ClassRoom;
 use App\Models\Expense;
-use App\Models\Sale;
 use App\Models\SalaryRecord;
+use App\Models\Sale;
 use App\Models\School;
 use App\Models\Student;
 use App\Models\StudentContribution;
@@ -388,7 +387,11 @@ class FinanceWorkflowTest extends TestCase
                 ->has('recentSales', 1)
                 ->where('recentSales.0.id', $sale->id)
                 ->has('recentContributions', 1)
-                ->where('recentContributions.0.id', $contribution->id));
+                ->where('recentContributions.0.id', $contribution->id)
+                ->where('financeSummary.revenue', 60000)
+                ->where('financeSummary.expenses', 10000)
+                ->where('financeSummary.profit', 50000)
+                ->where('financeSummary.margin', 83));
     }
 
     public function test_admin_performance_page_reports_all_categories(): void
@@ -425,14 +428,15 @@ class FinanceWorkflowTest extends TestCase
                 ->component('Admin/Performance/Index')
                 ->has('performance', 5)
                 ->has('performance.finance.buckets', 12)
-                ->has('performance.finance.series', 2)
-                ->has('performance.academique.series', 1)
-                ->has('performance.eleves.series', 1)
+                ->has('performance.finance.series', 3)
+                ->has('performance.academique.series', 4)
+                ->has('performance.eleves.series', 2)
                 ->has('performance.personnel.series', 1)
                 ->has('performance.communication.series', 1)
                 ->where('performance.finance.summary.0.value', '50 000 F')
                 ->where('performance.finance.summary.1.value', '10 000 F')
-                ->where('performance.finance.summary.2.value', '+ 40 000 F'));
+                ->where('performance.finance.summary.2.value', '+ 40 000 F')
+                ->where('performance.finance.summary.3.value', '80 %'));
 
         $teacher = $this->secretary;
         $teacher->role = 'teacher';

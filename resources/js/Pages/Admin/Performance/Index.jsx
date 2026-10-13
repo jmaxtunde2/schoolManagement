@@ -58,7 +58,7 @@ export default function Performance({ performance }) {
                                     }
                                     actions={
                                         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                                            <Activity className="h-3.5 w-3.5" /> 12 derniers mois
+                                            <Activity className="h-3.5 w-3.5" /> Année scolaire en cours
                                         </span>
                                     }
                                 />
@@ -82,7 +82,7 @@ export default function Performance({ performance }) {
                                         series={data.series}
                                         formatter={category.formatter}
                                         emptyTitle={`Aucune donnée pour ${category.label.toLowerCase()}`}
-                                        emptyDescription="Les douze derniers mois apparaîtront dès que des données auront été saisies."
+                                        emptyDescription="Les données apparaîtront dès qu'elles auront été saisies."
                                     />
                                 </Card.Body>
                             </Card>

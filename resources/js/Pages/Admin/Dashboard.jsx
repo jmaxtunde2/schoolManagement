@@ -12,6 +12,10 @@ import {
     ShoppingCart,
     HandCoins,
     PieChart,
+    TrendingUp,
+    TrendingDown,
+    PiggyBank,
+    Percent,
 } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -48,6 +52,7 @@ export default function Dashboard({
     recentIncidents,
     routePrefix = 'admin',
     finance = false,
+    financeSummary = null,
     recentExpenses = [],
     recentSales = [],
     recentContributions = [],
@@ -197,6 +202,58 @@ export default function Dashboard({
         </Card>
     );
 
+    const summary = financeSummary ?? {
+        revenue: 0,
+        expenses: 0,
+        profit: 0,
+        margin: 0,
+    };
+    const profitIsPositive = summary.profit >= 0;
+    const signedMoney = (value) =>
+        `${value >= 0 ? '+ ' : '- '}${money(Math.abs(value))}`;
+
+    const financeTiles = [
+        {
+            label: 'Recettes',
+            value: money(summary.revenue),
+            hint: 'Ventes et scolarité encaissée',
+            icon: TrendingUp,
+            accent: 'bg-emerald-50 text-emerald-600',
+            valueClass: 'text-emerald-700',
+        },
+        {
+            label: 'Dépenses',
+            value: money(summary.expenses),
+            hint: 'Charges validées sur la période',
+            icon: TrendingDown,
+            accent: 'bg-rose-50 text-rose-600',
+            valueClass: 'text-rose-700',
+        },
+        {
+            label: 'Bénéfice',
+            value: signedMoney(summary.profit),
+            hint: 'Recettes − dépenses',
+            icon: PiggyBank,
+            accent: profitIsPositive
+                ? 'bg-emerald-50 text-emerald-600'
+                : 'bg-rose-50 text-rose-600',
+            valueClass: profitIsPositive ? 'text-emerald-700' : 'text-rose-700',
+        },
+        {
+            label: 'Marge bénéficiaire',
+            value: `${summary.margin} %`,
+            hint: 'Part du bénéfice dans les recettes',
+            icon: Percent,
+            accent: 'bg-sky-50 text-sky-600',
+            valueClass:
+                summary.margin >= 15
+                    ? 'text-emerald-700'
+                    : summary.margin >= 0
+                      ? 'text-slate-900'
+                      : 'text-rose-700',
+        },
+    ];
+
     return (
         <AuthenticatedLayout
             title={`Bonjour, ${auth.user.name.split(' ')[0]}`}
@@ -265,7 +322,7 @@ export default function Dashboard({
                         <div className="mb-4 flex items-end justify-between">
                             <div>
                                 <p className="text-xs font-bold uppercase tracking-wider text-violet-600">Gestion financière</p>
-                                <h2 className="mt-1 text-lg font-bold tracking-tight text-slate-950">Finances récentes</h2>
+                                <h2 className="mt-1 text-lg font-bold tracking-tight text-slate-950">Bénéfice</h2>
                             </div>
                             <Link
                                 href={route(`${routePrefix}.expenses.index`)}
@@ -276,6 +333,14 @@ export default function Dashboard({
                                 <ArrowRight className="h-4 w-4" />
                             </Link>
                         </div>
+
+                        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                            {financeTiles.map((tile) => (
+                                <FinanceTile key={tile.label} {...tile} />
+                            ))}
+                        </div>
+
+                        <h3 className="mb-4 mt-8 text-lg font-bold tracking-tight text-slate-950">Finances récentes</h3>
 
                         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                             <FinanceCard
@@ -388,6 +453,19 @@ export default function Dashboard({
                 </Card>
             )}
         </AuthenticatedLayout>
+    );
+}
+
+function FinanceTile({ label, value, hint, icon: Icon, accent, valueClass = 'text-slate-900' }) {
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className={`mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl ${accent}`}>
+                <Icon className="h-5 w-5" />
+            </div>
+            <p className={`text-lg font-bold tracking-tight ${valueClass}`}>{value}</p>
+            <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+            <p className="mt-1 text-xs text-slate-400">{hint}</p>
+        </div>
     );
 }
 

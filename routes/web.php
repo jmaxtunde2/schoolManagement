@@ -6,9 +6,13 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Censeur\EvaluationController;
+use App\Http\Controllers\Communication;
+use App\Http\Controllers\CoriSchoolLandingController;
 use App\Http\Controllers\DemoRequestController;
 use App\Http\Controllers\Finance;
 use App\Http\Controllers\Parent\ChildController;
+use App\Http\Controllers\Parent\FinanceController;
+use App\Http\Controllers\Parent\MessageController;
 use App\Http\Controllers\Parent\TimetableController;
 use App\Http\Controllers\Platform\AcademicPeriodController;
 use App\Http\Controllers\Platform\AcademicYearController;
@@ -25,6 +29,7 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\Staff\AttendanceController;
 use App\Http\Controllers\Staff\EvaluationController as StaffEvaluationController;
 use App\Http\Controllers\Staff\ManagementDashboardController;
+use App\Http\Controllers\Staff\ParentMessageController as StaffParentMessageController;
 use App\Http\Controllers\Teacher;
 use App\Http\Controllers\UserNotificationController;
 use App\Services\Tenancy\TenantResolver;
@@ -40,16 +45,22 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function (Request $request) {
     $user = auth()->user();
+    $preview = $request->boolean('preview');
 
-    if ($user) {
+    if ($user && ! $preview) {
         return redirect()->route($user->role->homeRoute());
     }
 
+    $resolver = app(TenantResolver::class);
+
+    // En mode aperçu depuis l'hôte de la plateforme, on montre la landing
+    // CoriSchool plutôt que le site de l'école de l'utilisateur connecté.
+    if ($preview && ! $resolver->hasSchoolDomain($request->getHost())) {
+        return app(CoriSchoolLandingController::class)();
+    }
+
     return app(PublicSchoolController::class)
-        ->__invoke(
-            $request,
-            app(TenantResolver::class)
-        );
+        ->__invoke($request, $resolver);
 })->name('public.school.home');
 
 Route::get('/ecole/{slug}', [
@@ -936,6 +947,57 @@ Route::middleware([
 
     /*
     |--------------------------------------------------------------------------
+    | Communication — Annonces aux parents
+    |--------------------------------------------------------------------------
+    |
+    | Annonces libres (réunion, information, convocation…) envoyées aux parents
+    | par WhatsApp et/ou email. Accessible à l'administrateur, au censeur et à
+    | la secrétaire. Ciblage : tous les parents, par classe, par niveau ou par
+    | sélection de parents. Envoi immédiat ou programmé.
+    */
+
+    Route::middleware('role:admin,censeur,secretary')
+        ->prefix('communication')
+        ->name('communication.')
+        ->group(function () {
+            Route::get('/annonces', [
+                Communication\AnnouncementController::class,
+                'index',
+            ])->name('announcements.index');
+
+            Route::get('/annonces/nouvelle', [
+                Communication\AnnouncementController::class,
+                'create',
+            ])->name('announcements.create');
+
+            Route::post('/annonces', [
+                Communication\AnnouncementController::class,
+                'store',
+            ])->name('announcements.store');
+
+            Route::get('/annonces/{announcement}', [
+                Communication\AnnouncementController::class,
+                'show',
+            ])->name('announcements.show');
+
+            Route::post('/annonces/{announcement}/cancel', [
+                Communication\AnnouncementController::class,
+                'cancel',
+            ])->name('announcements.cancel');
+
+            Route::post('/annonces/{announcement}/resend', [
+                Communication\AnnouncementController::class,
+                'resend',
+            ])->name('announcements.resend');
+
+            Route::delete('/annonces/{announcement}', [
+                Communication\AnnouncementController::class,
+                'destroy',
+            ])->name('announcements.destroy');
+        });
+
+    /*
+    |--------------------------------------------------------------------------
     | Censeur
     |--------------------------------------------------------------------------
     */
@@ -1383,6 +1445,29 @@ Route::middleware([
                 ChildController::class,
                 'justify',
             ])->name('attendance.justify');
+
+            /*
+            | Scolarité — historique des paiements, relevé et reçus
+            */
+
+            Route::get('/finance', [FinanceController::class, 'index'])
+                ->name('finance.index');
+
+            Route::get('/finance/statement', [FinanceController::class, 'statement'])
+                ->name('finance.statement');
+
+            Route::get('/finance/payments/{payment}/receipt', [FinanceController::class, 'receipt'])
+                ->name('finance.receipt');
+
+            /*
+            | Messages adressés à l'établissement
+            */
+
+            Route::get('/messages', [MessageController::class, 'index'])
+                ->name('messages.index');
+
+            Route::post('/messages', [MessageController::class, 'store'])
+                ->name('messages.store');
         });
 
     /*
@@ -1452,6 +1537,28 @@ Route::middleware([
                 Finance\ContributionController::class,
                 'store',
             ])->name('contributions.store');
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Messages des parents — boîte de réception du personnel
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware('role:admin,censeur,secretary')
+        ->prefix('messages')
+        ->name('messages.')
+        ->group(function () {
+
+            Route::get('/', [
+                StaffParentMessageController::class,
+                'index',
+            ])->name('index');
+
+            Route::get('/{message}', [
+                StaffParentMessageController::class,
+                'show',
+            ])->name('show');
         });
 });
 
