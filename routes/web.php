@@ -17,6 +17,7 @@ use App\Http\Controllers\Parent\TimetableController;
 use App\Http\Controllers\Platform\AcademicPeriodController;
 use App\Http\Controllers\Platform\AcademicYearController;
 use App\Http\Controllers\Platform\AuditLogController;
+use App\Http\Controllers\Platform\CommunicationController as PlatformCommunicationController;
 use App\Http\Controllers\Platform\DashboardController;
 use App\Http\Controllers\Platform\DemoRequestController as PlatformDemoRequestController;
 use App\Http\Controllers\Platform\ImportController;
@@ -351,6 +352,12 @@ Route::middleware([
             Route::get('/audit-logs/{auditLog}', [AuditLogController::class, 'show'])->name('audit-logs.show');
 
             /*
+            | Suivi de la communication (multi-établissements)
+            */
+            Route::get('/communication', [PlatformCommunicationController::class, 'index'])->name('communication.index');
+            Route::get('/communication/history', [PlatformCommunicationController::class, 'history'])->name('communication.history');
+
+            /*
             | Import en masse
             */
             Route::get('/imports', [ImportController::class, 'index'])->name('imports.index');
@@ -463,6 +470,16 @@ Route::middleware([
                 EmailSettingsController::class,
                 'sendTestEmail',
             ])->name('settings.email.test');
+
+            Route::get('/settings/communication', [
+                Admin\CommunicationSettingsController::class,
+                'edit',
+            ])->name('settings.communication');
+
+            Route::put('/settings/communication', [
+                Admin\CommunicationSettingsController::class,
+                'update',
+            ])->name('settings.communication.update');
 
             /*
             | Billing

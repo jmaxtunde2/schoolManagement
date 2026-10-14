@@ -39,7 +39,16 @@ class GoogleAuthController extends Controller
         $tokens = $this->google->exchange($request->string('code')->toString());
         $profile = $this->google->user($tokens['access_token']);
         $user = User::withoutGlobalScopes()->where('google_id', $profile['sub'] ?? '')->orWhere('email', strtolower($profile['email'] ?? ''))->first();
-        abort_unless(($profile['email_verified'] ?? false) && $user && $user->is_active && ($user->school_id || $user->isPlatformAdmin()), 403, 'Votre compte Google n’est pas autorisé sur la plateforme. Contactez votre établissement.');
+
+        // Un établissement suspendu bloque aussi la connexion Google : on ne
+        // laisse pas un utilisateur d'école désactivée entrer par ce biais.
+        $schoolActive = $user && (! $user->school_id || $user->school?->is_active);
+
+        abort_unless(
+            ($profile['email_verified'] ?? false) && $user && $user->is_active && $schoolActive && ($user->school_id || $user->isPlatformAdmin()),
+            403,
+            'Votre compte Google n’est pas autorisé sur la plateforme. Contactez votre établissement.'
+        );
         $user->forceFill(['google_id' => $profile['sub'] ?? $user->google_id, 'google_email' => strtolower($profile['email'] ?? $user->email), 'google_avatar' => $profile['picture'] ?? null, 'google_verified_at' => now(), 'google_reauthenticated_at' => now()])->save();
         Auth::login($user);
         $request->session()->regenerate();

@@ -144,6 +144,11 @@ class School extends Model
         return $this->hasOne(SchoolMailSetting::class);
     }
 
+    public function communicationSettings(): HasOne
+    {
+        return $this->hasOne(SchoolCommunicationSetting::class);
+    }
+
     /** Configuration existante ou instance vide (non persistée) rattachée à l'école. */
     public function settingsOrNew(): SchoolSetting
     {

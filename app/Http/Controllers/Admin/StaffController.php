@@ -45,7 +45,8 @@ class StaffController extends Controller
                 $query->where('is_active', $request->string('status') === 'active');
             })
             ->orderByRaw("CASE role WHEN 'admin' THEN 1 WHEN 'director' THEN 2 WHEN 'censeur' THEN 3 WHEN 'surveillant' THEN 4 WHEN 'secretary' THEN 5 WHEN 'accountant' THEN 6 WHEN 'teacher' THEN 7 WHEN 'gardien' THEN 8 ELSE 9 END")
-            ->orderBy('name')
+            ->latest()
+            ->latest('id')
             ->get(['id', 'school_id', 'name', 'email', 'phone', 'role', 'is_active', 'photo_path', 'two_factor_confirmed_at'])
             ->map(fn (User $member) => $this->present($member, $currentUserId));
 

@@ -56,6 +56,28 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        $this->ensureSchoolIsActive();
+    }
+
+    /**
+     * Une école suspendue par l'administrateur de la plateforme ne peut
+     * plus accéder à l'application : la connexion est refusée d'emblée.
+     */
+    private function ensureSchoolIsActive(): void
+    {
+        $user = Auth::user();
+        $school = $user?->school;
+
+        if (! $school || $school->is_active) {
+            return;
+        }
+
+        Auth::guard('web')->logout();
+
+        throw ValidationException::withMessages([
+            'email' => "L'accès à la plateforme est suspendu pour l'établissement « {$school->name} ». Contactez l'administrateur.",
+        ]);
     }
 
     private function ensureIsNotRateLimited(): void

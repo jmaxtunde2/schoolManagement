@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\Communication\CommunicationTransport;
+use App\Services\Communication\ProviderCommunicationTransport;
 use App\Services\Sms\EsmsAfricaProvider;
 use App\Services\Sms\LogSmsProvider;
 use App\Services\Sms\MetaWhatsAppProvider;
@@ -21,5 +23,7 @@ class SmsServiceProvider extends ServiceProvider
                 default => new LogSmsProvider,
             };
         });
+
+        $this->app->bind(CommunicationTransport::class, ProviderCommunicationTransport::class);
     }
 }

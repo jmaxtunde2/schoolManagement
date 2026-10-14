@@ -1,0 +1,328 @@
+<?php
+
+namespace Tests\Feature\Communication;
+
+use App\Enums\CommunicationChannel;
+use App\Enums\EvaluationNotificationStatus;
+use App\Enums\NotificationStatus;
+use App\Enums\Role;
+use App\Jobs\SendCommunicationJob;
+use App\Models\AcademicYear;
+use App\Models\ClassRoom;
+use App\Models\Evaluation;
+use App\Models\Notification;
+use App\Models\NotificationBatch;
+use App\Models\ParentGuardian;
+use App\Models\School;
+use App\Models\SchoolCommunicationSetting;
+use App\Models\Student;
+use App\Models\Subject;
+use App\Models\Teacher;
+use App\Models\User;
+use App\Models\UserNotification;
+use App\Services\Communication\CommunicationBudgetService;
+use App\Services\Communication\CommunicationSettingsService;
+use App\Services\Communication\CommunicationTransport;
+use App\Services\Communication\NotificationAggregationService;
+use App\Services\Communication\NotificationChannelService;
+use App\Services\Communication\NotificationMessageBuilder;
+use App\Services\Sms\SmsResponse;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
+use Tests\TestCase;
+
+class EvaluationNotificationTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private School $school;
+
+    private AcademicYear $year;
+
+    private ClassRoom $class;
+
+    private Subject $subject;
+
+    private Teacher $teacher;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->school = School::factory()->create(['name' => 'École Test']);
+        $this->year = AcademicYear::factory()->create(['school_id' => $this->school->id, 'is_current' => true]);
+        $teacherUser = User::factory()->teacher()->forSchool($this->school)->create();
+        $this->teacher = Teacher::factory()->create(['school_id' => $this->school->id, 'user_id' => $teacherUser->id]);
+        $this->class = ClassRoom::factory()->create(['school_id' => $this->school->id]);
+        $this->subject = Subject::factory()->create(['school_id' => $this->school->id, 'name' => 'Mathématiques']);
+    }
+
+    private function validatedEvaluation(Student $student, ?Subject $subject = null, float $score = 15): Evaluation
+    {
+        $evaluation = Evaluation::factory()->validated()->create([
+            'school_id' => $this->school->id,
+            'academic_year_id' => $this->year->id,
+            'class_id' => $this->class->id,
+            'subject_id' => ($subject ?? $this->subject)->id,
+            'teacher_id' => $this->teacher->id,
+            'validated_at' => now(),
+        ]);
+
+        $evaluation->results()->create([
+            'school_id' => $this->school->id,
+            'student_id' => $student->id,
+            'score' => $score,
+        ]);
+
+        return $evaluation;
+    }
+
+    private function studentWithGuardian(?string $phone, ?string $email, ?User $user = null): Student
+    {
+        $student = Student::factory()->create([
+            'school_id' => $this->school->id,
+            'class_id' => $this->class->id,
+        ]);
+
+        $guardian = ParentGuardian::factory()->create([
+            'school_id' => $this->school->id,
+            'phone' => $phone,
+            'email' => $email,
+            'user_id' => $user?->id,
+        ]);
+
+        $guardian->students()->attach($student->id, ['relationship' => 'parent']);
+
+        return $student;
+    }
+
+    public function test_aggregate_consolidates_evaluations_into_one_batch_and_notification_per_student(): void
+    {
+        Queue::fake();
+
+        $student = $this->studentWithGuardian('+22890000001', null);
+        $this->validatedEvaluation($student);
+        $this->validatedEvaluation($student, score: 12);
+
+        $stats = app(NotificationAggregationService::class)->aggregate();
+
+        $this->assertSame(1, $stats['batches']);
+        $this->assertSame(1, $stats['recipients']);
+        $this->assertSame(1, NotificationBatch::count());
+        $this->assertSame(1, Notification::count());
+        $this->assertSame(2, NotificationBatch::first()->evaluations()->count());
+
+        $this->assertSame(
+            EvaluationNotificationStatus::Included,
+            Evaluation::first()->notification_status
+        );
+    }
+
+    public function test_running_aggregate_twice_does_not_duplicate(): void
+    {
+        Queue::fake();
+
+        $student = $this->studentWithGuardian('+22890000001', null);
+        $this->validatedEvaluation($student);
+
+        app(NotificationAggregationService::class)->aggregate();
+        app(NotificationAggregationService::class)->aggregate();
+
+        $this->assertSame(1, NotificationBatch::count());
+        $this->assertSame(1, Notification::count());
+    }
+
+    public function test_guardians_sharing_a_phone_receive_a_single_external_message(): void
+    {
+        Queue::fake();
+
+        $student = Student::factory()->create(['school_id' => $this->school->id, 'class_id' => $this->class->id]);
+
+        foreach (['Père', 'Mère'] as $name) {
+            $guardian = ParentGuardian::factory()->create([
+                'school_id' => $this->school->id,
+                'phone' => '+22890000009',
+            ]);
+            $guardian->students()->attach($student->id, ['relationship' => 'parent']);
+        }
+
+        $this->validatedEvaluation($student);
+
+        app(NotificationAggregationService::class)->aggregate();
+
+        $this->assertSame(1, Notification::count());
+    }
+
+    public function test_in_app_notification_is_created_for_linked_parent_user(): void
+    {
+        Queue::fake();
+
+        $parentUser = User::factory()->forSchool($this->school)->create();
+        $parentUser->forceFill(['role' => Role::Parent])->save();
+
+        $student = $this->studentWithGuardian('+22890000001', null, $parentUser);
+        $this->validatedEvaluation($student);
+
+        app(NotificationAggregationService::class)->aggregate();
+
+        $this->assertSame(1, UserNotification::where('type', 'evaluation.grades')->count());
+    }
+
+    public function test_external_message_falls_back_to_concise_alert_when_details_too_long(): void
+    {
+        $builder = app(NotificationMessageBuilder::class);
+        $entries = [];
+
+        for ($i = 0; $i < 8; $i++) {
+            $entries[] = [
+                'subject' => 'Mathématiques Appliquées',
+                'title' => 'Devoir',
+                'score' => 15.0,
+                'max' => 20.0,
+                'absent' => false,
+            ];
+        }
+
+        $built = $builder->externalMessage(
+            CommunicationChannel::Sms,
+            'École Test',
+            'Amadou Diallo',
+            $entries
+        );
+
+        $this->assertFalse($built['detailed']);
+        $this->assertLessThanOrEqual(160, mb_strlen($built['message']));
+        $this->assertStringContainsString('sont disponibles', $built['message']);
+    }
+
+    public function test_job_sends_sms_and_consumes_balance(): void
+    {
+        Queue::fake();
+
+        $student = $this->studentWithGuardian('+22890000001', null);
+        $this->validatedEvaluation($student);
+        app(NotificationAggregationService::class)->aggregate();
+
+        $notification = Notification::firstOrFail();
+        $transport = new FakeCommunicationTransport;
+
+        $this->runJob($notification->id, $transport);
+
+        $notification->refresh();
+        $this->assertSame(CommunicationChannel::Sms, CommunicationChannel::from($notification->channel));
+        $this->assertSame(NotificationStatus::Sent, $notification->status);
+        $this->assertSame(25, $notification->estimated_cost);
+
+        $settings = SchoolCommunicationSetting::withoutGlobalScopes()->firstOrFail();
+        $this->assertSame(2975, (int) $settings->sms_balance);
+    }
+
+    public function test_job_falls_back_to_whatsapp_when_sms_fails(): void
+    {
+        Queue::fake();
+
+        $student = $this->studentWithGuardian('+22890000001', null);
+        $this->validatedEvaluation($student);
+        app(NotificationAggregationService::class)->aggregate();
+
+        $notification = Notification::firstOrFail();
+        $transport = new FakeCommunicationTransport(failChannels: [CommunicationChannel::Sms]);
+
+        $this->runJob($notification->id, $transport);
+
+        $notification->refresh();
+        $this->assertSame(CommunicationChannel::Whatsapp, CommunicationChannel::from($notification->channel));
+        $this->assertSame(NotificationStatus::Sent, $notification->status);
+
+        $settings = SchoolCommunicationSetting::withoutGlobalScopes()->firstOrFail();
+        $this->assertGreaterThan(0, (float) $settings->whatsapp_consumed);
+    }
+
+    public function test_job_falls_back_to_email_when_sms_disabled(): void
+    {
+        Queue::fake();
+
+        $student = $this->studentWithGuardian('+22890000001', 'parent@example.com');
+        $this->validatedEvaluation($student);
+        app(NotificationAggregationService::class)->aggregate();
+
+        app(CommunicationSettingsService::class)->for($this->school)->update([
+            'sms_enabled' => false,
+            'whatsapp_enabled' => false,
+        ]);
+
+        $notification = Notification::firstOrFail();
+        $transport = new FakeCommunicationTransport;
+
+        $this->runJob($notification->id, $transport);
+
+        $notification->refresh();
+        $this->assertSame(CommunicationChannel::Email, CommunicationChannel::from($notification->channel));
+        $this->assertSame(NotificationStatus::Sent, $notification->status);
+        $this->assertSame('parent@example.com', $notification->email);
+    }
+
+    public function test_low_sms_balance_skips_sms_channel(): void
+    {
+        Queue::fake();
+
+        $student = $this->studentWithGuardian('+22890000001', null);
+        $this->validatedEvaluation($student);
+
+        app(CommunicationSettingsService::class)->for($this->school)->update([
+            'sms_balance' => 100,
+            'sms_low_balance_threshold' => 500,
+        ]);
+
+        app(NotificationAggregationService::class)->aggregate();
+
+        $this->assertSame(
+            CommunicationChannel::Whatsapp,
+            CommunicationChannel::from(Notification::firstOrFail()->channel)
+        );
+    }
+
+    public function test_command_runs_successfully(): void
+    {
+        Queue::fake();
+
+        $student = $this->studentWithGuardian('+22890000001', null);
+        $this->validatedEvaluation($student);
+
+        $this->artisan('corischool:notify-validated-evaluations')
+            ->assertSuccessful();
+
+        $this->assertSame(1, NotificationBatch::count());
+    }
+
+    private function runJob(int $notificationId, CommunicationTransport $transport): void
+    {
+        (new SendCommunicationJob($notificationId))->handle(
+            $transport,
+            app(CommunicationBudgetService::class),
+            app(NotificationChannelService::class),
+        );
+    }
+}
+
+class FakeCommunicationTransport implements CommunicationTransport
+{
+    /** @var array<int, array{channel: CommunicationChannel, recipient: string, message: string}> */
+    public array $sent = [];
+
+    /**
+     * @param  array<int, CommunicationChannel>  $failChannels
+     */
+    public function __construct(private array $failChannels = []) {}
+
+    public function send(CommunicationChannel $channel, string $recipient, string $message): SmsResponse
+    {
+        if (in_array($channel, $this->failChannels, true)) {
+            return SmsResponse::failure('Échec simulé pour '.$channel->value);
+        }
+
+        $this->sent[] = ['channel' => $channel, 'recipient' => $recipient, 'message' => $message];
+
+        return SmsResponse::success('fake_'.count($this->sent));
+    }
+}

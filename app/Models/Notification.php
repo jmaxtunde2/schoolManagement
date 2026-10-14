@@ -15,7 +15,7 @@ class Notification extends Model
     protected $table = 'notifications';
 
     protected $fillable = [
-        'evaluation_id', 'student_id', 'parent_id', 'channel', 'phone', 'email', 'message', 'provider',
+        'evaluation_id', 'notification_batch_id', 'notification_type', 'student_id', 'parent_id', 'channel', 'phone', 'email', 'message', 'provider',
         'status', 'idempotency_key', 'external_id', 'error', 'attempts', 'estimated_cost', 'cost_currency', 'sent_at', 'delivered_at',
     ];
 
@@ -31,6 +31,11 @@ class Notification extends Model
     public function evaluation(): BelongsTo
     {
         return $this->belongsTo(Evaluation::class);
+    }
+
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(NotificationBatch::class, 'notification_batch_id');
     }
 
     public function student(): BelongsTo

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Evaluations;
 
+use App\Enums\EvaluationNotificationStatus;
 use App\Jobs\SendSmsNotificationJob;
 use App\Models\AcademicPeriod;
 use App\Models\AcademicYear;
@@ -185,7 +186,14 @@ class EvaluationWorkflowTest extends TestCase
 
         $this->assertSame('validated', $evaluation->fresh()->status->value);
         $this->assertSame($censeur->id, $evaluation->fresh()->validated_by);
-        Queue::assertPushed(SendSmsNotificationJob::class);
+
+        // La notification parentale n'est plus immédiate : elle est consolidée
+        // par le traitement quotidien.
+        $this->assertSame(
+            EvaluationNotificationStatus::Pending,
+            $evaluation->fresh()->notification_status
+        );
+        Queue::assertNotPushed(SendSmsNotificationJob::class);
     }
 
     public function test_teacher_cannot_validate_own_evaluation(): void

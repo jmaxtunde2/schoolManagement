@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\EvaluationNotificationStatus;
 use App\Enums\EvaluationStatus;
 use App\Enums\EvaluationType;
 use App\Models\Concerns\BelongsToSchool;
@@ -9,6 +10,7 @@ use Database\Factories\EvaluationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Evaluation extends Model
@@ -20,7 +22,7 @@ class Evaluation extends Model
         'academic_year_id', 'academic_period_id', 'class_id', 'subject_id', 'teacher_id',
         'title', 'type', 'evaluation_date', 'max_score', 'coefficient',
         'status', 'validated_at', 'validated_by', 'created_by', 'entered_by', 'submitted_by', 'submitted_at',
-        'returned_at', 'returned_by', 'return_reason',
+        'returned_at', 'returned_by', 'return_reason', 'notification_status', 'notified_at',
     ];
 
     protected function casts(): array
@@ -34,6 +36,8 @@ class Evaluation extends Model
             'validated_at' => 'datetime',
             'submitted_at' => 'datetime',
             'returned_at' => 'datetime',
+            'notification_status' => EvaluationNotificationStatus::class,
+            'notified_at' => 'datetime',
         ];
     }
 
@@ -90,6 +94,13 @@ class Evaluation extends Model
     public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class);
+    }
+
+    /** Lots de notification parentale auxquels cette évaluation est rattachée. */
+    public function notificationBatches(): BelongsToMany
+    {
+        return $this->belongsToMany(NotificationBatch::class, 'notification_batch_evaluation')
+            ->withTimestamps();
     }
 
     public function isValidated(): bool

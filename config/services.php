@@ -47,6 +47,9 @@ return [
         'token' => env('ESMS_TOKEN', env('SMS_API_KEY')),
         'api_secret' => env('SMS_API_SECRET'),
         'sender_id' => env('SMS_SENDER_ID'),
+        // Endpoint facultatif de consultation du solde fournisseur. Si absent,
+        // le solde local (school_communication_settings.sms_balance) fait foi.
+        'balance_url' => env('SMS_BALANCE_URL'),
         // Indicatif téléphonique utilisée pour normaliser les numéros au format
         // international (E.164) exigé par l'API WhatsApp avant l'envoi.
         'country_code' => env('SMS_COUNTRY_CODE', '228'),

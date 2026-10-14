@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\Role;
+use App\Models\School;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -108,6 +110,41 @@ class LoginTest extends TestCase
             ->assertSessionHasErrors('email');
 
         $this->assertGuest();
+    }
+
+    public function test_user_of_a_suspended_school_cannot_log_in(): void
+    {
+        $school = School::factory()->create(['is_active' => false]);
+        $user = User::factory()->admin()->forSchool($school)->create();
+
+        $this->post('/login', ['email' => $user->email, 'password' => 'password'])
+            ->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
+    public function test_user_of_an_active_school_can_log_in(): void
+    {
+        $school = School::factory()->create(['is_active' => true]);
+        $user = User::factory()->admin()->forSchool($school)->create();
+
+        $this->post('/login', ['email' => $user->email, 'password' => 'password'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_platform_admin_without_a_school_can_log_in(): void
+    {
+        $user = User::factory()->create([
+            'role' => Role::PlatformAdmin,
+            'school_id' => null,
+        ]);
+
+        $this->post('/login', ['email' => $user->email, 'password' => 'password'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_login_is_rate_limited_after_five_failures(): void

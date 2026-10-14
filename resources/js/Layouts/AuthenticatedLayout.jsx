@@ -70,6 +70,7 @@ const adminNav = [
             { href: 'admin.academic-periods.index', label: 'Périodes scolaires', icon: Layers },
             { href: 'admin.settings.edit', label: 'Établissement', icon: Building2 },
             { href: 'admin.settings.public-site.edit', label: 'Site public', icon: Globe2 },
+            { href: 'admin.settings.communication', label: 'Communication', icon: BellRing },
         ],
     },
 ];
@@ -225,6 +226,7 @@ const platformNav = [
             { href: 'platform.schools.index', label: 'Écoles', icon: Building2 },
             { href: 'platform.licenses.index', label: 'Licences', icon: FileText },
             { href: 'platform.audit-logs.index', label: 'Journaux d\'audit', icon: BellRing },
+            { href: 'platform.communication.index', label: 'Communication', icon: Megaphone },
             { href: 'platform.imports.index', label: 'Import en masse', icon: Upload },
         ],
     },

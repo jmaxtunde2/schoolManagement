@@ -14,7 +14,7 @@ class AcademicYearController extends Controller
     public function index(): Response
     {
         return Inertia::render('Admin/AcademicYears/Index', [
-            'years' => AcademicYear::orderByDesc('name')->get(),
+            'years' => AcademicYear::latest()->latest('id')->get(),
         ]);
     }
 

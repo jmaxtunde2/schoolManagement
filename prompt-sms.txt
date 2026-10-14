@@ -1,0 +1,1899 @@
+# CORISCHOOL — COMPLETE COMMUNICATION & AUTOMATIC PARENT NOTIFICATION SYSTEM
+
+## 1. OBJECTIVE
+
+Implement a complete communication system for CoriSchool that automatically notifies parents when new academic results become available, while minimizing communication costs.
+
+The system must combine:
+
+- In-app notifications
+- SMS notifications
+- WhatsApp notifications
+- Email notifications
+- Communication budgets per school
+- SMS balance monitoring
+- WhatsApp budget monitoring
+- Automatic fallback between channels
+- Daily aggregation of validated evaluations
+- Parent notifications at 17:00
+- Message batching
+- Communication history and cost tracking
+- Platform Admin monitoring
+- Automatic cleanup of old in-app notifications
+
+The architecture must be reusable later for:
+
+- Absences
+- Retards
+- Bulletins
+- Results
+- Announcements
+- Fee reminders
+- Other school notifications
+
+For the first implementation, only **validated evaluation/grade notifications** are required.
+
+---
+
+# 2. CORE BUSINESS VALUE
+
+The core CoriSchool value proposition is:
+
+> **Chaque évaluation validée est automatiquement destinée à être communiquée aux parents.**
+
+However, CoriSchool must NOT send one SMS for every validated evaluation.
+
+Instead:
+
+> **At 17:00 every day, CoriSchool collects all newly validated evaluations, groups them by student, and sends one consolidated notification per student and parent.**
+
+Therefore:
+
+### Bad behavior
+
+```text
+Maths validated
+→ SMS
+
+SVT validated
+→ SMS
+
+French validated
+→ SMS
+
+English validated
+→ SMS
+```
+
+This generates unnecessary communication costs.
+
+### Desired behavior
+
+```text
+Maths validated
+SVT validated
+French validated
+English validated
+
+              ↓
+
+            17:00
+
+              ↓
+
+       Group by student
+
+              ↓
+
+      One consolidated message
+
+              ↓
+
+       Father + Mother
+```
+
+---
+
+# 3. NO MANUAL "NOTIFY PARENTS" ACTION
+
+There must NOT be a manual:
+
+```text
+Notifier les parents
+```
+
+button that requires the teacher, Admin, Censeur or Directeur to trigger parent notification.
+
+The notification process is automatic.
+
+The approver's responsibility ends with:
+
+```text
+Validate / Approve
+```
+
+Once the evaluation is validated, CoriSchool automatically marks it as eligible for the next parent notification cycle.
+
+Example:
+
+```text
+Teacher submits evaluation
+        ↓
+Admin/Censeur/Directeur validates
+        ↓
+Evaluation = validated
+        ↓
+Notification = pending
+        ↓
+17:00 daily process
+        ↓
+Parent notification
+```
+
+---
+
+# 4. VALIDATED EVALUATION = READY FOR NOTIFICATION
+
+When an authorized user validates an evaluation:
+
+- Admin
+- Censeur
+- Directeur
+
+the system must automatically register:
+
+```text
+notification_status = pending
+```
+
+or an equivalent status according to the existing database architecture.
+
+Do not create a separate manual notification workflow.
+
+The evaluation must remain linked to the notification lifecycle.
+
+---
+
+# 5. DO NOT SEND IMMEDIATELY
+
+If an evaluation is validated at:
+
+```text
+10:15
+```
+
+do NOT immediately send an SMS, WhatsApp message or email.
+
+The evaluation becomes:
+
+```text
+pending_notification
+```
+
+and waits for the daily notification process.
+
+This allows multiple evaluations for the same student to be consolidated.
+
+---
+
+# 6. DAILY ARTISAN COMMAND
+
+Create:
+
+```bash
+php artisan corischool:notify-validated-evaluations
+```
+
+Schedule it every day at:
+
+```text
+17:00
+```
+
+The command must:
+
+1. Find validated evaluations not yet included in a successful parent notification.
+2. Respect the daily notification window.
+3. Group evaluations by school.
+4. Group evaluations by student.
+5. Retrieve the student's eligible parents.
+6. Build one consolidated notification per student/recipient.
+7. Create the in-app notification.
+8. Select the appropriate external communication channel.
+9. Queue external notifications.
+10. Process recipients in batches.
+11. Track delivery and cost.
+12. Mark evaluations correctly only after successful processing.
+
+---
+
+# 7. DAILY WINDOW
+
+The daily cycle is:
+
+```text
+00:00 → 17:00
+```
+
+During this period:
+
+```text
+Evaluation validated
+        ↓
+notification_status = pending
+```
+
+At:
+
+```text
+17:00
+```
+
+the command processes pending evaluations.
+
+Evaluations validated after 17:00 normally belong to the next day's notification cycle.
+
+Do not send them immediately.
+
+---
+
+# 8. GROUPING BY SCHOOL AND STUDENT
+
+The main grouping key should be:
+
+```text
+school_id
++
+student_id
++
+notification_date
+```
+
+Do NOT group multiple students together.
+
+Example:
+
+```text
+Jean Dupont
+→ one consolidated notification
+
+Marie Koffi
+→ one consolidated notification
+
+Paul Mensah
+→ one consolidated notification
+```
+
+Even if all three students belong to the same class.
+
+---
+
+# 9. EXAMPLE OF DAILY AGGREGATION
+
+Suppose Jean Dupont has five evaluations validated during the day:
+
+```text
+Mathématiques → 15/20
+SVT           → 12/20
+Français      → 14/20
+Anglais       → 16/20
+Histoire      → 13/20
+```
+
+At 17:00, CoriSchool must NOT send five messages.
+
+It creates one notification containing:
+
+```text
+CoriSchool via [Nom de l'école]
+
+Nouvelles notes de Jean Dupont :
+
+Mathématiques : 15/20
+SVT : 12/20
+Français : 14/20
+Anglais : 16/20
+Histoire : 13/20
+
+Consultez votre espace parent :
+corischool.com
+```
+
+---
+
+# 10. PARENT RECIPIENTS
+
+After grouping by student, retrieve the student's eligible parents.
+
+Possible cases:
+
+```text
+Father only
+Mother only
+Father + Mother
+```
+
+If both parents have valid communication information:
+
+```text
+Father → receive notification
+Mother → receive notification
+```
+
+The same consolidated student notification is sent to both.
+
+If father and mother have the same phone number:
+
+```text
+send only once
+```
+
+Do not create duplicate external messages.
+
+---
+
+# 11. ONE SMS SEGMENT MAXIMUM
+
+The external SMS notification must never exceed:
+
+```text
+ONE SMS SEGMENT
+```
+
+Do not automatically split one notification into:
+
+```text
+SMS 1
+SMS 2
+SMS 3
+```
+
+The purpose is to control communication costs.
+
+Create a configurable setting:
+
+```text
+MAX_NOTIFICATION_SMS_LENGTH
+```
+
+The default should correspond to a single SMS segment.
+
+Prefer GSM-7-compatible characters where possible.
+
+Avoid unnecessary emojis and special Unicode characters because Unicode SMS messages have a much smaller single-message capacity.
+
+---
+
+# 12. IF ALL RESULTS FIT
+
+If all validated evaluations fit within the configured SMS limit, send the detailed consolidated message.
+
+Example:
+
+```text
+CoriSchool via [Nom de l'école]
+Nouvelles notes de Jean Dupont :
+Mathématiques 15/20, SVT 12/20, Français 14/20.
+Consultez votre espace parent : corischool.com
+```
+
+The application URL must be configurable.
+
+Do not hard-code school names, students, subjects or scores.
+
+---
+
+# 13. IF RESULTS DO NOT FIT
+
+If there are too many evaluations to fit into one SMS segment:
+
+DO NOT send multiple SMS messages.
+
+Instead, send a short alert:
+
+```text
+CoriSchool via [Nom de l'école] :
+De nouvelles notes de Jean Dupont sont disponibles.
+Consultez votre espace parent : corischool.com
+```
+
+The complete results remain available inside the parent dashboard.
+
+Therefore:
+
+```text
+SMS
+→ alert
+
+Parent dashboard
+→ complete results
+```
+
+This preserves the one-SMS maximum.
+
+---
+
+# 14. IN-APP NOTIFICATION IS ALWAYS CREATED
+
+The parent must always receive an in-app notification.
+
+The in-app notification is not subject to the SMS length limitation.
+
+Example:
+
+```text
+Nouvelles notes disponibles
+
+Jean Dupont
+
+Mathématiques : 15/20
+SVT : 12/20
+Français : 14/20
+Anglais : 16/20
+Histoire : 13/20
+
+[Voir les résultats]
+```
+
+The in-app notification should link directly to the relevant parent/student results page when possible.
+
+---
+
+# 15. IN-APP NOTIFICATION RETENTION
+
+In-app notifications should remain visible in the active notification interface for:
+
+```text
+15 days
+```
+
+After 15 days:
+
+- remove/archive them from the active notification list
+- do not destroy important audit/communication history
+
+Communication logs and audit records must remain available for administrative history and reporting.
+
+Create a scheduled cleanup command/job if one does not already exist.
+
+---
+
+# 16. COMMUNICATION CHANNEL PRIORITY
+
+CoriSchool must use the following communication strategy:
+
+```text
+IN-APP
+   ↓
+always used
+
+EXTERNAL
+   ↓
+SMS
+   ↓
+WhatsApp
+   ↓
+Email
+```
+
+In-app notification is always created.
+
+For external notification:
+
+### Priority 1
+
+Use SMS when SMS is enabled and sufficient balance is available.
+
+### Priority 2
+
+If SMS is unavailable because of insufficient balance, provider failure, or configured disablement:
+
+```text
+WhatsApp
+```
+
+### Priority 3
+
+If WhatsApp is unavailable:
+
+```text
+Email
+```
+
+Do not send the same notification through all external channels unless explicitly configured.
+
+The objective is fallback, not duplication.
+
+---
+
+# 17. SCHOOL COMMUNICATION BUDGET
+
+Each school should have configurable communication budgets.
+
+Initial budget:
+
+```text
+SMS:
+3,000 FCFA
+
+WhatsApp:
+approximately $5
+```
+
+These values must NOT be hard-coded in application logic.
+
+Store them in configurable settings/database records.
+
+Example:
+
+```text
+school_communication_settings
+
+sms_budget
+whatsapp_budget
+sms_low_balance_threshold
+whatsapp_low_balance_threshold
+sms_enabled
+whatsapp_enabled
+email_enabled
+```
+
+---
+
+# 18. SMS BALANCE MONITORING
+
+Create a daily Artisan command:
+
+```bash
+php artisan corischool:check-sms-balances
+```
+
+This command must:
+
+1. Query the SMS provider balance.
+2. Update the school's current SMS balance.
+3. Record the last balance check.
+4. Update SMS availability.
+5. Trigger fallback when the balance is too low.
+6. Make the information visible to Platform Admin.
+
+Initial rule:
+
+```text
+SMS balance < 500 FCFA
+        ↓
+Disable SMS
+        ↓
+Activate WhatsApp fallback
+```
+
+To avoid constant switching around the threshold, use hysteresis.
+
+Recommended:
+
+```text
+SMS disabled below 500 FCFA
+
+SMS reactivated when balance >= 1,000 FCFA
+```
+
+Both thresholds must be configurable.
+
+---
+
+# 19. SMS BUDGET VS PROVIDER BALANCE
+
+Keep these concepts separate:
+
+### School communication budget
+
+How much CoriSchool has allocated for the school.
+
+Example:
+
+```text
+3,000 FCFA
+```
+
+### Provider balance
+
+Actual available balance at the SMS provider.
+
+Example:
+
+```text
+1,850 FCFA
+```
+
+Platform Admin should be able to see both.
+
+---
+
+# 20. WHATSAPP BUDGET
+
+Each school should have an initial WhatsApp budget of approximately:
+
+```text
+$5
+```
+
+Do not promise unlimited WhatsApp messaging.
+
+Track:
+
+```text
+WhatsApp budget
+WhatsApp consumed
+WhatsApp remaining
+messages sent
+messages delivered
+messages failed
+```
+
+The WhatsApp provider and pricing must remain configurable.
+
+---
+
+# 21. COMMUNICATION FALLBACK
+
+The fallback logic should be:
+
+```text
+Try SMS
+   ↓
+SMS unavailable?
+   ↓
+Try WhatsApp
+   ↓
+WhatsApp unavailable?
+   ↓
+Try Email
+```
+
+Possible SMS unavailability reasons:
+
+- balance below threshold
+- provider disabled
+- provider API failure
+- school SMS channel disabled
+- temporary provider failure
+
+Possible WhatsApp unavailability reasons:
+
+- budget exhausted
+- provider disabled
+- recipient unavailable
+- provider API failure
+
+Email should be the final external fallback when an email address is available.
+
+---
+
+# 22. MESSAGE BATCHING
+
+External messages must be processed in batches of:
+
+```text
+25 recipients
+```
+
+Example:
+
+```text
+200 recipients
+
+Batch 1 → 25
+Batch 2 → 25
+Batch 3 → 25
+...
+Batch 8 → 25
+```
+
+Wait:
+
+```text
+10 minutes
+```
+
+between batches.
+
+Do NOT implement:
+
+```php
+sleep(600);
+```
+
+inside a queue worker.
+
+Use Laravel delayed jobs.
+
+Example:
+
+```text
+Batch 1
+delay = 0
+
+Batch 2
+delay = 10 minutes
+
+Batch 3
+delay = 20 minutes
+
+Batch 4
+delay = 30 minutes
+```
+
+This prevents workers from being blocked unnecessarily.
+
+---
+
+# 23. COST OPTIMIZATION
+
+Aggregation MUST happen before message counting and cost calculation.
+
+Example:
+
+```text
+5 evaluations
+1 student
+2 parents
+```
+
+Without aggregation:
+
+```text
+5 × 2 = 10 messages
+```
+
+With aggregation:
+
+```text
+1 × 2 = 2 messages
+```
+
+Savings:
+
+```text
+8 external messages
+```
+
+This aggregation is an essential part of the CoriSchool business model.
+
+---
+
+# 24. NOTIFICATION LIFECYCLE
+
+Use a reliable notification lifecycle.
+
+Recommended:
+
+```text
+validated
+    ↓
+pending_notification
+    ↓
+included_in_batch
+    ↓
+queued
+    ↓
+sent
+    ↓
+delivered
+```
+
+If a provider fails:
+
+```text
+failed
+```
+
+The system must support retry/fallback.
+
+Do NOT consider a notification successfully sent merely because a Laravel job was created.
+
+---
+
+# 25. GROUPED NOTIFICATION RECORD
+
+If five evaluations are grouped into one parent notification, all five evaluations must be traceable to the same notification/batch.
+
+Example:
+
+```text
+Notification #1254
+
+School:
+Ecole Exemple
+
+Student:
+Jean Dupont
+
+Evaluations:
+#501 Mathématiques
+#502 SVT
+#503 Français
+#504 Anglais
+#505 Histoire
+
+Recipients:
+Father
+Mother
+
+Channel:
+SMS
+
+Status:
+sent
+```
+
+This is important for:
+
+- auditing
+- cost calculation
+- troubleshooting
+- preventing duplicate notifications
+- reporting
+
+---
+
+# 26. FAILURE HANDLING
+
+If an external notification fails:
+
+Do NOT mark the evaluations as successfully notified.
+
+Keep them associated with the notification attempt.
+
+Example:
+
+```text
+SMS
+failed
+   ↓
+WhatsApp fallback
+   ↓
+success
+```
+
+If WhatsApp also fails:
+
+```text
+Email fallback
+```
+
+If all external channels fail:
+
+```text
+In-app notification remains available
+notification = failed
+```
+
+The system must retain the error message/provider response where appropriate.
+
+---
+
+# 27. IDEMPOTENCY — VERY IMPORTANT
+
+The daily command may be executed more than once.
+
+It must NOT send duplicate notifications.
+
+Before creating a new notification batch, verify that the evaluation has not already been successfully included in a previous notification.
+
+Use appropriate database constraints/status checks.
+
+The process must be safe if:
+
+```bash
+php artisan corischool:notify-validated-evaluations
+```
+
+is accidentally executed twice.
+
+---
+
+# 28. COMMUNICATION DATABASE ARCHITECTURE
+
+Adapt these tables to the existing CoriSchool architecture rather than blindly creating duplicates.
+
+Potential structures:
+
+### school_communication_settings
+
+```text
+id
+school_id
+sms_enabled
+sms_budget
+sms_balance
+sms_low_balance_threshold
+sms_reactivation_threshold
+whatsapp_enabled
+whatsapp_budget
+whatsapp_consumed
+email_enabled
+last_sms_balance_check_at
+created_at
+updated_at
+```
+
+### notification_batches
+
+```text
+id
+school_id
+notification_type
+notification_date
+student_id
+channel
+status
+recipient_count
+message
+cost
+currency
+created_at
+updated_at
+```
+
+### notification_recipients
+
+```text
+id
+notification_batch_id
+parent_id
+user_id
+channel
+recipient
+status
+provider
+provider_message_id
+cost
+error_message
+sent_at
+delivered_at
+created_at
+updated_at
+```
+
+### communication_transactions
+
+```text
+id
+school_id
+notification_batch_id
+notification_type
+channel
+provider
+recipient
+message
+cost
+currency
+status
+provider_message_id
+error_message
+created_at
+updated_at
+```
+
+If equivalent existing tables already exist, reuse them instead of duplicating functionality.
+
+---
+
+# 29. REQUIRED COMMUNICATION LOG DATA
+
+Every external communication should be traceable.
+
+Store where applicable:
+
+```text
+school_id
+user_id
+student_id
+parent_id
+notification_type
+channel
+provider
+recipient
+message
+provider_message_id
+status
+cost
+currency
+batch_id
+sent_at
+delivered_at
+error_message
+created_at
+updated_at
+```
+
+---
+
+# 30. PLATFORM ADMIN DASHBOARD
+
+Platform Admin must be able to monitor communication consumption across all schools.
+
+Create a communication monitoring section.
+
+### KPI cards
+
+Display:
+
+```text
+Total écoles
+
+Budget SMS total
+
+SMS consommés
+
+SMS restant
+
+Budget WhatsApp total
+
+WhatsApp consommé
+
+WhatsApp restant
+
+Messages envoyés
+
+Messages délivrés
+
+Messages échoués
+```
+
+Use clear visual KPI cards.
+
+---
+
+# 31. SCHOOL COMMUNICATION TABLE
+
+Platform Admin should see:
+
+```text
+School
+SMS balance
+SMS budget
+SMS consumed
+WhatsApp budget
+WhatsApp consumed
+Messages sent
+Messages failed
+Channel status
+Last balance check
+```
+
+Add:
+
+- search
+- filters
+- pagination
+- sorting
+
+---
+
+# 32. LOW-BALANCE ALERTS
+
+Platform Admin should immediately see schools approaching communication limits.
+
+Example:
+
+```text
+SMS balance < 500 FCFA
+```
+
+→ warning/critical status.
+
+WhatsApp should have a configurable low-budget threshold.
+
+Do not hard-code the threshold in the UI.
+
+---
+
+# 33. COMMUNICATION HISTORY
+
+Provide communication history with filters:
+
+```text
+School
+Date
+Student
+Parent
+Channel
+Notification type
+Status
+Provider
+```
+
+Possible statuses:
+
+```text
+pending
+queued
+sent
+delivered
+failed
+```
+
+Allow Platform Admin to investigate failed messages.
+
+---
+
+# 34. COMMUNICATION ANALYTICS
+
+Provide useful reporting such as:
+
+```text
+Messages sent over time
+SMS consumption by school
+WhatsApp consumption by school
+Cost by school
+Success rate
+Failure rate
+```
+
+A chart should show communication consumption/evolution over time.
+
+---
+
+# 35. SCHOOL ADMIN ACCESS
+
+School administrators must only see their own school's communication data.
+
+They must NEVER see:
+
+```text
+another school's communication
+another school's parents
+another school's students
+another school's budgets
+```
+
+All communication queries must respect:
+
+```text
+school_id
+```
+
+and the existing tenant isolation architecture.
+
+Platform Admin is the only role with cross-school communication monitoring.
+
+---
+
+# 36. SIDEBAR / COMMUNICATION MENU
+
+The Communication section should contain role-appropriate entries such as:
+
+```text
+Communication
+    Notifications
+    Historique
+    SMS
+    WhatsApp
+```
+
+Do not expose Platform Admin monitoring pages to school users unless explicitly authorized.
+
+---
+
+# 37. INITIAL NOTIFICATION TYPE
+
+For the first version, implement only:
+
+```text
+VALIDATED_EVALUATION
+```
+
+Example notification:
+
+```text
+Nouvelles notes disponibles
+```
+
+Do not implement all future notification types now.
+
+However, the architecture must allow:
+
+```text
+ABSENCE
+RETARD
+BULLETIN
+RESULT
+ANNOUNCEMENT
+FEE_REMINDER
+```
+
+later without redesigning the entire communication system.
+
+---
+
+# 38. REUSABLE NOTIFICATION SERVICE
+
+Create/reuse a service architecture such as:
+
+```text
+NotificationAggregationService
+NotificationChannelService
+SmsNotificationService
+WhatsAppNotificationService
+EmailNotificationService
+CommunicationBudgetService
+CommunicationLogService
+```
+
+Names should follow the existing CoriSchool conventions.
+
+Do not duplicate services that already exist.
+
+The implementation must first inspect the current project.
+
+---
+
+# 39. PROVIDER ABSTRACTION
+
+Do not tightly couple the entire application to one provider.
+
+Use a provider abstraction where practical:
+
+```text
+SmsProvider
+WhatsAppProvider
+EmailProvider
+```
+
+This allows CoriSchool to change providers later without rewriting the notification system.
+
+For SMS, integrate with the provider already configured in the project.
+
+If eSMS Africa is already selected/configured, reuse the existing integration rather than creating a second SMS integration.
+
+---
+
+# 40. EMAIL
+
+Email is the final external fallback.
+
+Use the existing CoriSchool mail architecture.
+
+Do not create a second unrelated mail system.
+
+If school-specific SMTP configuration already exists:
+
+```text
+school_mail_settings
+SchoolMailService
+SendUserNotificationEmailJob
+```
+
+reuse it.
+
+---
+
+# 41. SCHEDULER
+
+Register the daily commands in the existing Laravel scheduler.
+
+Required commands:
+
+```bash
+php artisan corischool:notify-validated-evaluations
+```
+
+at:
+
+```text
+17:00
+```
+
+and:
+
+```bash
+php artisan corischool:check-sms-balances
+```
+
+once per day.
+
+Also schedule the 15-day in-app notification cleanup.
+
+Do not create duplicate scheduler definitions if the project already has equivalent scheduled jobs.
+
+---
+
+# 42. QUEUE ARCHITECTURE
+
+Use Laravel queues for external communication.
+
+Do not perform large communication workloads directly inside the scheduler command.
+
+Recommended:
+
+```text
+Scheduler
+   ↓
+Aggregation command
+   ↓
+Create notification batches
+   ↓
+Dispatch jobs
+   ↓
+Queue workers
+   ↓
+SMS / WhatsApp / Email providers
+```
+
+Use delayed jobs for the 10-minute batch interval.
+
+---
+
+# 43. VALIDATION WORKFLOW INTEGRATION
+
+The communication feature MUST integrate with the existing evaluation workflow.
+
+Expected workflow:
+
+```text
+Teacher
+   ↓
+Enter grades
+   ↓
+Submit
+   ↓
+in_progress
+   ↓
+Admin/Censeur/Directeur
+   ↓
+Validate
+   ↓
+validated
+   ↓
+pending_notification
+   ↓
+17:00
+   ↓
+Parent notification
+```
+
+Do not modify existing authorization rules unnecessarily.
+
+Teachers should not be able to trigger parent communication manually.
+
+---
+
+# 44. NO DUPLICATE NOTIFICATION AFTER RESUBMISSION
+
+If an evaluation is returned for correction:
+
+```text
+validated
+   ↓
+returned
+   ↓
+teacher corrects
+   ↓
+resubmits
+   ↓
+validated again
+```
+
+The notification logic must correctly identify the final validated version.
+
+Do not notify parents twice for the same unchanged evaluation.
+
+If the grade actually changes after correction, the system should treat the new validated result according to a clearly defined version/status rule.
+
+Reuse existing audit/versioning architecture if available.
+
+---
+
+# 45. SECURITY
+
+Respect existing:
+
+- authentication
+- authorization
+- school tenant isolation
+- 2FA
+- audit logs
+- role permissions
+
+Sensitive communication information must not be exposed across schools.
+
+Provider API keys must remain in:
+
+```text
+.env
+```
+
+or the application's secure configuration mechanism.
+
+Never hard-code API keys.
+
+---
+
+# 46. TEST CASES
+
+Create automated tests for at least:
+
+### Validation
+
+```text
+Validated evaluation becomes pending notification.
+```
+
+### No immediate send
+
+```text
+Validation at 10:00
+→ no SMS immediately.
+```
+
+### Daily aggregation
+
+```text
+5 evaluations
+1 student
+→ 1 consolidated notification.
+```
+
+### Multiple students
+
+```text
+3 students
+→ 3 consolidated notifications.
+```
+
+### Two parents
+
+```text
+1 student
+2 parents
+→ 2 recipients.
+```
+
+### Same phone
+
+```text
+Father + Mother
+same phone
+→ only 1 external message.
+```
+
+### SMS length
+
+```text
+Short message
+→ detailed SMS.
+
+Long message
+→ one concise SMS only.
+```
+
+### Budget
+
+```text
+SMS balance >= threshold
+→ SMS enabled.
+
+SMS balance < 500
+→ SMS disabled.
+
+SMS balance >= 1000
+→ SMS re-enabled.
+```
+
+### Fallback
+
+```text
+SMS unavailable
+→ WhatsApp.
+
+WhatsApp unavailable
+→ Email.
+```
+
+### Batching
+
+```text
+60 recipients
+→ 25 + 25 + 10.
+```
+
+### Delay
+
+```text
+Batch 1
+→ immediate
+
+Batch 2
+→ +10 min
+
+Batch 3
+→ +20 min
+```
+
+### Duplicate execution
+
+Running the daily command twice must NOT produce duplicate notifications.
+
+### Tenant isolation
+
+School A must never access School B communication data.
+
+### Cost calculation
+
+Verify that grouped messages are counted and charged correctly.
+
+---
+
+# 47. IMPORTANT IMPLEMENTATION RULE
+
+Before changing anything:
+
+1. Inspect the existing CoriSchool architecture.
+2. Inspect existing models.
+3. Inspect migrations.
+4. Inspect evaluation/grade workflow.
+5. Inspect student-parent relationships.
+6. Inspect existing notification system.
+7. Inspect queue configuration.
+8. Inspect scheduler configuration.
+9. Inspect communication/mail services.
+10. Inspect school tenant isolation.
+11. Inspect sidebar/navigation structure.
+12. Reuse existing code whenever possible.
+
+Do NOT create duplicate systems.
+
+Do NOT replace working existing functionality unnecessarily.
+
+---
+
+# 48. DATABASE DESIGN RULE
+
+Before creating migrations, determine whether the existing application already has equivalent:
+
+```text
+notifications
+user_notifications
+communication_logs
+mail settings
+SMS settings
+school settings
+evaluation statuses
+audit events
+```
+
+If they exist:
+
+```text
+extend/reuse them
+```
+
+instead of creating competing tables.
+
+The final architecture should remain clean and maintainable.
+
+---
+
+# 49. COST ACCOUNTING
+
+Every successful external communication must be associated with its actual cost.
+
+For example:
+
+```text
+SMS
+cost = provider cost
+
+WhatsApp
+cost = provider cost
+
+Email
+cost = configurable/optional cost
+```
+
+The system should distinguish:
+
+```text
+message count
++
+actual communication cost
+```
+
+Do not assume every channel has the same cost.
+
+---
+
+# 50. PLATFORM ADMIN CONSUMPTION MODEL
+
+Platform Admin must be able to answer:
+
+> How much communication has each school consumed?
+
+For each school:
+
+```text
+SMS budget
+SMS consumed
+SMS remaining
+SMS messages
+WhatsApp budget
+WhatsApp consumed
+WhatsApp remaining
+WhatsApp messages
+Email messages
+Total messages
+Total estimated cost
+```
+
+This is important for CoriSchool's profitability and operational control.
+
+---
+
+# 51. EXAMPLE END-TO-END FLOW
+
+Example:
+
+At 08:30:
+
+```text
+Jean — Mathématiques — 15/20
+```
+
+validated.
+
+System:
+
+```text
+notification_status = pending
+```
+
+At 10:00:
+
+```text
+Jean — SVT — 12/20
+```
+
+validated.
+
+At 13:00:
+
+```text
+Jean — Français — 14/20
+```
+
+validated.
+
+At 15:30:
+
+```text
+Jean — Anglais — 16/20
+```
+
+validated.
+
+At 17:00:
+
+```text
+Scheduler
+   ↓
+corischool:notify-validated-evaluations
+   ↓
+Find 4 pending evaluations
+   ↓
+Group by Jean
+   ↓
+Retrieve father + mother
+   ↓
+Create ONE notification
+   ↓
+Check SMS balance
+   ↓
+SMS available
+   ↓
+Create 2 SMS recipients
+   ↓
+Queue notification
+```
+
+Result:
+
+```text
+Father → 1 SMS
+Mother → 1 SMS
+```
+
+NOT:
+
+```text
+Father → 4 SMS
+Mother → 4 SMS
+```
+
+---
+
+# 52. EXAMPLE WHEN SMS IS UNAVAILABLE
+
+At 17:00:
+
+```text
+SMS balance = 350 FCFA
+```
+
+Configured rule:
+
+```text
+< 500 FCFA
+```
+
+Therefore:
+
+```text
+SMS disabled
+```
+
+The same consolidated parent notifications use:
+
+```text
+WhatsApp
+```
+
+if the school's WhatsApp budget/provider is available.
+
+If WhatsApp is unavailable:
+
+```text
+Email
+```
+
+The parent still receives:
+
+```text
+In-app notification
+```
+
+regardless of external channel availability.
+
+---
+
+# 53. EXAMPLE OF PLATFORM ADMIN VIEW
+
+Example:
+
+```text
+COMMUNICATION
+
+Schools: 12
+
+SMS
+Budget:       36,000 FCFA
+Consumed:     21,450 FCFA
+Remaining:    14,550 FCFA
+
+WhatsApp
+Budget:       $60
+Consumed:     $31.40
+Remaining:    $28.60
+
+Messages
+Sent:         2,480
+Delivered:    2,390
+Failed:       90
+```
+
+School table:
+
+```text
+École              SMS       WhatsApp      Status
+---------------------------------------------------
+CS Sainte Marie    1,250 F   $2.10         Normal
+Complexe ABC         420 F   $4.60         SMS faible
+École XYZ             80 F   $4.95         SMS critique
+```
+
+---
+
+# 54. EXPECTED RESULT
+
+At the end of implementation, CoriSchool must provide:
+
+### Academic side
+
+```text
+Evaluation validated
+        ↓
+Automatically eligible for notification
+```
+
+### Communication side
+
+```text
+17:00
+        ↓
+Aggregate evaluations by student
+        ↓
+Create one parent notification
+        ↓
+In-app always
+        ↓
+SMS
+   ↓ unavailable
+WhatsApp
+   ↓ unavailable
+Email
+```
+
+### Cost side
+
+```text
+School communication budget
+        ↓
+Consumption tracking
+        ↓
+Provider balance
+        ↓
+Automatic channel fallback
+        ↓
+Platform Admin monitoring
+```
+
+### Parent experience
+
+```text
+Parent receives one concise daily alert per student
+        +
+Complete results inside CoriSchool
+```
+
+### Platform Admin experience
+
+```text
+Full visibility of:
+
+- SMS consumption
+- WhatsApp consumption
+- balances
+- costs
+- sent messages
+- delivered messages
+- failed messages
+- school-by-school usage
+```
+
+---
+
+# 55. IMPLEMENTATION EXPECTATION
+
+Implement this feature using the existing CoriSchool architecture.
+
+Do not create a parallel notification system if one already exists.
+
+Do not introduce unnecessary dependencies.
+
+Keep the architecture:
+
+- multi-school
+- tenant-safe
+- queue-based
+- configurable
+- auditable
+- cost-aware
+- reusable
+- production-ready
+
+After implementation:
+
+1. Run migrations.
+2. Run automated tests.
+3. Run Laravel validation/linting where available.
+4. Run frontend build.
+5. Verify scheduler registration.
+6. Verify queue jobs.
+7. Verify tenant isolation.
+8. Verify notification grouping.
+9. Verify SMS length handling.
+10. Verify fallback logic.
+11. Verify communication cost accounting.
+12. Report exactly which files were created or modified.
+
+The final implementation must respect the existing CoriSchool codebase rather than replacing existing architecture unnecessarily.

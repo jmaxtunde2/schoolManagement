@@ -2,17 +2,16 @@
 
 namespace App\Actions\Evaluations;
 
+use App\Enums\EvaluationNotificationStatus;
 use App\Enums\EvaluationStatus;
 use App\Models\Evaluation;
 use App\Services\AuditService;
-use App\Services\Notifications\NotificationService;
 use App\Services\UserNotifications\EvaluationNotificationService;
 use Illuminate\Support\Facades\DB;
 
 class ValidateEvaluation
 {
     public function __construct(
-        private NotificationService $notifications,
         private AuditService $audit,
         private EvaluationNotificationService $evaluationNotifications
     ) {}
@@ -33,10 +32,15 @@ class ValidateEvaluation
                 throw new \RuntimeException('Toutes les notes doivent être saisies avant validation.');
             }
 
+            // Les parents ne sont pas notifiés immédiatement : l'évaluation est
+            // marquée « en attente » puis consolidée par le traitement quotidien
+            // (app/Services/Communication/NotificationAggregationService).
             $evaluation->update([
                 'status' => EvaluationStatus::Validated->value,
                 'validated_at' => now(),
                 'validated_by' => $validatorId,
+                'notification_status' => EvaluationNotificationStatus::Pending->value,
+                'notified_at' => null,
             ]);
 
             $this->audit->log('evaluation.validated', $evaluation, ['validated_by' => $validatorId]);
@@ -44,7 +48,6 @@ class ValidateEvaluation
             return $evaluation->fresh(['teacher.user', 'subject', 'classRoom']);
         });
 
-        $this->notifications->notifyForEvaluation($validated);
         $this->evaluationNotifications->notify($validated, 'evaluation.validated');
 
         return $validated;

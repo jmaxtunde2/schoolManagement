@@ -47,6 +47,7 @@ class EvaluationController extends Controller
                 )
             )
             ->latest('evaluation_date')
+            ->latest('id')
             ->paginate(15)
             ->withQueryString();
 

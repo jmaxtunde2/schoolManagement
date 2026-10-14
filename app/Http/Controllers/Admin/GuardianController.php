@@ -19,7 +19,7 @@ class GuardianController extends Controller
     public function index(): Response
     {
         return Inertia::render('Admin/Guardians/Index', [
-            'guardians' => ParentGuardian::with('students:id,first_name,last_name')->orderBy('name')->get(),
+            'guardians' => ParentGuardian::with('students:id,first_name,last_name')->latest()->latest('id')->get(),
             'students' => Student::orderBy('last_name')->get(['id', 'first_name', 'last_name']),
         ]);
     }
