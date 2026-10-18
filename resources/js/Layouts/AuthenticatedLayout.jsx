@@ -3,10 +3,12 @@ import { Link, usePage, router } from '@inertiajs/react';
 import {
     LayoutDashboard, Building2, CalendarRange, School as SchoolIcon, BookOpen, Users, UserRound,
     GraduationCap, ClipboardList, BellRing, Globe2, ClipboardCheck, BookOpenCheck, FileText, Menu, X, LogOut, ChevronDown, CheckCheck, Layers, UserCircle,
-    CalendarDays, UserCog, Upload, DoorOpen, Wallet, BadgeEuro, ShoppingCart, HandCoins, Activity, Megaphone,
+    CalendarDays, UserCog, Upload, DoorOpen, Wallet, BadgeEuro, ShoppingCart, HandCoins, Activity, Megaphone, Sparkles, Files, Inbox, History, FileSpreadsheet,
+    Library,
 } from 'lucide-react';
 import Dropdown from '@/Components/UI/Dropdown';
 import Toast from '@/Components/UI/Toast';
+
 import { useFlash } from '@/Hooks/useFlash';
 import { cn } from '@/Utils/cn';
 
@@ -15,6 +17,7 @@ const adminNav = [
         section: 'Aperçu',
         items: [
             { href: 'admin.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+            { href: 'admin.assistant.index', label: 'Assistant', icon: Sparkles },
             { href: 'admin.performance.index', label: 'Performance', icon: Activity },
         ],
     },
@@ -29,6 +32,7 @@ const adminNav = [
             { href: 'admin.rooms.index', label: 'Salles', icon: DoorOpen },
             { href: 'admin.classes.index', label: 'Classes', icon: SchoolIcon },
             { href: 'admin.subjects.index', label: 'Matières', icon: BookOpen },
+            { href: 'admin.exam-bank.index', label: 'Banque d\'épreuves', icon: Library },
         ],
     },
     {
@@ -45,6 +49,8 @@ const adminNav = [
         section: 'Élèves & parents',
         items: [
             { href: 'admin.students.index', label: 'Élèves', icon: GraduationCap },
+            { href: 'admin.preinscriptions.index', label: 'Préinscriptions', icon: Inbox },
+            { href: 'admin.students.at-risk', label: 'Élèves en difficulté', icon: Activity },
             { href: 'admin.guardians.index', label: 'Parents', icon: UserRound },
         ],
     },
@@ -61,6 +67,8 @@ const adminNav = [
             { href: 'messages.index', label: 'Messages parents', icon: Megaphone },
             { href: 'communication.announcements.index', label: 'Annonces parents', icon: Megaphone },
             { href: 'admin.notifications.index', label: 'Notifications', icon: BellRing },
+            { href: 'admin.documents.index', label: 'Centre de documents', icon: Files },
+            { href: 'educmaster.index', label: 'Export EducMaster', icon: FileSpreadsheet },
         ],
     },
     {
@@ -70,7 +78,8 @@ const adminNav = [
             { href: 'admin.academic-periods.index', label: 'Périodes scolaires', icon: Layers },
             { href: 'admin.settings.edit', label: 'Établissement', icon: Building2 },
             { href: 'admin.settings.public-site.edit', label: 'Site public', icon: Globe2 },
-            { href: 'admin.settings.communication', label: 'Communication', icon: BellRing },
+           // { href: 'admin.settings.communication', label: 'Communication', icon: BellRing },
+            { href: 'admin.audit-logs.index', label: 'Journal d\'activité', icon: History },
         ],
     },
 ];
@@ -90,6 +99,7 @@ const censeurNav = [
             { href: 'censeur.timetables.index', label: 'Emploi du temps', icon: CalendarDays },
             { href: 'censeur.classes.index', label: 'Classes', icon: SchoolIcon },
             { href: 'censeur.subjects.index', label: 'Matières', icon: BookOpen },
+            { href: 'educmaster.index', label: 'Export EducMaster', icon: FileSpreadsheet },
         ],
     },
     {
@@ -116,7 +126,42 @@ const censeurNav = [
 const directorNav = [
     {
         section: 'Aperçu',
-        items: [{ href: 'director.dashboard', label: 'Tableau de bord', icon: LayoutDashboard }],
+        items: [
+            { href: 'director.dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+            { href: 'director.assistant.index', label: 'Assistant', icon: Sparkles },
+        ],
+    },
+    {
+        section: 'Gestion académique (Primaire)',
+        items: [
+            { href: 'director.evaluations.index', label: 'Évaluations à contrôler', icon: ClipboardList },
+            { href: 'director.attendance.index', label: 'Absences & retards', icon: ClipboardCheck },
+            { href: 'director.academic.results.index', label: 'Résultats académiques', icon: BookOpenCheck },
+            { href: 'director.report-cards.index', label: 'Bulletins', icon: FileText },
+            { href: 'director.timetables.index', label: 'Emploi du temps', icon: CalendarDays },
+            { href: 'director.classes.index', label: 'Classes', icon: SchoolIcon },
+            { href: 'director.subjects.index', label: 'Matières', icon: BookOpen },
+        ],
+    },
+    {
+        section: 'Élèves & parents (Primaire)',
+        items: [
+            { href: 'director.students.index', label: 'Élèves', icon: GraduationCap },
+            { href: 'director.preinscriptions.index', label: 'Préinscriptions', icon: Inbox },
+            { href: 'director.students.at-risk', label: 'Élèves en difficulté', icon: Activity },
+            { href: 'director.guardians.index', label: 'Parents', icon: UserRound },
+        ],
+    },
+    {
+        section: 'Personnel (Primaire)',
+        items: [{ href: 'director.teachers.index', label: 'Enseignants', icon: Users }],
+    },
+    {
+        section: 'Documents',
+        items: [
+            { href: 'director.documents.index', label: 'Centre de documents', icon: Files },
+            { href: 'educmaster.index', label: 'Export EducMaster', icon: FileSpreadsheet },
+        ],
     },
 ];
 
@@ -192,6 +237,7 @@ const teacherNav = [
         items: [
             { href: 'teacher.evaluations.index', label: 'Mes évaluations', icon: ClipboardList },
             { href: 'teacher.attendance.index', label: 'Assiduité des classes', icon: ClipboardCheck },
+            { href: 'teacher.exam-bank.index', label: 'Banque d\'épreuves', icon: Library },
             ],
     },
     {
@@ -212,6 +258,12 @@ const parentNav = [
             { href: 'parent.messages.index', label: 'Messages', icon: Megaphone },
         ],
     },
+    {
+        section: 'Paramètres',
+        items: [
+            { href: 'parent.notifications.edit', label: 'Notifications', icon: BellRing },
+        ],
+    },
 ];
 
 const platformNav = [
@@ -228,6 +280,13 @@ const platformNav = [
             { href: 'platform.audit-logs.index', label: 'Journaux d\'audit', icon: BellRing },
             { href: 'platform.communication.index', label: 'Communication', icon: Megaphone },
             { href: 'platform.imports.index', label: 'Import en masse', icon: Upload },
+        ],
+    },
+    {
+        section: 'Ressources pédagogiques',
+        items: [
+            { href: 'platform.exam-bank.index', label: 'Banque d\'épreuves', icon: Library },
+            { href: 'platform.exam-bank.references', label: 'Niveaux & matières', icon: Layers },
         ],
     },
 ];

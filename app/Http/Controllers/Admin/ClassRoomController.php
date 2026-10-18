@@ -7,16 +7,25 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Reference\ClassRoomRequest;
 use App\Models\ClassRoom;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ClassRoomController extends Controller
 {
-    public function index(BuildGenderDistribution $genderDistribution): Response
+    public function index(Request $request, BuildGenderDistribution $genderDistribution): Response
     {
+        $primaryClassIds = $request->user()->isDirector()
+            ? ClassRoom::primary()->pluck('id')
+            : null;
+
         return Inertia::render('Admin/Classes/Index', [
-            'classes' => ClassRoom::withCount('students')->orderBy('name')->get(),
-            'genderDistribution' => $genderDistribution->handle(),
+            'classes' => ClassRoom::query()
+                ->when($primaryClassIds !== null, fn ($q) => $q->primary())
+                ->withCount('students')
+                ->orderBy('name')
+                ->get(),
+            'genderDistribution' => $genderDistribution->handle($primaryClassIds),
         ]);
     }
 

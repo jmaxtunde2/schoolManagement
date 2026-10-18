@@ -11,6 +11,7 @@ import {
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Card from '@/Components/UI/Card';
 import SeriesChart from '@/Components/Performance/SeriesChart';
+import AcademicPerformanceSection from '@/Components/Performance/AcademicPerformanceSection';
 
 const categories = [
     { key: 'finance', label: 'Finance', icon: Wallet, accent: 'text-violet-600 bg-violet-50', formatter: (value) => `${Number(value ?? 0).toLocaleString('fr-FR')} F` },
@@ -26,7 +27,7 @@ const toneClasses = {
     negative: 'bg-red-50 text-red-700 ring-red-200',
 };
 
-export default function Performance({ performance }) {
+export default function Performance({ performance, academic = null }) {
     return (
         <AuthenticatedLayout title="Performance">
             <Head title="Performance" />
@@ -36,9 +37,11 @@ export default function Performance({ performance }) {
                     <p className="text-xs font-bold uppercase tracking-wider text-violet-600">Aperçu</p>
                     <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Performance de l'établissement</h1>
                     <p className="mt-1 text-sm text-slate-500">
-                        Évolution mensuelle (12 derniers mois) par catégorie : finance, vie académique, élèves & parents, personnel et communication.
+                        Performance scolaire détaillée, puis évolution mensuelle (12 derniers mois) par catégorie : finance, vie académique, élèves & parents, personnel et communication.
                     </p>
                 </div>
+
+                <AcademicPerformanceSection academic={academic} />
 
                 <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                     {categories.map((category) => {

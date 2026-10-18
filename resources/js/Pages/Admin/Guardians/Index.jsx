@@ -38,7 +38,10 @@ export default function GuardiansIndex({
     guardians,
     students,
 }) {
-    const isCenseur = usePage().props.auth.user.role === 'censeur';
+    const role = usePage().props.auth.user.role;
+    const isCenseur = role === 'censeur';
+    const isDirector = role === 'director';
+    const readOnly = isCenseur || isDirector;
     const [editing, setEditing] = useState(null);
     const [showForm, setShowForm] = useState(false);
     const [toDelete, setToDelete] = useState(null);
@@ -242,7 +245,7 @@ export default function GuardiansIndex({
                             </p>
                         </div>
 
-                        {!isCenseur && <Button
+                        {!readOnly && <Button
                             onClick={openCreate}
                             className="bg-white text-white shadow-md hover:bg-teal-50"
                         >
@@ -476,7 +479,7 @@ export default function GuardiansIndex({
                                     icon={Search}
                                     title="Aucun résultat"
                                     description={`Aucun parent ne correspond à « ${search} ».`}
-                                    action={!isCenseur && (
+                                    action={!readOnly && (
                                         <Button
                                             variant="secondary"
                                             onClick={() => setSearch('')}
@@ -491,7 +494,7 @@ export default function GuardiansIndex({
                                     title="Aucun parent enregistré"
                                     description="Ajoutez un parent pour pouvoir l'associer à un élève."
                                     action={
-                                        !isCenseur && (
+                                        !readOnly && (
                                             <Button
                                                 onClick={
                                                     openCreate

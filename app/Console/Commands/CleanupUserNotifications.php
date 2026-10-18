@@ -25,7 +25,16 @@ class CleanupUserNotifications extends Command
             ->where('created_at', '<', $cutoff)
             ->delete();
 
+        $alertCutoff = now()->subDays(max(1, (int) config('alerts.retention_days', 90)));
+
+        $deletedAlerts = UserNotification::withoutGlobalScopes()
+            ->where('type', 'like', 'alert.%')
+            ->whereNotNull('read_at')
+            ->where('created_at', '<', $alertCutoff)
+            ->delete();
+
         $this->info("{$deleted} notification(s) in-app nettoyée(s) (antérieure(s) au {$cutoff->toDateString()}).");
+        $this->info("{$deletedAlerts} alerte(s) lue(s) nettoyée(s) (antérieure(s) au {$alertCutoff->toDateString()}).");
 
         return self::SUCCESS;
     }

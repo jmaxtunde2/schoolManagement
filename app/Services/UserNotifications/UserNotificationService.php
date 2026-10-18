@@ -3,6 +3,7 @@
 namespace App\Services\UserNotifications;
 
 use App\Jobs\SendUserNotificationEmailJob;
+use App\Jobs\SendWebPushJob;
 use App\Models\User;
 use App\Models\UserNotification;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,7 @@ class UserNotificationService
         string $message,
         array $data = [],
         bool $sendEmail = true,
+        bool $sendPush = true,
     ): UserNotification {
         return DB::transaction(function () use (
             $user,
@@ -26,7 +28,8 @@ class UserNotificationService
             $title,
             $message,
             $data,
-            $sendEmail
+            $sendEmail,
+            $sendPush
         ) {
             $notification = $this->findExistingNotification($user, $type, $data);
 
@@ -41,10 +44,17 @@ class UserNotificationService
                 ]);
             }
 
-            if ($sendEmail && $user->email && $notification->wasRecentlyCreated) {
-                SendUserNotificationEmailJob::dispatch(
-                    $notification->id
-                );
+            if ($notification->wasRecentlyCreated) {
+                if ($sendEmail && $user->email) {
+                    SendUserNotificationEmailJob::dispatch($notification->id);
+                }
+
+                if (
+                    $sendPush
+                    && $user->pushSubscriptions()->withoutGlobalScopes()->exists()
+                ) {
+                    SendWebPushJob::dispatch($notification->id);
+                }
             }
 
             return $notification;
@@ -80,6 +90,7 @@ class UserNotificationService
         string $message,
         array $data = [],
         bool $sendEmail = true,
+        bool $sendPush = true,
     ): int {
         $count = 0;
 
@@ -91,6 +102,7 @@ class UserNotificationService
                 message: $message,
                 data: $data,
                 sendEmail: $sendEmail,
+                sendPush: $sendPush,
             );
 
             $count++;

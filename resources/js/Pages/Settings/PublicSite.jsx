@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import {
     ArrowUpRight,
+    BookOpen,
+    CalendarDays,
     Check,
+    Coins,
     Eye,
     FileImage,
     Globe,
@@ -40,6 +43,24 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
             ...(publicSite.features ?? []),
             { title: '', description: '' },
         ].slice(0, 6),
+        results_headline: publicSite.results_headline ?? '',
+        results_note: publicSite.results_note ?? '',
+        tuition_currency: publicSite.tuition_currency ?? '',
+        tuition_note: publicSite.tuition_note ?? '',
+        tuition_fees: [
+            ...(publicSite.tuition_fees ?? []),
+            { label: '', amount: '', note: '' },
+        ].slice(0, 10),
+        curriculum_intro: publicSite.curriculum_intro ?? '',
+        curriculum: [
+            ...(publicSite.curriculum ?? []),
+            { title: '', description: '' },
+        ].slice(0, 8),
+        calendar_intro: publicSite.calendar_intro ?? '',
+        calendar: [
+            ...(publicSite.calendar ?? []),
+            { label: '', date: '', description: '' },
+        ].slice(0, 20),
         hero_image: null,
         remove_hero_image: false,
     });
@@ -83,11 +104,55 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
             _method: 'put',
             values: data.values.filter((value) => value.trim()),
             features: data.features.filter((feature) => feature.title.trim()),
+            tuition_fees: data.tuition_fees.filter((fee) =>
+                (fee.label ?? '').trim()
+            ),
+            curriculum: data.curriculum.filter((item) =>
+                (item.title ?? '').trim()
+            ),
+            calendar: data.calendar.filter((item) =>
+                (item.label ?? '').trim()
+            ),
         }));
 
         contentForm.post(route('admin.settings.public-site.update'), {
             forceFormData: true,
         });
+    }
+
+    function updateRow(field, index, key, value) {
+        contentForm.setData(
+            field,
+            contentForm.data[field].map((item, itemIndex) =>
+                itemIndex === index ? { ...item, [key]: value } : item
+            )
+        );
+    }
+
+    function addRow(field, template, limit) {
+        if (contentForm.data[field].length >= limit) {
+            return;
+        }
+
+        contentForm.setData(field, [...contentForm.data[field], template]);
+    }
+
+    function removeRow(field, index) {
+        contentForm.setData(
+            field,
+            contentForm.data[field].filter((_, itemIndex) => itemIndex !== index)
+        );
+    }
+
+    function fieldErrors(prefix) {
+        return Object.entries(contentForm.errors)
+            .filter(
+                ([key]) =>
+                    key === prefix || key.startsWith(`${prefix}.`)
+            )
+            .map(([key, message]) => (
+                <ErrorMessage key={key}>{message}</ErrorMessage>
+            ));
     }
 
     function resetTestimonial() {
@@ -227,6 +292,11 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
             label: 'Galerie',
             count: gallery.length,
             icon: FileImage,
+        },
+        {
+            key: 'admission',
+            label: 'Admission & programme',
+            icon: Coins,
         },
     ];
 
@@ -739,6 +809,56 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
                                             </ErrorMessage>
                                         ))}
                                 </div>
+                            </Card.Body>
+                        </Card>
+
+                        {/* Palmarès / résultats */}
+                        <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-slate-200">
+                            <Card.Header
+                                title="Palmarès & résultats (facultatif)"
+                                description="Met en avant une réussite marquante, affichée sur le site public."
+                            />
+
+                            <Card.Body className="space-y-4">
+                                <Field label="Titre du résultat" optional>
+                                    <Input
+                                        id="results_headline"
+                                        value={contentForm.data.results_headline}
+                                        maxLength={160}
+                                        onChange={(event) =>
+                                            contentForm.setData(
+                                                'results_headline',
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="92 % de réussite aux examens nationaux"
+                                    />
+                                    {contentForm.errors.results_headline && (
+                                        <ErrorMessage>
+                                            {contentForm.errors.results_headline}
+                                        </ErrorMessage>
+                                    )}
+                                </Field>
+
+                                <Field label="Précision" optional>
+                                    <Input
+                                        id="results_note"
+                                        value={contentForm.data.results_note}
+                                        maxLength={160}
+                                        onChange={(event) =>
+                                            contentForm.setData(
+                                                'results_note',
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Session 2025"
+                                    />
+                                    {contentForm.errors.results_note && (
+                                        <ErrorMessage>
+                                            {contentForm.errors.results_note}
+                                        </ErrorMessage>
+                                    )}
+                                </Field>
                             </Card.Body>
                         </Card>
 
@@ -1391,6 +1511,548 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
                             </Card.Body>
                         </Card>
                     </div>
+                )}
+
+                {activeTab === 'admission' && (
+                    <form onSubmit={saveContent} className="space-y-6">
+                        {/* Frais de scolarité */}
+                        <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-slate-200">
+                            <Card.Header
+                                title="Frais de scolarité"
+                                description="Présentez clairement vos frais aux familles. Jusqu'à dix lignes affichées sur le site public."
+                            />
+
+                            <Card.Body className="space-y-6">
+                                <div className="grid gap-4 sm:grid-cols-[minmax(0,160px)_minmax(0,1fr)]">
+                                    <Field label="Devise" optional>
+                                        <Input
+                                            value={
+                                                contentForm.data.tuition_currency
+                                            }
+                                            maxLength={12}
+                                            onChange={(event) =>
+                                                contentForm.setData(
+                                                    'tuition_currency',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            placeholder="FCFA"
+                                        />
+                                    </Field>
+
+                                    <Field label="Note générale" optional>
+                                        <Input
+                                            value={contentForm.data.tuition_note}
+                                            maxLength={300}
+                                            onChange={(event) =>
+                                                contentForm.setData(
+                                                    'tuition_note',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            placeholder="Ex. Paiement possible en trois tranches."
+                                        />
+                                    </Field>
+                                </div>
+
+                                <div className="border-t border-slate-100 pt-6">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <SectionHeading
+                                            icon={Coins}
+                                            title="Lignes de frais"
+                                            description="Inscription, scolarité, cantine, transport…"
+                                        />
+
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="sm"
+                                            disabled={
+                                                contentForm.data.tuition_fees
+                                                    .length >= 10
+                                            }
+                                            onClick={() =>
+                                                addRow(
+                                                    'tuition_fees',
+                                                    {
+                                                        label: '',
+                                                        amount: '',
+                                                        note: '',
+                                                    },
+                                                    10,
+                                                )
+                                            }
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            Ajouter
+                                        </Button>
+                                    </div>
+
+                                    <div className="mt-4 space-y-3">
+                                        {contentForm.data.tuition_fees.map(
+                                            (fee, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:border-emerald-200 hover:bg-white"
+                                                >
+                                                    <div className="flex gap-3">
+                                                        <span className="mt-6 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-xs font-bold text-white shadow-sm">
+                                                            {index + 1}
+                                                        </span>
+
+                                                        <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,1.1fr)]">
+                                                            <Field label="Intitulé">
+                                                                <Input
+                                                                    value={
+                                                                        fee.label ??
+                                                                        ''
+                                                                    }
+                                                                    maxLength={
+                                                                        100
+                                                                    }
+                                                                    onChange={(
+                                                                        event,
+                                                                    ) =>
+                                                                        updateRow(
+                                                                            'tuition_fees',
+                                                                            index,
+                                                                            'label',
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                    placeholder="Frais d'inscription"
+                                                                />
+                                                            </Field>
+
+                                                            <Field
+                                                                label="Montant"
+                                                                optional
+                                                            >
+                                                                <Input
+                                                                    value={
+                                                                        fee.amount ??
+                                                                        ''
+                                                                    }
+                                                                    maxLength={
+                                                                        40
+                                                                    }
+                                                                    onChange={(
+                                                                        event,
+                                                                    ) =>
+                                                                        updateRow(
+                                                                            'tuition_fees',
+                                                                            index,
+                                                                            'amount',
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                    placeholder="25 000"
+                                                                />
+                                                            </Field>
+
+                                                            <Field
+                                                                label="Précision"
+                                                                optional
+                                                            >
+                                                                <Input
+                                                                    value={
+                                                                        fee.note ??
+                                                                        ''
+                                                                    }
+                                                                    maxLength={
+                                                                        200
+                                                                    }
+                                                                    onChange={(
+                                                                        event,
+                                                                    ) =>
+                                                                        updateRow(
+                                                                            'tuition_fees',
+                                                                            index,
+                                                                            'note',
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                    placeholder="Payable à l'inscription"
+                                                                />
+                                                            </Field>
+                                                        </div>
+
+                                                        {contentForm.data
+                                                            .tuition_fees
+                                                            .length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    removeRow(
+                                                                        'tuition_fees',
+                                                                        index,
+                                                                    )
+                                                                }
+                                                                className="flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-xl text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                                                                aria-label="Retirer cette ligne"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ),
+                                        )}
+                                    </div>
+
+                                    {fieldErrors('tuition_fees')}
+                                </div>
+                            </Card.Body>
+                        </Card>
+
+                        {/* Programme d'études */}
+                        <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-slate-200">
+                            <Card.Header
+                                title="Programme d'études"
+                                description="Décrivez les cycles et les niveaux enseignés. Jusqu'à huit entrées."
+                            />
+
+                            <Card.Body className="space-y-6">
+                                <Field label="Introduction" optional>
+                                    <Textarea
+                                        rows={3}
+                                        value={contentForm.data.curriculum_intro}
+                                        maxLength={1000}
+                                        onChange={(event) =>
+                                            contentForm.setData(
+                                                'curriculum_intro',
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Ex. Un programme conforme au référentiel national, enrichi d'activités d'éveil."
+                                    />
+                                </Field>
+
+                                <div className="border-t border-slate-100 pt-6">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <SectionHeading
+                                            icon={BookOpen}
+                                            title="Cycles & niveaux"
+                                            description="Ex. Maternelle, Primaire, Collège…"
+                                        />
+
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="sm"
+                                            disabled={
+                                                contentForm.data.curriculum
+                                                    .length >= 8
+                                            }
+                                            onClick={() =>
+                                                addRow(
+                                                    'curriculum',
+                                                    {
+                                                        title: '',
+                                                        description: '',
+                                                    },
+                                                    8,
+                                                )
+                                            }
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            Ajouter
+                                        </Button>
+                                    </div>
+
+                                    <div className="mt-4 space-y-3">
+                                        {contentForm.data.curriculum.map(
+                                            (item, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:border-emerald-200 hover:bg-white"
+                                                >
+                                                    <div className="flex gap-3">
+                                                        <span className="mt-6 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-xs font-bold text-white shadow-sm">
+                                                            {index + 1}
+                                                        </span>
+
+                                                        <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+                                                            <Field label="Cycle / niveau">
+                                                                <Input
+                                                                    value={
+                                                                        item.title ??
+                                                                        ''
+                                                                    }
+                                                                    maxLength={
+                                                                        100
+                                                                    }
+                                                                    onChange={(
+                                                                        event,
+                                                                    ) =>
+                                                                        updateRow(
+                                                                            'curriculum',
+                                                                            index,
+                                                                            'title',
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                    placeholder="Primaire"
+                                                                />
+                                                            </Field>
+
+                                                            <Field
+                                                                label="Description"
+                                                                optional
+                                                            >
+                                                                <Textarea
+                                                                    rows={2}
+                                                                    value={
+                                                                        item.description ??
+                                                                        ''
+                                                                    }
+                                                                    maxLength={
+                                                                        800
+                                                                    }
+                                                                    onChange={(
+                                                                        event,
+                                                                    ) =>
+                                                                        updateRow(
+                                                                            'curriculum',
+                                                                            index,
+                                                                            'description',
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                    placeholder="Matières et objectifs pédagogiques"
+                                                                />
+                                                            </Field>
+                                                        </div>
+
+                                                        {contentForm.data
+                                                            .curriculum
+                                                            .length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    removeRow(
+                                                                        'curriculum',
+                                                                        index,
+                                                                    )
+                                                                }
+                                                                className="flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-xl text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                                                                aria-label="Retirer cette entrée"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ),
+                                        )}
+                                    </div>
+
+                                    {fieldErrors('curriculum')}
+                                </div>
+                            </Card.Body>
+                        </Card>
+
+                        {/* Calendrier scolaire */}
+                        <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-slate-200">
+                            <Card.Header
+                                title="Calendrier scolaire"
+                                description="Listez les temps forts de l'année : rentrée, examens, vacances. Jusqu'à vingt entrées."
+                            />
+
+                            <Card.Body className="space-y-6">
+                                <Field label="Introduction" optional>
+                                    <Textarea
+                                        rows={3}
+                                        value={contentForm.data.calendar_intro}
+                                        maxLength={1000}
+                                        onChange={(event) =>
+                                            contentForm.setData(
+                                                'calendar_intro',
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Ex. Les grandes dates de l'année scolaire 2026-2027."
+                                    />
+                                </Field>
+
+                                <div className="border-t border-slate-100 pt-6">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <SectionHeading
+                                            icon={CalendarDays}
+                                            title="Événements"
+                                            description="Rentrée, compositions, vacances, fêtes…"
+                                        />
+
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="sm"
+                                            disabled={
+                                                contentForm.data.calendar
+                                                    .length >= 20
+                                            }
+                                            onClick={() =>
+                                                addRow(
+                                                    'calendar',
+                                                    {
+                                                        label: '',
+                                                        date: '',
+                                                        description: '',
+                                                    },
+                                                    20,
+                                                )
+                                            }
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            Ajouter
+                                        </Button>
+                                    </div>
+
+                                    <div className="mt-4 space-y-3">
+                                        {contentForm.data.calendar.map(
+                                            (item, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:border-emerald-200 hover:bg-white"
+                                                >
+                                                    <div className="flex gap-3">
+                                                        <span className="mt-6 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-xs font-bold text-white shadow-sm">
+                                                            {index + 1}
+                                                        </span>
+
+                                                        <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,0.7fr)]">
+                                                            <Field label="Événement">
+                                                                <Input
+                                                                    value={
+                                                                        item.label ??
+                                                                        ''
+                                                                    }
+                                                                    maxLength={
+                                                                        120
+                                                                    }
+                                                                    onChange={(
+                                                                        event,
+                                                                    ) =>
+                                                                        updateRow(
+                                                                            'calendar',
+                                                                            index,
+                                                                            'label',
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                    placeholder="Rentrée des classes"
+                                                                />
+                                                            </Field>
+
+                                                            <Field
+                                                                label="Date / période"
+                                                                optional
+                                                            >
+                                                                <Input
+                                                                    value={
+                                                                        item.date ??
+                                                                        ''
+                                                                    }
+                                                                    maxLength={
+                                                                        120
+                                                                    }
+                                                                    onChange={(
+                                                                        event,
+                                                                    ) =>
+                                                                        updateRow(
+                                                                            'calendar',
+                                                                            index,
+                                                                            'date',
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                        )
+                                                                    }
+                                                                    placeholder="Lundi 2 octobre 2026"
+                                                                />
+                                                            </Field>
+
+                                                            <div className="sm:col-span-2">
+                                                                <Field
+                                                                    label="Précision"
+                                                                    optional
+                                                                >
+                                                                    <Input
+                                                                        value={
+                                                                            item.description ??
+                                                                            ''
+                                                                        }
+                                                                        maxLength={
+                                                                            300
+                                                                        }
+                                                                        onChange={(
+                                                                            event,
+                                                                        ) =>
+                                                                            updateRow(
+                                                                                'calendar',
+                                                                                index,
+                                                                                'description',
+                                                                                event
+                                                                                    .target
+                                                                                    .value,
+                                                                            )
+                                                                        }
+                                                                        placeholder="Informations complémentaires"
+                                                                    />
+                                                                </Field>
+                                                            </div>
+                                                        </div>
+
+                                                        {contentForm.data.calendar
+                                                            .length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    removeRow(
+                                                                        'calendar',
+                                                                        index,
+                                                                    )
+                                                                }
+                                                                className="flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-xl text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                                                                aria-label="Retirer cet événement"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ),
+                                        )}
+                                    </div>
+
+                                    {fieldErrors('calendar')}
+                                </div>
+                            </Card.Body>
+                        </Card>
+
+                        <div className="flex justify-end">
+                            <Button
+                                type="submit"
+                                loading={contentForm.processing}
+                                className="min-w-48"
+                            >
+                                <Save className="h-4 w-4" />
+                                Enregistrer
+                            </Button>
+                        </div>
+                    </form>
                 )}
             </div>
 

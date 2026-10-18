@@ -25,12 +25,15 @@ class ReportCardController extends Controller
     public function index(Request $request): Response
     {
         Gate::authorize('viewAny', ReportCard::class);
+        $primaryClassIds = $request->user()->isDirector() ? ClassRoom::primary()->pluck('id') : null;
+
         $cards = ReportCard::query()
             ->with(['student:id,first_name,last_name,matricule', 'classRoom:id,name', 'period:id,name', 'academicYear:id,name'])
             ->when($request->user()->isTeacher(), function ($query) use ($request) {
                 $classIds = $request->user()->teacher?->classes()->pluck('classes.id') ?? collect();
                 $query->whereIn('class_room_id', $classIds);
             })
+            ->when($primaryClassIds !== null, fn ($query) => $query->whereIn('class_room_id', $primaryClassIds))
             ->when($request->filled('class_id'), fn ($query) => $query->where('class_room_id', $request->integer('class_id')))
             ->when($request->filled('period_id'), fn ($query) => $query->where('academic_period_id', $request->integer('period_id')))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
@@ -66,6 +69,8 @@ class ReportCardController extends Controller
         if ($request->user()->isTeacher()) {
             $assignedClassIds = $request->user()->teacher?->classes()->pluck('classes.id') ?? collect();
             $classesQuery->whereIn('id', $assignedClassIds);
+        } elseif ($request->user()->isDirector()) {
+            $classesQuery->primary();
         }
 
         return Inertia::render('Admin/Academic/ReportCards/Index', [
@@ -73,11 +78,13 @@ class ReportCardController extends Controller
             'classes' => $classesQuery->get(['id', 'name']),
             'periods' => AcademicPeriod::query()->with('academicYear:id,name')->orderByDesc('academic_year_id')->orderBy('position')->get(['id', 'academic_year_id', 'name', 'position'])->map(fn ($period) => ['id' => $period->id, 'name' => $period->name, 'academic_year' => $period->academicYear?->name]),
             'filters' => $request->only(['class_id', 'period_id', 'status']),
-            'routePrefix' => $request->routeIs('censeur.*')
-                ? 'censeur'
-                : ($request->routeIs('teacher.*')
-                    ? 'teacher'
-                    : ($request->routeIs('secretary.*') ? 'secretary' : 'admin')),
+            'routePrefix' => $request->routeIs('director.*')
+                ? 'director'
+                : ($request->routeIs('censeur.*')
+                    ? 'censeur'
+                    : ($request->routeIs('teacher.*')
+                        ? 'teacher'
+                        : ($request->routeIs('secretary.*') ? 'secretary' : 'admin'))),
         ]);
     }
 
@@ -88,13 +95,15 @@ class ReportCardController extends Controller
 
         return Inertia::render('Admin/Academic/ReportCards/Show', [
             'reportCard' => $this->serialize($reportCard),
-            'routePrefix' => $request->routeIs('parent.*')
-                ? 'parent'
-                : ($request->routeIs('censeur.*')
-                    ? 'censeur'
-                    : ($request->routeIs('teacher.*')
-                        ? 'teacher'
-                        : ($request->routeIs('secretary.*') ? 'secretary' : 'admin'))),
+            'routePrefix' => $request->routeIs('director.*')
+                ? 'director'
+                : ($request->routeIs('parent.*')
+                    ? 'parent'
+                    : ($request->routeIs('censeur.*')
+                        ? 'censeur'
+                        : ($request->routeIs('teacher.*')
+                            ? 'teacher'
+                            : ($request->routeIs('secretary.*') ? 'secretary' : 'admin')))),
             'canEditComments' => Gate::allows('updateComments', $reportCard),
             'canPublish' => Gate::allows('publish', $reportCard),
             'canRegenerate' => Gate::allows('regenerate', $reportCard),
@@ -167,9 +176,11 @@ class ReportCardController extends Controller
         }
 
         return redirect()->route(
-            $request->routeIs('censeur.*')
-                ? 'censeur.report-cards.show'
-                : ($request->routeIs('teacher.*') ? 'teacher.report-cards.show' : 'admin.report-cards.show'),
+            $request->routeIs('director.*')
+                ? 'director.report-cards.show'
+                : ($request->routeIs('censeur.*')
+                    ? 'censeur.report-cards.show'
+                    : ($request->routeIs('teacher.*') ? 'teacher.report-cards.show' : 'admin.report-cards.show')),
             $result['report_cards'][0]->id
         )->with('success', 'Une nouvelle version du bulletin a été générée.');
     }

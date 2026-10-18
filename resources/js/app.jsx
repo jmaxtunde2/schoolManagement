@@ -30,3 +30,13 @@ createInertiaApp({
         color: 'var(--school-primary, #1E40AF)',
     },
 });
+
+// PWA : enregistrement du service worker (production uniquement pour ne pas
+// interférer avec le serveur de développement Vite).
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
+            // L'application reste pleinement fonctionnelle sans service worker.
+        });
+    });
+}

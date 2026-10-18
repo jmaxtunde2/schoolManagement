@@ -4,11 +4,13 @@ import { AnimatePresence, motion, useInView, useReducedMotion } from 'framer-mot
 import {
     ArrowRight,
     BookOpenCheck,
+    CalendarDays,
     CheckCircle2,
     ChevronDown,
     ChevronLeft,
     ChevronRight,
     Clock3,
+    Coins,
     ExternalLink,
     GraduationCap,
     HeartHandshake,
@@ -22,21 +24,12 @@ import {
     ShieldCheck,
     Sparkles,
     Target,
+    UserPlus,
     X,
 } from 'lucide-react';
 
 const fallbackHero =
     'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=2200&q=85';
-
-const navigation = [
-    ['Accueil', '#home'],
-    ['À propos', '#about'],
-    ['Impact', '#impact'],
-    ['Notre approche', '#strengths'],
-    ['Témoignages', '#testimonials'],
-    ['Galerie', '#gallery'],
-    ['Contact', '#contact'],
-];
 
 const EASE = [0.22, 1, 0.36, 1];
 
@@ -87,12 +80,87 @@ export default function SchoolLanding({
     structuredData = null,
     testimonials = [],
     gallery = [],
+    tuition = null,
+    curriculum = null,
+    calendar = null,
     preview = false,
     preview_dashboard_url = null,
+    preinscription_url = null,
 }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [lightboxItem, setLightboxItem] = useState(null);
+    const [openCurriculum, setOpenCurriculum] = useState(0);
     const reduceMotion = useReducedMotion();
+
+    const tuitionFees = useMemo(
+        () => (Array.isArray(tuition?.fees) ? tuition.fees : []),
+        [tuition]
+    );
+    const curriculumItems = useMemo(
+        () => (Array.isArray(curriculum?.items) ? curriculum.items : []),
+        [curriculum]
+    );
+    const calendarItems = useMemo(
+        () => (Array.isArray(calendar?.items) ? calendar.items : []),
+        [calendar]
+    );
+
+    // Regroupement des liens pour éviter une barre de navigation surchargée.
+    const navGroups = useMemo(() => {
+        const groups = [{ label: 'Accueil', href: '#home' }];
+
+        const establishment = [
+            { label: 'À propos', href: '#about' },
+            { label: 'Notre approche', href: '#strengths' },
+            { label: 'Impact', href: '#impact' },
+        ];
+        if (testimonials.length > 0) {
+            establishment.push({ label: 'Témoignages', href: '#testimonials' });
+        }
+        groups.push({ label: 'Établissement', items: establishment });
+
+        const vieScolaire = [];
+        if (curriculumItems.length > 0) {
+            vieScolaire.push({
+                label: "Programme d'études",
+                href: '#curriculum',
+            });
+        }
+        if (calendarItems.length > 0) {
+            vieScolaire.push({
+                label: 'Calendrier scolaire',
+                href: '#calendar',
+            });
+        }
+        if (gallery.length > 0) {
+            vieScolaire.push({ label: 'Galerie', href: '#gallery' });
+        }
+        if (vieScolaire.length > 0) {
+            groups.push({ label: 'Vie scolaire', items: vieScolaire });
+        }
+
+        if (tuitionFees.length > 0) {
+            groups.push({ label: 'Frais de scolarité', href: '#fees' });
+        }
+
+        groups.push({ label: 'Contact', href: '#contact' });
+
+        return groups;
+    }, [
+        testimonials.length,
+        gallery.length,
+        tuitionFees.length,
+        curriculumItems.length,
+        calendarItems.length,
+    ]);
+
+    const flatNav = useMemo(
+        () =>
+            navGroups.flatMap((group) =>
+                group.items ? group.items : [group]
+            ),
+        [navGroups]
+    );
 
     const address = [school.address, school.city, school.country].filter(Boolean).join(', ');
     const phoneHref = school.phone?.replace(/[^+\d]/g, '');
@@ -246,24 +314,33 @@ export default function SchoolLanding({
                         </span>
                     </a>
 
-                    <nav className="hidden items-center gap-1 xl:flex" aria-label="Navigation principale">
-                        {navigation.map(([label, href]) => (
-                            <a
-                                key={href}
-                                href={href}
-                                className="group relative rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
-                            >
-                                {label}
-                                <span
-                                    className="absolute inset-x-3 -bottom-0.5 h-0.5 origin-left scale-x-0 rounded-full transition-transform duration-300 group-hover:scale-x-100"
-                                    style={{ backgroundColor: primary }}
-                                />
-                            </a>
-                        ))}
+                    <nav className="hidden items-center gap-0.5 xl:flex" aria-label="Navigation principale">
+                        {navGroups.map((group) =>
+                            group.items ? (
+                                <NavDropdown key={group.label} group={group} color={primary} />
+                            ) : (
+                                <a
+                                    key={group.href}
+                                    href={group.href}
+                                    className="group relative whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
+                                >
+                                    {group.label}
+                                    <span
+                                        className="absolute inset-x-3 -bottom-0.5 h-0.5 origin-left scale-x-0 rounded-full transition-transform duration-300 group-hover:scale-x-100"
+                                        style={{ backgroundColor: primary }}
+                                    />
+                                </a>
+                            )
+                        )}
                     </nav>
                     <div className="hidden xl:block">
                         <ParentLink color={primary} />
                     </div>
+                    {preinscription_url && (
+                        <div className="hidden xl:block">
+                            <PreinscriptionLink url={preinscription_url} color={accent} />
+                        </div>
+                    )}
                     <button
                         type="button"
                         onClick={() => setMenuOpen((open) => !open)}
@@ -286,19 +363,45 @@ export default function SchoolLanding({
                             aria-label="Navigation mobile"
                         >
                             <div className="mx-auto grid max-w-7xl gap-1 px-4 py-3 sm:grid-cols-2">
-                                {navigation.map(([label, href]) => (
-                                    <a
-                                        key={href}
-                                        href={href}
-                                        onClick={() => setMenuOpen(false)}
-                                        className="rounded-md px-3 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                                    >
-                                        {label}
-                                    </a>
-                                ))}
+                                {navGroups.map((group) =>
+                                    group.items ? (
+                                        <div key={group.label} className="sm:col-span-2">
+                                            <p className="px-3 pt-2 text-xs font-bold uppercase tracking-wide text-slate-400">
+                                                {group.label}
+                                            </p>
+
+                                            <div className="mt-1 grid gap-1 sm:grid-cols-2">
+                                                {group.items.map((item) => (
+                                                    <a
+                                                        key={item.href}
+                                                        href={item.href}
+                                                        onClick={() => setMenuOpen(false)}
+                                                        className="rounded-md px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                                    >
+                                                        {item.label}
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <a
+                                            key={group.href}
+                                            href={group.href}
+                                            onClick={() => setMenuOpen(false)}
+                                            className="rounded-md px-3 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                        >
+                                            {group.label}
+                                        </a>
+                                    )
+                                )}
                                 <div className="px-3 py-2 sm:col-span-2">
                                     <ParentLink color={primary} />
                                 </div>
+                                {preinscription_url && (
+                                    <div className="px-3 py-2 sm:col-span-2">
+                                        <PreinscriptionLink url={preinscription_url} color={accent} />
+                                    </div>
+                                )}
                             </div>
                         </motion.nav>
                     )}
@@ -364,6 +467,17 @@ export default function SchoolLanding({
                                 </motion.p>
                             )}
                             <motion.div variants={fadeUp} className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                                {preinscription_url && (
+                                    <Link
+                                        href={preinscription_url}
+                                        className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-6 text-sm font-semibold text-white shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:brightness-110"
+                                        style={{ backgroundColor: accent }}
+                                    >
+                                        <UserPlus className="h-4 w-4" />
+                                        Inscrire mon enfant
+                                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                                    </Link>
+                                )}
                                 <a
                                     href="#about"
                                     className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-6 text-sm font-semibold text-white shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:brightness-110"
@@ -519,6 +633,29 @@ export default function SchoolLanding({
                     </div>
                 </section>
 
+                {school.results_headline && (
+                    <section className="scroll-mt-24 bg-white py-12 sm:py-14">
+                        <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
+                            <motion.div
+                                variants={fadeUp}
+                                initial="hidden"
+                                whileInView="visible"
+                                viewport={revealViewport}
+                                className="flex flex-col items-center gap-3 rounded-3xl border px-6 py-10 text-center sm:px-12"
+                                style={{ borderColor: withAlpha(primary, 0.2), background: `linear-gradient(135deg, ${withAlpha(primary, 0.08)}, ${withAlpha(accent, 0.08)})` }}
+                            >
+                                <SectionEyebrow color={accent}>Palmarès &amp; résultats</SectionEyebrow>
+                                <p className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">
+                                    {school.results_headline}
+                                </p>
+                                {school.results_note && (
+                                    <p className="text-sm font-medium text-slate-500">{school.results_note}</p>
+                                )}
+                            </motion.div>
+                        </div>
+                    </section>
+                )}
+
                 {/* ---------------------------------------------------------------- */}
                 {/* Points forts                                                      */}
                 {/* ---------------------------------------------------------------- */}
@@ -557,6 +694,179 @@ export default function SchoolLanding({
                         )}
                     </div>
                 </section>
+
+                {/* ---------------------------------------------------------------- */}
+                {/* Programme d'études                                                */}
+                {/* ---------------------------------------------------------------- */}
+                {curriculumItems.length > 0 && (
+                    <section id="curriculum" className="scroll-mt-24 border-y border-slate-200 bg-slate-50 py-20 sm:py-24">
+                        <div className="mx-auto max-w-4xl px-5 sm:px-8 lg:px-12">
+                            <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={revealViewport} className="max-w-2xl">
+                                <motion.div variants={fadeUp}>
+                                    <SectionEyebrow color={primary}>Vie scolaire</SectionEyebrow>
+                                </motion.div>
+                                <motion.h2 variants={fadeUp} className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                                    Notre programme d’études
+                                </motion.h2>
+                                {curriculum?.intro && (
+                                    <motion.p variants={fadeUp} className="mt-4 text-base leading-7 text-slate-600">
+                                        {curriculum.intro}
+                                    </motion.p>
+                                )}
+                            </motion.div>
+
+                            <motion.div
+                                variants={stagger}
+                                initial="hidden"
+                                whileInView="visible"
+                                viewport={revealViewport}
+                                className="mt-10 space-y-3"
+                            >
+                                {curriculumItems.map((item, index) => (
+                                    <CurriculumRow
+                                        key={`${item.title}-${index}`}
+                                        item={item}
+                                        index={index}
+                                        open={openCurriculum === index}
+                                        onToggle={() =>
+                                            setOpenCurriculum(openCurriculum === index ? -1 : index)
+                                        }
+                                        color={primary}
+                                        accent={accent}
+                                    />
+                                ))}
+                            </motion.div>
+                        </div>
+                    </section>
+                )}
+
+                {/* ---------------------------------------------------------------- */}
+                {/* Calendrier scolaire                                               */}
+                {/* ---------------------------------------------------------------- */}
+                {calendarItems.length > 0 && (
+                    <section id="calendar" className="scroll-mt-24 py-20 sm:py-24">
+                        <div className="mx-auto max-w-4xl px-5 sm:px-8 lg:px-12">
+                            <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={revealViewport} className="max-w-2xl">
+                                <motion.div variants={fadeUp}>
+                                    <SectionEyebrow color={accent}>Vie scolaire</SectionEyebrow>
+                                </motion.div>
+                                <motion.h2 variants={fadeUp} className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                                    Calendrier scolaire
+                                </motion.h2>
+                                {calendar?.intro && (
+                                    <motion.p variants={fadeUp} className="mt-4 text-base leading-7 text-slate-600">
+                                        {calendar.intro}
+                                    </motion.p>
+                                )}
+                            </motion.div>
+
+                            <motion.ol
+                                variants={stagger}
+                                initial="hidden"
+                                whileInView="visible"
+                                viewport={revealViewport}
+                                className="mt-10 space-y-4"
+                            >
+                                {calendarItems.map((item, index) => (
+                                    <motion.li
+                                        key={`${item.label}-${index}`}
+                                        variants={fadeUp}
+                                        className="group flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                                    >
+                                        <span
+                                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                                            style={{ backgroundColor: withAlpha(accent, 0.12), color: accent }}
+                                        >
+                                            <CalendarDays className="h-5 w-5" />
+                                        </span>
+                                        <div className="min-w-0">
+                                            {item.date && (
+                                                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: accent }}>
+                                                    {item.date}
+                                                </p>
+                                            )}
+                                            <h3 className="mt-0.5 text-base font-bold text-slate-900">{item.label}</h3>
+                                            {item.description && (
+                                                <p className="mt-1 text-sm leading-6 text-slate-600">{item.description}</p>
+                                            )}
+                                        </div>
+                                    </motion.li>
+                                ))}
+                            </motion.ol>
+                        </div>
+                    </section>
+                )}
+
+                {/* ---------------------------------------------------------------- */}
+                {/* Frais de scolarité                                                */}
+                {/* ---------------------------------------------------------------- */}
+                {tuitionFees.length > 0 && (
+                    <section id="fees" className="scroll-mt-24 border-y border-slate-200 bg-slate-50 py-20 sm:py-24">
+                        <div className="relative mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
+                            <div className="pointer-events-none absolute inset-0 opacity-[0.5]" style={{ background: `radial-gradient(60% 60% at 0% 0%, ${withAlpha(primary, 0.1)}, transparent 70%)` }} />
+
+                            <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={revealViewport} className="relative max-w-2xl">
+                                <motion.div variants={fadeUp}>
+                                    <SectionEyebrow color={primary}>Admission</SectionEyebrow>
+                                </motion.div>
+                                <motion.h2 variants={fadeUp} className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                                    Frais de scolarité
+                                </motion.h2>
+                                <motion.p variants={fadeUp} className="mt-4 text-base leading-7 text-slate-600">
+                                    Des frais présentés en toute transparence pour accompagner chaque famille.
+                                </motion.p>
+                            </motion.div>
+
+                            <motion.div
+                                variants={stagger}
+                                initial="hidden"
+                                whileInView="visible"
+                                viewport={revealViewport}
+                                className="relative mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+                            >
+                                {tuitionFees.map((fee, index) => (
+                                    <motion.article
+                                        key={`${fee.label}-${index}`}
+                                        variants={fadeUp}
+                                        className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                                    >
+                                        <span className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${primary}, ${accent})` }} />
+                                        <span
+                                            className="flex h-11 w-11 items-center justify-center rounded-xl"
+                                            style={{ backgroundColor: withAlpha(primary, 0.12), color: primary }}
+                                        >
+                                            <Coins className="h-5 w-5" />
+                                        </span>
+                                        <h3 className="mt-4 text-base font-bold text-slate-900">{fee.label}</h3>
+                                        {fee.amount && (
+                                            <p className="mt-2 flex items-baseline gap-1.5 text-2xl font-extrabold tracking-tight text-slate-950">
+                                                {fee.amount}
+                                                {tuition?.currency && (
+                                                    <span className="text-sm font-semibold text-slate-500">{tuition.currency}</span>
+                                                )}
+                                            </p>
+                                        )}
+                                        {fee.note && (
+                                            <p className="mt-2 text-sm leading-6 text-slate-500">{fee.note}</p>
+                                        )}
+                                    </motion.article>
+                                ))}
+                            </motion.div>
+
+                            {tuition?.note && (
+                                <motion.p
+                                    variants={fadeUp}
+                                    initial="hidden"
+                                    whileInView="visible"
+                                    viewport={revealViewport}
+                                    className="relative mx-auto mt-8 max-w-3xl rounded-2xl border border-slate-200 bg-white px-5 py-4 text-center text-sm leading-6 text-slate-600"
+                                >
+                                    {tuition.note}
+                                </motion.p>
+                            )}
+                        </div>
+                    </section>
+                )}
 
                 {/* ---------------------------------------------------------------- */}
                 {/* Témoignages                                                       */}
@@ -752,8 +1062,8 @@ export default function SchoolLanding({
                     <div>
                         <h2 className="text-sm font-semibold">Navigation</h2>
                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-white/65">
-                            {navigation.slice(0, 6).map(([label, href]) => (
-                                <a key={href} href={href} className="transition hover:text-white">{label}</a>
+                            {flatNav.slice(0, 8).map((item) => (
+                                <a key={item.href} href={item.href} className="transition hover:text-white">{item.label}</a>
                             ))}
                         </div>
                     </div>
@@ -833,6 +1143,98 @@ function ParentLink({ color, light = false }) {
         >
             <GraduationCap className="h-4 w-4" /> Espace parent
         </Link>
+    );
+}
+
+function PreinscriptionLink({ url, color }) {
+    return (
+        <Link
+            href={url}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:brightness-110"
+            style={{ backgroundColor: color }}
+        >
+            <UserPlus className="h-4 w-4" /> Inscrire mon enfant
+        </Link>
+    );
+}
+
+function NavDropdown({ group, color }) {
+    return (
+        <div className="group relative">
+            <button
+                type="button"
+                aria-haspopup="true"
+                className="relative flex items-center gap-1 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
+            >
+                {group.label}
+                <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" />
+                <span
+                    className="absolute inset-x-3 -bottom-0.5 h-0.5 origin-left scale-x-0 rounded-full transition-transform duration-300 group-hover:scale-x-100"
+                    style={{ backgroundColor: color }}
+                />
+            </button>
+
+            <div className="invisible absolute left-0 top-full z-50 w-60 translate-y-1 pt-2 opacity-0 transition duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10">
+                    {group.items.map((item) => (
+                        <a
+                            key={item.href}
+                            href={item.href}
+                            className="block rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-950"
+                        >
+                            {item.label}
+                        </a>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function CurriculumRow({ item, index, open, onToggle, color, accent }) {
+    const hasDescription = Boolean(item.description);
+
+    return (
+        <motion.div
+            variants={fadeUp}
+            className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+        >
+            <button
+                type="button"
+                onClick={hasDescription ? onToggle : undefined}
+                aria-expanded={hasDescription ? open : undefined}
+                className={`flex w-full items-center gap-4 px-5 py-4 text-left transition ${hasDescription ? 'hover:bg-slate-50' : 'cursor-default'}`}
+            >
+                <span
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm"
+                    style={{ background: `linear-gradient(135deg, ${color}, ${accent})` }}
+                >
+                    {index + 1}
+                </span>
+                <span className="flex-1 text-base font-bold text-slate-900">{item.title}</span>
+                {hasDescription && (
+                    <ChevronDown
+                        className={`h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
+                    />
+                )}
+            </button>
+
+            <AnimatePresence initial={false}>
+                {open && hasDescription && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: EASE }}
+                        className="overflow-hidden"
+                    >
+                        <p className="px-5 pb-5 pl-[4.5rem] text-sm leading-7 text-slate-600">
+                            {item.description}
+                        </p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     );
 }
 

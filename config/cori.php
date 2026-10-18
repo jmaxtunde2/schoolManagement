@@ -21,4 +21,26 @@ return [
         'expiring_soon_days' => 30,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Service clientèle
+    |--------------------------------------------------------------------------
+    |
+    | Contact du service clientèle CoriSchool (Coriyase). Le numéro WhatsApp
+    | doit être renseigné au format international, sans espace ni séparateur
+    | (ex. +2250700000000). Laisser vide désactive le bouton flottant.
+    |
+    */
+
+    'support' => [
+        'whatsapp' => env('CORI_SUPPORT_WHATSAPP'),
+
+        // Message d'accueil pré-rempli proposé au visiteur lors de l'ouverture
+        // de la conversation WhatsApp.
+        'whatsapp_message' => env(
+            'CORI_SUPPORT_WHATSAPP_MESSAGE',
+            'Bonjour, je souhaite entrer en contact avec le service clientèle de CoriSchool.'
+        ),
+    ],
+
 ];

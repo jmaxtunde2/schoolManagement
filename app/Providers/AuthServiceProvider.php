@@ -6,6 +6,7 @@ use App\Models\AttendanceRecord;
 use App\Models\ClassRoom;
 use App\Models\DemoRequest;
 use App\Models\Evaluation;
+use App\Models\ExamResource;
 use App\Models\ReportCard;
 use App\Models\SchoolSetting;
 use App\Models\Timetable;
@@ -13,6 +14,7 @@ use App\Policies\AcademicResultPolicy;
 use App\Policies\AttendancePolicy;
 use App\Policies\DemoRequestPolicy;
 use App\Policies\EvaluationPolicy;
+use App\Policies\ExamResourcePolicy;
 use App\Policies\ReportCardPolicy;
 use App\Policies\SchoolSettingPolicy;
 use App\Policies\TimetablePolicy;
@@ -28,6 +30,7 @@ class AuthServiceProvider extends ServiceProvider
         ReportCard::class => ReportCardPolicy::class,
         Timetable::class => TimetablePolicy::class,
         DemoRequest::class => DemoRequestPolicy::class,
+        ExamResource::class => ExamResourcePolicy::class,
     ];
 
     public function boot(): void

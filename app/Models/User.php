@@ -143,6 +143,11 @@ class User extends Authenticatable
         return $this->hasMany(UserNotification::class);
     }
 
+    public function pushSubscriptions(): HasMany
+    {
+        return $this->hasMany(PushSubscription::class);
+    }
+
     public function recordedAttendanceRecords(): HasMany
     {
         return $this->hasMany(AttendanceRecord::class, 'recorded_by');

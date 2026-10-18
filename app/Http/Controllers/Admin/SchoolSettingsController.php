@@ -6,6 +6,7 @@ use App\Actions\Settings\UpdateSchoolSettings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\UpdateSchoolSettingsRequest;
 use App\Models\SchoolSetting;
+use App\Services\AuditService;
 use App\Support\SchoolBranding;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -52,14 +53,21 @@ class SchoolSettingsController extends Controller
         ]);
     }
 
-    public function update(UpdateSchoolSettingsRequest $request, UpdateSchoolSettings $action): RedirectResponse
-    {
+    public function update(
+        UpdateSchoolSettingsRequest $request,
+        UpdateSchoolSettings $action,
+        AuditService $audit,
+    ): RedirectResponse {
         $action->handle(
             $request->user()->school,
             $request->safe()->except(['logo', 'remove_logo']),
             $request->file('logo'),
             $request->boolean('remove_logo'),
         );
+
+        $audit->log('settings.updated', $request->user()->school, [
+            'scope' => 'school',
+        ]);
 
         return back()->with('success', "Les paramètres de l'établissement ont été enregistrés.");
     }

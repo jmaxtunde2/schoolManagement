@@ -34,8 +34,15 @@ export default function SubjectsIndex({
     subjects,
     classes,
 }) {
-    const isCenseur = usePage().props.auth.user.role === 'censeur';
-    const routePrefix = isCenseur ? 'censeur' : 'admin';
+    const role = usePage().props.auth.user.role;
+    const isCenseur = role === 'censeur';
+    const isDirector = role === 'director';
+    const readOnly = isCenseur || isDirector;
+    const routePrefix = isDirector
+        ? 'director'
+        : isCenseur
+          ? 'censeur'
+          : 'admin';
     const [editing, setEditing] = useState(null);
     const [showForm, setShowForm] = useState(false);
     const [toDelete, setToDelete] = useState(null);
@@ -593,7 +600,8 @@ export default function SubjectsIndex({
                                 {
                                     key: 'actions',
                                     header: '',
-                                    render: (subject) => (
+                                    render: (subject) =>
+                                        readOnly ? null : (
                                         <div className="flex justify-end gap-1">
                                             <button
                                                 type="button"

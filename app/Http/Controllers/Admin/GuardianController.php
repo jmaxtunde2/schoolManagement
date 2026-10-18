@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Reference\GuardianRequest;
+use App\Models\ClassRoom;
 use App\Models\ParentGuardian;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
@@ -16,11 +18,23 @@ use Inertia\Response;
 
 class GuardianController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $primaryClassIds = $request->user()->isDirector()
+            ? ClassRoom::primary()->pluck('id')
+            : null;
+
         return Inertia::render('Admin/Guardians/Index', [
-            'guardians' => ParentGuardian::with('students:id,first_name,last_name')->latest()->latest('id')->get(),
-            'students' => Student::orderBy('last_name')->get(['id', 'first_name', 'last_name']),
+            'guardians' => ParentGuardian::with('students:id,first_name,last_name')
+                ->when($primaryClassIds !== null, fn ($q) => $q->whereHas(
+                    'students',
+                    fn ($s) => $s->whereIn('class_id', $primaryClassIds),
+                ))
+                ->latest()->latest('id')->get(),
+            'students' => Student::query()
+                ->when($primaryClassIds !== null, fn ($q) => $q->whereIn('class_id', $primaryClassIds))
+                ->orderBy('last_name')
+                ->get(['id', 'first_name', 'last_name']),
         ]);
     }
 

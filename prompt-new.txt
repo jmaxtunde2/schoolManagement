@@ -1,0 +1,1040 @@
+# CORISCHOOL — BANQUE D'ÉPREUVES + JEU ÉDUCATIF & COMPÉTITIONS
+
+## 1. CONTEXTE
+
+CoriSchool est une plateforme SaaS de gestion scolaire développée avec :
+
+- Laravel
+- Inertia.js
+- React
+- Tailwind CSS
+- architecture multi-établissements avec `school_id`
+- rôles et permissions
+- espace administrateur plateforme
+- espace établissement
+- espace enseignant
+- espace élève/parent selon les fonctionnalités déjà présentes
+
+Nous voulons maintenant ajouter deux nouveaux modules pédagogiques :
+
+### Module 1 — Banque d'épreuves
+
+Une bibliothèque centralisée d'épreuves, exercices et ressources pédagogiques classés par niveau et matière.
+
+### Module 2 — Jeu éducatif & compétitions
+
+Un espace ludique permettant aux élèves de s'entraîner avec des contenus alignés au programme scolaire, de suivre leur progression et de participer à des compétitions mensuelles avec classement, badges et récompenses.
+
+IMPORTANT :
+
+Ces deux modules doivent être conçus comme des fonctionnalités natives de CoriSchool, avec une architecture évolutive.
+
+Ne pas casser les fonctionnalités existantes.
+
+Ne pas modifier inutilement les modules actuels.
+
+Réutiliser les composants, layouts, permissions et conventions existantes.
+
+Respecter le multi-tenant et la sécurité.
+
+---
+
+# 2. NOUVELLE ORGANISATION DU MENU LANDING PAGE
+
+Le menu actuel du landing page contient déjà plusieurs liens.
+
+Il faut maintenant éviter d'avoir une longue liste de liens.
+
+Analyser le menu actuel et regrouper logiquement les fonctionnalités en sous-menus.
+
+L'objectif est d'obtenir un menu professionnel, clair et responsive.
+
+Proposition de structure :
+
+```text
+Accueil
+
+Fonctionnalités
+    ├── Gestion scolaire
+    ├── Gestion financière
+    ├── Espace parents
+    ├── Communication
+    └── Pilotage & statistiques
+
+Ressources pédagogiques
+    ├── Banque d'épreuves
+    └── Jeu éducatif & compétitions
+
+Établissements
+    ├── Mini-site établissement
+    └── Préinscription en ligne
+
+À propos
+
+Tarifs
+
+Contact
+
+Connexion
+```
+
+Adapter cette structure au menu réellement présent dans le projet.
+
+Ne pas supprimer un lien existant sans raison.
+
+Si certaines fonctionnalités existantes sont déjà regroupées, conserver une logique cohérente.
+
+## Responsive
+
+Desktop :
+
+- dropdown / mega-menu selon le design actuel.
+
+Mobile :
+
+- menu accordion
+- sous-menus dépliables
+- navigation tactile claire.
+
+Les deux nouvelles fonctionnalités doivent être visibles depuis le landing page.
+
+---
+
+# 3. MODULE 1 — BANQUE D'ÉPREUVES
+
+## Objectif
+
+Créer une bibliothèque centralisée permettant de rechercher, consulter et utiliser des épreuves et exercices pédagogiques.
+
+La banque est administrée au niveau de la plateforme.
+
+Elle peut être utilisée par les utilisateurs autorisés des établissements.
+
+---
+
+# 4. STRUCTURE DES RESSOURCES
+
+Une ressource pédagogique doit pouvoir contenir au minimum :
+
+- titre
+- description
+- niveau
+- matière
+- type
+- année scolaire / période si nécessaire
+- durée indicative
+- difficulté
+- contenu
+- fichier joint si nécessaire
+- corrigé
+- auteur
+- date de création
+- date de modification
+- statut
+- visibilité
+
+Types possibles :
+
+```text
+Épreuve
+Exercice
+Devoir
+Examen blanc
+QCM
+Quiz
+Corrigé
+Sujet d'examen
+Fiche d'exercices
+```
+
+Prévoir une architecture extensible permettant d'ajouter d'autres types plus tard.
+
+---
+
+# 5. CLASSIFICATION
+
+Les ressources doivent pouvoir être classées par :
+
+### Niveau
+
+Exemples :
+
+- 6e
+- 5e
+- 4e
+- 3e
+- 2nde
+- 1ère
+- Terminale
+
+Mais ne pas coder ces valeurs en dur.
+
+Utiliser les niveaux/classes déjà présents dans CoriSchool lorsque possible.
+
+Prévoir également la possibilité d'adapter les niveaux selon le système scolaire.
+
+### Matière
+
+Utiliser les matières existantes lorsque la ressource est associée à un établissement.
+
+Pour la banque centrale, prévoir une gestion de matières/niveaux de référence administrée au niveau plateforme si nécessaire.
+
+---
+
+# 6. ADMINISTRATION PLATEFORME
+
+Les administrateurs de la plateforme doivent pouvoir :
+
+- créer une épreuve
+- modifier une épreuve
+- supprimer/archiver
+- publier
+- dépublier
+- ajouter un fichier
+- ajouter un corrigé
+- associer niveau
+- associer matière
+- définir la difficulté
+- rechercher
+- filtrer
+- prévisualiser
+- gérer les ressources
+
+Ajouter des statuts :
+
+```text
+Brouillon
+En révision
+Publié
+Archivé
+```
+
+Une ressource en brouillon ne doit pas être visible des utilisateurs ordinaires.
+
+---
+
+# 7. PARTAGE DES ÉPREUVES
+
+Une ressource publiée dans la banque centrale peut être mise à disposition des établissements.
+
+Prévoir une distinction entre :
+
+### Ressource plateforme
+
+Créée et gérée par l'administration CoriSchool.
+
+### Ressource établissement
+
+Créée par un établissement ou un enseignant si cette possibilité est activée.
+
+Ne pas mélanger les deux niveaux de propriété.
+
+Une ressource plateforme ne doit pas pouvoir être modifiée par un établissement.
+
+---
+
+# 8. RECHERCHE DE LA BANQUE
+
+Créer une interface de recherche moderne :
+
+```text
+Banque d'épreuves
+
+[ Rechercher une épreuve... ]
+
+Niveau       [Tous ▼]
+Matière      [Toutes ▼]
+Type         [Tous ▼]
+Difficulté   [Toutes ▼]
+
+[ Rechercher ]
+```
+
+Afficher les résultats sous forme de cartes ou liste.
+
+Chaque carte :
+
+```text
+Mathématiques
+3e
+
+Épreuve de mathématiques
+Difficulté : Moyenne
+
+[Voir] [Télécharger] [Utiliser]
+```
+
+Ne pas afficher « Télécharger » si le type de ressource ne le permet pas.
+
+---
+
+# 9. UTILISATION D'UNE ÉPREUVE
+
+lutilisation est destine au public, eleve ou enseignant: il peut telecharger, ces pour ca les epreuves doivent avoir un wter marke de corischool
+
+
+# 10. CORRIGÉS
+
+Prévoir un corrigé séparé ou une section protégée. certaine epreuves peuvetre gratuite d'autre payante
+Ne jamais exposer accidentellement le corrigé dans l'espace élève.
+
+---
+
+# 11. MODULE 2 — JEU ÉDUCATIF & COMPÉTITIONS ()
+
+## Objectif
+
+Créer un espace où les élèves peuvent apprendre et s'entraîner sous forme de jeu.
+
+Positionnement :
+
+> **Apprendre, progresser et se challenger grâce à des activités éducatives adaptées au programme scolaire.**
+
+Le système doit être conçu pour être motivant sans devenir uniquement un système de compétition.
+
+---
+
+# 12. JEUX ÉDUCATIFS
+
+Commencer par un moteur générique de quiz/QCM.
+
+Types initiaux :
+
+### QCM
+
+Question :
+
+> Quel est le résultat de 5 × 6 ?
+
+A. 20  
+B. 25  
+C. 30  
+D. 35
+
+### Vrai / Faux
+
+### Question à réponse courte
+
+Prévoir l'architecture permettant d'ajouter d'autres types plus tard.
+
+---
+
+# 13. ALIGNEMENT AU PROGRAMME
+
+Chaque contenu éducatif doit pouvoir être associé à :
+
+- niveau
+- matière
+- chapitre/thème
+- compétence
+- difficulté
+
+Exemple :
+
+```text
+Niveau : 4e
+Matière : Mathématiques
+Thème : Équations
+Difficulté : Moyen
+Compétence : Résoudre une équation du premier degré
+```
+
+Ne pas coder les matières et thèmes directement dans le frontend.
+
+---
+
+# 14. PROGRESSION PAR MATIÈRE
+
+Chaque élève doit pouvoir voir sa progression.
+
+Exemple :
+
+```text
+Mes progrès
+
+Mathématiques       72 %
+████████████░░░░
+
+Français             64 %
+██████████░░░░░░
+
+SVT                  81 %
+█████████████░░░
+```
+
+Afficher éventuellement :
+
+- questions répondues
+- bonnes réponses
+- taux de réussite
+- séries complétées
+- niveau de progression
+- badges obtenus
+
+Éviter de présenter la progression comme une note scolaire officielle.
+
+Il s'agit d'une progression ludique.
+
+---
+
+# 15. SYSTÈME DE POINTS
+
+Créer un système de points éducatifs.
+
+Exemple :
+
+```text
+Bonne réponse          +10 XP
+Série de 5 bonnes      +20 XP
+Quiz terminé           +15 XP
+Défi réussi            +30 XP
+```
+
+Les règles doivent être configurables.
+
+Ne pas permettre à l'utilisateur de modifier ses propres points.
+
+Le calcul doit être effectué côté serveur.
+
+---
+
+# 16. BADGES
+
+Créer des badges motivants.
+
+Exemples :
+
+🏅 Premier quiz  
+📚 10 quiz terminés  
+🔥 5 jours consécutifs  
+🧮 Expert en mathématiques  
+🔬 Explorateur des sciences  
+🏆 Top 10 du mois
+
+Les badges doivent être attribués automatiquement selon des règles définies.
+
+Prévoir une structure permettant d'ajouter de nouveaux badges sans modifier le code métier principal.
+
+---
+
+# 17. CLASSEMENTS
+
+Créer plusieurs niveaux de classement.
+
+### Classement personnel
+
+Progression de l'élève.
+
+### Classement établissement
+
+Élèves de l'établissement.
+
+### Classement mensuel plateforme
+
+Compétition entre participants.
+
+ATTENTION :
+
+Le classement doit respecter les règles de confidentialité.
+
+Ne pas afficher publiquement des informations personnelles inutiles.
+
+Utiliser par exemple :
+
+```text
+1. Élève A — 1 250 XP
+2. Élève B — 1 180 XP
+3. Élève C — 1 120 XP
+```
+
+Selon les règles de confidentialité choisies par la plateforme, le nom complet peut être remplacé par un nom d'affichage.
+
+---
+
+# 18. COMPÉTITIONS MENSUELLES
+
+Créer un système de compétitions.
+
+L'administrateur plateforme peut créer :
+
+```text
+Compétition
+------------------------------
+Nom
+Description
+Mois
+Date début
+Date fin
+Niveaux concernés
+Matières
+Questions
+Nombre maximum de participants
+Statut
+Récompenses
+```
+
+Statuts :
+
+```text
+Brouillon
+Programmée
+Active
+Terminée
+Archivée
+```
+
+---
+
+# 19. DÉROULEMENT D'UNE COMPÉTITION
+
+Exemple :
+
+```text
+Compétition Octobre 2026
+
+Mathématiques
+4e / 3e
+
+20 questions
+Temps : 20 minutes
+
+Début : 15 octobre
+Fin : 31 octobre
+
+[Participer]
+```
+
+Pendant la compétition :
+
+- chronomètre
+- questions
+- progression
+- score
+- validation des réponses
+
+Après soumission :
+
+- score
+- bonnes réponses
+- mauvaises réponses
+- temps utilisé
+- classement provisoire si autorisé
+
+---
+
+# 20. ANTI-FRAUDE
+
+Les compétitions doivent prévoir un minimum de protection.
+
+Exemples :
+
+- durée limitée
+- tentative limitée
+- questions mélangées
+- réponses mélangées
+- contrôle côté serveur du temps
+- impossibilité de modifier une réponse après expiration
+- validation serveur du score
+
+Ne jamais faire confiance uniquement au JavaScript du navigateur pour calculer les scores.
+
+Prévoir des logs pour les tentatives.
+
+---
+
+# 21. RÉCOMPENSES
+
+L'administrateur peut définir une récompense pour les gagnants.
+
+Exemples :
+
+```text
+🥇 1er prix
+🥈 2e prix
+🥉 3e prix
+```
+
+La plateforme doit permettre d'enregistrer :
+
+- type de récompense
+- description
+- valeur éventuelle
+- gagnant
+- statut de remise
+
+IMPORTANT :
+
+Ne pas implémenter de système de paiement ou de pari.
+
+Les compétitions sont éducatives.
+
+---
+
+# 22. DASHBOARD ÉLÈVE
+
+Ajouter une section :
+
+## Jeu éducatif
+
+Avec :
+
+```text
+Bonjour Jean 👋
+
+🔥 450 XP
+
+Niveau : Explorateur
+
+Mes matières
+----------------
+Mathématiques     72 %
+Français           64 %
+Sciences           81 %
+
+Mes badges
+🏅 Premier quiz
+🔥 5 jours consécutifs
+
+Compétition actuelle
+----------------
+🏆 Défi Mathématiques Octobre
+
+Position : 12e
+Score : 840 XP
+
+[Continuer]
+```
+
+---
+
+# 23. DASHBOARD ADMINISTRATEUR PLATEFORME
+
+Créer une section de gestion :
+
+### Banque d'épreuves
+
+- ressources
+- niveaux
+- matières
+- publications
+- statistiques d'utilisation
+
+### Jeux
+
+- jeux
+- questions
+- catégories
+- niveaux
+- matières
+
+### Compétitions
+
+- compétitions
+- participants
+- résultats
+- classements
+- récompenses
+
+### Badges
+
+- création
+- règles
+- attribution
+
+---
+
+# 24. STATISTIQUES PÉDAGOGIQUES
+
+Prévoir des statistiques pour l'administration plateforme.
+
+Exemples :
+
+- nombre de participants
+- nombre de quiz réalisés
+- taux moyen de réussite
+- matières les plus utilisées
+- niveaux les plus actifs
+- épreuves les plus consultées
+- progression moyenne
+
+Ne pas afficher de données personnelles sensibles inutilement.
+
+---
+
+# 25. INTÉGRATION AVEC CORISCHOOL
+
+Ces modules doivent pouvoir fonctionner avec les comptes existants.
+
+Un élève déjà présent dans CoriSchool doit pouvoir accéder au jeu éducatif sans créer un deuxième compte.
+
+Même principe pour les enseignants.
+
+Respecter les rôles existants.
+
+---
+
+# 26. NOTIFICATIONS
+
+Prévoir des notifications pour :
+
+### Élève
+
+> 🏆 Une nouvelle compétition est disponible.
+
+> 🎉 Vous avez obtenu un nouveau badge.
+
+> 📚 Une nouvelle série d'exercices est disponible.
+
+### Établissement
+
+> La compétition mensuelle est ouverte.
+
+Ne pas envoyer automatiquement des SMS/WhatsApp pour chaque événement ludique.
+
+Utiliser prioritairement :
+
+- notifications internes
+- éventuellement push/email selon la configuration.
+
+---
+
+# 27. MENU LANDING PAGE
+
+Le menu doit présenter clairement les deux fonctionnalités.
+
+Proposition :
+
+```text
+Accueil
+
+Fonctionnalités
+    Gestion scolaire
+    Gestion financière
+    Espace parents
+    Communication
+    Pilotage & statistiques
+
+Ressources pédagogiques
+    Banque d'épreuves
+    Jeu éducatif & compétitions
+
+Établissements
+    Mini-site établissement
+    Préinscription
+
+Tarifs
+
+À propos
+
+Contact
+
+Connexion
+```
+
+Créer une landing page dédiée pour chacun :
+
+### `/banque-epreuves`
+
+Titre :
+
+> **Une banque d'épreuves pour mieux préparer vos élèves**
+
+Sous-titre :
+
+> Retrouvez des épreuves et exercices classés par niveau et par matière, accessibles depuis une bibliothèque pédagogique centralisée.
+
+### `/jeu-educatif`
+
+Titre :
+
+> **Apprendre autrement avec CoriSchool**
+
+Sous-titre :
+
+> Des jeux éducatifs alignés au programme, une progression motivante et des compétitions pour apprendre en se challengeant.
+
+---
+
+# 28. SEO DES DEUX PAGES
+
+Prévoir :
+
+- title
+- meta description
+- Open Graph
+- URL propre
+- contenu indexable
+- titres H1/H2
+- données structurées si pertinentes
+
+Exemples :
+
+```text
+/banque-epreuves
+/jeu-educatif
+/competitions
+```
+
+Éviter les URLs techniques.
+
+---
+
+# 29. ARCHITECTURE DES DONNÉES
+
+Avant de créer les migrations, analyser les modèles existants.
+
+Ne pas dupliquer :
+
+- niveaux
+- matières
+- utilisateurs
+- élèves
+- enseignants
+
+si ces entités existent déjà et peuvent être réutilisées.
+
+Prévoir probablement des entités du type :
+
+```text
+Question
+QuestionOption
+EducationalContent
+ExamResource
+ResourceAttachment
+Game
+GameAttempt
+GameAnswer
+PlayerProgress
+Badge
+StudentBadge
+Competition
+CompetitionParticipant
+CompetitionQuestion
+CompetitionResult
+Reward
+```
+
+Adapter les noms aux conventions déjà utilisées dans le projet.
+
+Toutes les entités liées à un établissement doivent respecter le `school_id`.
+
+Les ressources globales de la plateforme doivent être clairement distinguées des ressources propres à un établissement.
+
+---
+
+# 30. PERMISSIONS
+
+Créer ou réutiliser des permissions adaptées.
+
+Exemples :
+
+```text
+platform.manage_exam_bank
+platform.manage_games
+platform.manage_competitions
+platform.manage_badges
+
+school.view_exam_bank
+school.use_exam_resource
+
+teacher.use_exam_bank
+teacher.create_local_resource
+
+student.play_games
+student.join_competition
+student.view_progress
+
+parent.view_student_progress
+```
+
+Adapter aux permissions existantes.
+
+---
+
+# 31. RÈGLES DE SÉCURITÉ
+
+Vérifier systématiquement :
+
+- authentification
+- autorisation
+- tenant isolation
+- propriété des ressources
+- accès aux corrigés
+- accès aux résultats
+- protection des scores
+- protection des récompenses
+- validation côté serveur
+
+Un élève ne doit jamais pouvoir :
+
+- modifier son score ;
+- ajouter ses propres XP ;
+- s'attribuer un badge ;
+- modifier son classement ;
+- accéder aux réponses avant une compétition ;
+- accéder aux corrigés protégés.
+
+---
+
+# 32. APPROCHE DE DÉVELOPPEMENT
+
+NE PAS développer tout le système simultanément.
+
+Procéder en étapes.
+
+## Étape 1
+
+Refactorisation du menu landing page et création des deux nouvelles pages publiques.
+
+## Étape 2
+
+Banque d'épreuves :
+
+- migrations
+- modèles
+- administration plateforme
+- recherche
+- filtres
+- consultation
+- téléchargement
+- permissions
+
+## Étape 3
+
+Utilisation d'une épreuve par un enseignant.
+
+## Étape 4
+
+Moteur de quiz éducatif.
+
+## Étape 5
+
+Progression + XP + badges.
+
+## Étape 6
+
+Compétitions mensuelles.
+
+## Étape 7
+
+Classements + récompenses.
+
+## Étape 8
+
+Statistiques + notifications.
+
+À chaque étape :
+
+- migration
+- backend
+- frontend
+- permissions
+- validation
+- tests
+- responsive design
+
+---
+
+# 33. DESIGN UI/UX
+
+Le design doit rester cohérent avec CoriSchool :
+
+- professionnel
+- moderne
+- responsive
+- accessible
+- français
+- mode clair
+- mode sombre
+- palette actuelle CoriSchool
+- cartes élégantes
+- tableaux lisibles
+- badges visuels
+- progression claire
+
+Pour la partie jeu, autoriser une interface légèrement plus dynamique et ludique, mais sans transformer CoriSchool en application enfantine.
+
+Le jeu doit rester compatible avec l'identité professionnelle d'une plateforme scolaire.
+
+---
+
+# 34. CRITÈRES D'ACCEPTATION
+
+## Banque d'épreuves
+
+Un administrateur plateforme peut :
+
+- créer une ressource
+- l'associer à un niveau
+- l'associer à une matière
+- ajouter un corrigé
+- publier
+- rechercher
+- filtrer
+- archiver
+
+Un enseignant peut :
+
+- rechercher
+- consulter
+- utiliser
+- éventuellement télécharger
+- créer une copie locale si autorisé
+
+Un élève ne doit pas accéder aux corrigés protégés.
+
+---
+
+## Jeu éducatif
+
+Un élève peut :
+
+- choisir une matière
+- choisir un niveau/contenu
+- jouer
+- répondre
+- obtenir un score
+- gagner de l'XP
+- suivre sa progression
+- obtenir des badges
+- participer à une compétition
+
+L'administrateur plateforme peut :
+
+- créer les contenus
+- créer les compétitions
+- définir les règles
+- suivre les participants
+- gérer les récompenses
+- consulter les statistiques.
+
+---
+
+# 35. OBJECTIF FINAL
+
+Ces fonctionnalités doivent renforcer le positionnement de CoriSchool autour de quatre dimensions :
+
+```text
+                  CORISCHOOL
+                      │
+        ┌─────────────┼─────────────┐
+        │             │             │
+     GÉRER         APPRENDRE      PILOTER
+        │             │             │
+   Vie scolaire   Banque         Dashboard
+   Finances       d'épreuves     Analytics
+   Parents        Jeux           Alertes
+   Communication  Compétitions
+                      │
+                      ▼
+                   MOTIVER
+                 XP • Badges
+                 Classements
+                 Récompenses
+```
+
+CoriSchool ne doit donc pas être uniquement présenté comme une plateforme administrative.
+
+Il devient progressivement une plateforme permettant à l'établissement de :
+
+**gérer → communiquer → enseigner → faire apprendre → motiver → piloter.**

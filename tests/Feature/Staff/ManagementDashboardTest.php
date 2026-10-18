@@ -11,10 +11,11 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 /**
- * Tableau de bord des rôles de pilotage (directeur et comptable).
+ * Tableau de bord du comptable.
  *
- * Ces deux rôles partagent une page en lecture seule : `billing` n'est présent
- * que pour le comptable.
+ * Le directeur dispose désormais de son propre tableau de bord pédagogique
+ * (voir Tests\Feature\Director\DashboardTest) ; cette page de pilotage en
+ * lecture est réservée au comptable, qui y retrouve en plus la facturation.
  */
 class ManagementDashboardTest extends TestCase
 {
@@ -31,39 +32,10 @@ class ManagementDashboardTest extends TestCase
         ]);
     }
 
-    public function test_the_director_sees_the_school_overview_without_billing(): void
+    public function test_the_accountant_sees_the_school_overview_with_billing(): void
     {
         AcademicYear::factory()->forSchool($this->school)->create([
             'name' => '2026-2027',
-            'is_current' => true,
-        ]);
-
-        $this->actingAs(
-            User::factory()->create([
-                'school_id' => $this->school->id,
-                'role' => Role::Director,
-            ])
-        )
-            ->get(route('director.dashboard'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Staff/ManagementDashboard')
-                ->where('role', Role::Director->value)
-                ->where('school.name', 'Lycée Les Genies')
-                ->where('currentAcademicYear.name', '2026-2027')
-                ->has('stats.students')
-                ->has('stats.teachers')
-                ->has('stats.classes')
-                ->has('stats.staff')
-                ->has('stats.parents')
-                ->has('stats.timetable_slots')
-                ->missing('billing')
-            );
-    }
-
-    public function test_the_accountant_also_sees_the_billing_summary(): void
-    {
-        AcademicYear::factory()->forSchool($this->school)->create([
             'is_current' => true,
         ]);
 
@@ -78,6 +50,14 @@ class ManagementDashboardTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Staff/ManagementDashboard')
                 ->where('role', Role::Accountant->value)
+                ->where('school.name', 'Lycée Les Genies')
+                ->where('currentAcademicYear.name', '2026-2027')
+                ->has('stats.students')
+                ->has('stats.teachers')
+                ->has('stats.classes')
+                ->has('stats.staff')
+                ->has('stats.parents')
+                ->has('stats.timetable_slots')
                 ->has('billing.summary.collected')
                 ->has('billing.summary.coriyase_share')
                 ->has('billing.summary.school_share')
@@ -91,10 +71,10 @@ class ManagementDashboardTest extends TestCase
         $this->actingAs(
             User::factory()->create([
                 'school_id' => $this->school->id,
-                'role' => Role::Director,
+                'role' => Role::Accountant,
             ])
         )
-            ->get(route('director.dashboard'))
+            ->get(route('accountant.dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Staff/ManagementDashboard')
@@ -102,15 +82,18 @@ class ManagementDashboardTest extends TestCase
             );
     }
 
-    public function test_the_dashboard_is_reserved_to_the_director_and_the_accountant(): void
+    public function test_the_dashboard_is_reserved_to_the_accountant(): void
     {
         $admin = User::factory()->admin()->forSchool($this->school)->create();
+        $director = User::factory()->forSchool($this->school)->create([
+            'role' => Role::Director,
+        ]);
 
         $this->actingAs($admin)
-            ->get(route('director.dashboard'))
+            ->get(route('accountant.dashboard'))
             ->assertForbidden();
 
-        $this->actingAs($admin)
+        $this->actingAs($director)
             ->get(route('accountant.dashboard'))
             ->assertForbidden();
     }
@@ -120,10 +103,10 @@ class ManagementDashboardTest extends TestCase
         $this->actingAs(
             User::factory()->create([
                 'school_id' => $this->school->id,
-                'role' => Role::Director,
+                'role' => Role::Accountant,
             ])
         )
-            ->get(route('director.dashboard'))
+            ->get(route('accountant.dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 // Aucune année scolaire dans cette école : rien ne fuite ailleurs.

@@ -15,12 +15,16 @@ use App\Models\Student;
 class BuildGenderDistribution
 {
     /**
+     * @param  iterable<int>|null  $classIds  Restreint la distribution à ces classes.
      * @return array{totals: array<string, int|null>, classes: array<int, array<string, mixed>>}
      */
-    public function handle(): array
+    public function handle(?iterable $classIds = null): array
     {
+        $classIds = $classIds === null ? null : collect($classIds)->map(fn ($id) => (int) $id)->all();
+
         $counts = Student::query()
             ->where('is_active', true)
+            ->when($classIds !== null, fn ($query) => $query->whereIn('class_id', $classIds))
             ->selectRaw('class_id, gender, count(*) as total')
             ->groupBy('class_id', 'gender')
             ->get();
@@ -39,6 +43,7 @@ class BuildGenderDistribution
         }
 
         $classes = ClassRoom::query()
+            ->when($classIds !== null, fn ($query) => $query->whereIn('id', $classIds))
             ->orderBy('name')
             ->get(['id', 'name', 'level']);
 
@@ -48,7 +53,7 @@ class BuildGenderDistribution
             $rows[] = $this->row($class->id, $class->name, $class->level, $byClass[$class->id] ?? []);
         }
 
-        if (! empty($byClass[null])) {
+        if ($classIds === null && ! empty($byClass[null])) {
             $rows[] = $this->row(null, 'Élèves non affectés', null, $byClass[null]);
         }
 

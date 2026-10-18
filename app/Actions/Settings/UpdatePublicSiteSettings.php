@@ -31,6 +31,27 @@ class UpdatePublicSiteSettings
                 $data['features'] ?? [],
                 fn ($feature) => trim((string) ($feature['title'] ?? '')) !== ''
             )),
+            'results_headline' => filled($data['results_headline'] ?? null)
+                ? trim((string) $data['results_headline'])
+                : null,
+            'results_note' => filled($data['results_note'] ?? null)
+                ? trim((string) $data['results_note'])
+                : null,
+            'tuition_currency' => filled($data['tuition_currency'] ?? null)
+                ? trim((string) $data['tuition_currency'])
+                : null,
+            'tuition_note' => filled($data['tuition_note'] ?? null)
+                ? trim((string) $data['tuition_note'])
+                : null,
+            'tuition_fees' => $this->cleanFees($data['tuition_fees'] ?? []),
+            'curriculum_intro' => filled($data['curriculum_intro'] ?? null)
+                ? trim((string) $data['curriculum_intro'])
+                : null,
+            'curriculum' => $this->cleanCurriculum($data['curriculum'] ?? []),
+            'calendar_intro' => filled($data['calendar_intro'] ?? null)
+                ? trim((string) $data['calendar_intro'])
+                : null,
+            'calendar' => $this->cleanCalendar($data['calendar'] ?? []),
         ]);
 
         if ($heroImage) {
@@ -58,5 +79,59 @@ class UpdatePublicSiteSettings
         }
 
         return $setting;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $fees
+     * @return array<int, array{label: string, amount: ?string, note: ?string}>
+     */
+    private function cleanFees(array $fees): array
+    {
+        return collect($fees)
+            ->filter(fn ($fee) => is_array($fee) && trim((string) ($fee['label'] ?? '')) !== '')
+            ->map(fn ($fee) => [
+                'label' => trim((string) $fee['label']),
+                'amount' => filled($fee['amount'] ?? null) ? trim((string) $fee['amount']) : null,
+                'note' => filled($fee['note'] ?? null) ? trim((string) $fee['note']) : null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $items
+     * @return array<int, array{title: string, description: ?string}>
+     */
+    private function cleanCurriculum(array $items): array
+    {
+        return collect($items)
+            ->filter(fn ($item) => is_array($item) && trim((string) ($item['title'] ?? '')) !== '')
+            ->map(fn ($item) => [
+                'title' => trim((string) $item['title']),
+                'description' => filled($item['description'] ?? null)
+                    ? trim((string) $item['description'])
+                    : null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $items
+     * @return array<int, array{label: string, date: ?string, description: ?string}>
+     */
+    private function cleanCalendar(array $items): array
+    {
+        return collect($items)
+            ->filter(fn ($item) => is_array($item) && trim((string) ($item['label'] ?? '')) !== '')
+            ->map(fn ($item) => [
+                'label' => trim((string) $item['label']),
+                'date' => filled($item['date'] ?? null) ? trim((string) $item['date']) : null,
+                'description' => filled($item['description'] ?? null)
+                    ? trim((string) $item['description'])
+                    : null,
+            ])
+            ->values()
+            ->all();
     }
 }

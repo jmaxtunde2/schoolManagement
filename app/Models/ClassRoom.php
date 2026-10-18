@@ -45,4 +45,23 @@ class ClassRoom extends Model
     {
         return $this->hasMany(AttendanceRecord::class);
     }
+
+    /** Niveaux considérés comme primaire (maternelle + élémentaire). */
+    public const PRIMARY_LEVELS = ['PS', 'MS', 'GS', 'CI', 'CP', 'CP1', 'CP2', 'CE1', 'CE2', 'CM1', 'CM2'];
+
+    /**
+     * Filtre les classes du primaire (maternelle + élémentaire).
+     */
+    public function scopePrimary($query)
+    {
+        return $query->whereIn('level', self::PRIMARY_LEVELS);
+    }
+
+    /**
+     * Filtre les classes du secondaire (6ème à Terminale).
+     */
+    public function scopeSecondary($query)
+    {
+        return $query->whereNotIn('level', self::PRIMARY_LEVELS);
+    }
 }

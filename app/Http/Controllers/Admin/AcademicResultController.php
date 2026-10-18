@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Academic\BuildResultsPerformance;
+use App\Actions\Academic\EducMasterResultsExport;
 use App\Actions\Academic\GenerateReportCards;
+use App\Actions\Academic\PrepareEducMasterExport;
 use App\Http\Controllers\Controller;
 use App\Models\AcademicPeriod;
 use App\Models\AcademicYear;
 use App\Models\ClassRoom;
 use App\Models\ReportCard;
+use App\Models\School;
 use App\Services\Academic\AcademicCalculationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +19,8 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class AcademicResultController extends Controller
 {
@@ -41,6 +46,8 @@ class AcademicResultController extends Controller
         if ($request->user()->isTeacher()) {
             $assignedClassIds = $request->user()->teacher?->classes()->pluck('classes.id') ?? collect();
             $classesQuery->whereIn('id', $assignedClassIds);
+        } elseif ($request->user()->isDirector()) {
+            $classesQuery->primary();
         }
         $classes = $classesQuery->get(['id', 'name']);
         $periods = AcademicPeriod::query()
@@ -125,12 +132,19 @@ class AcademicResultController extends Controller
                     return $student;
                 })->values(),
             ] : null,
-            'routePrefix' => $request->routeIs('censeur.*')
-                ? 'censeur'
-                : ($request->routeIs('teacher.*')
-                    ? 'teacher'
-                    : ($request->routeIs('secretary.*') ? 'secretary' : 'admin')),
+            'routePrefix' => $this->routePrefix($request),
         ]);
+    }
+
+    private function routePrefix(Request $request): string
+    {
+        return match (true) {
+            $request->routeIs('director.*') => 'director',
+            $request->routeIs('censeur.*') => 'censeur',
+            $request->routeIs('teacher.*') => 'teacher',
+            $request->routeIs('secretary.*') => 'secretary',
+            default => 'admin',
+        };
     }
 
     public function generate(Request $request, GenerateReportCards $action): RedirectResponse
@@ -162,5 +176,55 @@ class AcademicResultController extends Controller
             'success',
             "{$generated['generated']} bulletin(s) généré(s); {$generated['skipped']} élève(s) sans résultat calculable ignoré(s)."
         );
+    }
+
+    public function prepareEducMaster(
+        Request $request,
+        AcademicCalculationService $calculator,
+    ): Response {
+        $data = $request->validate([
+            'class_id' => ['required', 'integer', Rule::exists('classes', 'id')->where('school_id', $request->user()->school_id)],
+            'period_id' => ['required', 'integer', Rule::exists('academic_periods', 'id')->where('school_id', $request->user()->school_id)],
+        ]);
+
+        $classRoom = ClassRoom::findOrFail($data['class_id']);
+        $period = AcademicPeriod::findOrFail($data['period_id']);
+        $school = School::findOrFail($request->user()->school_id);
+
+        Gate::authorize('viewAcademicResults', [ClassRoom::class, $classRoom, $period]);
+
+        $report = (new PrepareEducMasterExport($classRoom, $period, $calculator, $school))->handle();
+
+        return Inertia::render('Admin/Academic/EducMasterPreparation', [
+            'report' => $report,
+            'classRoom' => ['id' => $classRoom->id, 'name' => $classRoom->name],
+            'period' => ['id' => $period->id, 'name' => $period->name],
+            'routePrefix' => $this->routePrefix($request),
+        ]);
+    }
+
+    public function exportEducMaster(Request $request, AcademicCalculationService $calculator): BinaryFileResponse
+    {
+        $data = $request->validate([
+            'class_id' => ['required', 'integer', Rule::exists('classes', 'id')->where('school_id', $request->user()->school_id)],
+            'period_id' => ['required', 'integer', Rule::exists('academic_periods', 'id')->where('school_id', $request->user()->school_id)],
+        ]);
+
+        $classRoom = ClassRoom::findOrFail($data['class_id']);
+        $period = AcademicPeriod::findOrFail($data['period_id']);
+        $school = School::findOrFail($request->user()->school_id);
+
+        Gate::authorize('viewAcademicResults', [ClassRoom::class, $classRoom, $period]);
+
+        $export = new EducMasterResultsExport($classRoom, $period, $calculator, $school);
+
+        $fileName = sprintf(
+            'educmaster_%s_%s_%s.xlsx',
+            str($classRoom->name)->slug(),
+            str($period->name)->slug(),
+            now()->format('Ymd_His')
+        );
+
+        return Excel::download($export, $fileName);
     }
 }

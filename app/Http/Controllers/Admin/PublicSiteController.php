@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\UpdatePublicSiteSettingsRequest;
 use App\Models\SchoolPublicGalleryItem;
 use App\Models\SchoolPublicTestimonial;
+use App\Services\AuditService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -51,6 +52,15 @@ class PublicSiteController extends Controller
                 'vision' => $publicSite['vision'] ?? '',
                 'values' => $publicSite['values'] ?? [],
                 'features' => $publicSite['features'] ?? [],
+                'results_headline' => $publicSite['results_headline'] ?? '',
+                'results_note' => $publicSite['results_note'] ?? '',
+                'tuition_currency' => $publicSite['tuition_currency'] ?? '',
+                'tuition_note' => $publicSite['tuition_note'] ?? '',
+                'tuition_fees' => $publicSite['tuition_fees'] ?? [],
+                'curriculum_intro' => $publicSite['curriculum_intro'] ?? '',
+                'curriculum' => $publicSite['curriculum'] ?? [],
+                'calendar_intro' => $publicSite['calendar_intro'] ?? '',
+                'calendar' => $publicSite['calendar'] ?? [],
                 'hero_image_url' => ! empty($publicSite['hero_image_path'])
                     ? Storage::disk('public')->url($publicSite['hero_image_path'])
                     : null,
@@ -88,7 +98,8 @@ class PublicSiteController extends Controller
 
     public function update(
         UpdatePublicSiteSettingsRequest $request,
-        UpdatePublicSiteSettings $action
+        UpdatePublicSiteSettings $action,
+        AuditService $audit,
     ): RedirectResponse {
         $action->handle(
             $request->user()->school,
@@ -96,6 +107,10 @@ class PublicSiteController extends Controller
             $request->file('hero_image'),
             $request->boolean('remove_hero_image')
         );
+
+        $audit->log('settings.updated', $request->user()->school, [
+            'scope' => 'public_site',
+        ]);
 
         return back()->with('success', 'Le contenu public a été enregistré.');
     }

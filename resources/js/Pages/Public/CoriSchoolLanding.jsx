@@ -30,6 +30,7 @@ import {
     Wallet,
     X,
 } from 'lucide-react';
+import WhatsAppButton from '@/Components/Support/WhatsAppButton';
 
 function cn(...classes) {
     return classes
@@ -145,7 +146,7 @@ const features = [
     {
         id: 'pilotage',
         icon: LayoutDashboard,
-        title: 'Pilotage de l’établissement',
+        title: 'Pilotage de l\'établissement',
         description:
             'Une vue centralisée pour suivre les activités essentielles de votre école.',
         points: [
@@ -160,7 +161,7 @@ const features = [
         icon: BarChart3,
         title: 'Notes & évaluations',
         description:
-            'Structurez le cycle complet de l’évaluation, de la saisie à la validation.',
+            'Structurez le cycle complet de l\'évaluation, de la saisie à la validation.',
         points: [
             'Évaluations et devoirs',
             'Saisie des notes',
@@ -197,14 +198,53 @@ const features = [
     {
         id: 'site-public',
         icon: Globe,
-        title: 'Site public de l’établissement',
+        title: 'Site public de l\'établissement',
         description:
             'Chaque école dispose de sa propre vitrine en ligne, à son image.',
         points: [
-            'Page d’accueil personnalisée',
-            'Logo et couleurs de l’école',
+            'Page d\'accueil personnalisée',
+            'Logo et couleurs de l\'école',
             'Présentation, valeurs et galerie',
-            'Contact et demande d’information',
+            'Contact et demande d\'information',
+        ],
+    },
+    {
+        id: 'educmaster-export',
+        icon: ClipboardCheck,
+        title: 'Export EducMaster préparé',
+        description:
+            'Contrôles de cohérence avant export, modèles de fichiers et génération prête pour les établissements concernés au Bénin.',
+        points: [
+            'Contrôles de cohérence des données',
+            'Modèles de fichiers EducMaster',
+            'Génération automatisée',
+            'Conforme aux normes béninoises',
+        ],
+    },
+    {
+        id: 'epreuves-bank',
+        icon: BookOpen,
+        title: 'Banque d\'épreuves',
+        description:
+            'Une bibliothèque centralisée d\'épreuves et exercices pour tous les niveaux, gérée par les administrateurs de plateforme.',
+        points: [
+            'Épreuves classées par niveau et matière',
+            'Création et partage par admins plateforme',
+            'Import/export de banques de questions',
+            'Disponible pour tous les établissements',
+        ],
+    },
+    {
+        id: 'educational-game',
+        icon: GraduationCap,
+        title: 'Jeu éducatif & compétitions',
+        description:
+            'Les élèves apprennent en jouant avec des contenus alignés au programme. Compétitions mensuelles avec prix à gagner.',
+        points: [
+            'Jeux alignés au programme scolaire',
+            'Progression ludique par matière',
+            'Compétitions mensuelles avec récompenses',
+            'Classements et badges motivants',
         ],
     },
 ];
@@ -672,6 +712,12 @@ function SiteHeader() {
         ['FAQ', '#faq'],
     ];
 
+    const resourceLinks = [
+        { label: 'Banque d\'épreuves', href: '/banque-epreuves', route: 'public.banque-epreuves' },
+        { label: 'Jeu éducatif', href: '/jeu-educatif', route: 'public.jeu-educatif' },
+        { label: 'Compétitions', href: '/competitions', route: 'public.competitions' },
+    ];
+
     return (
         <header className="fixed inset-x-0 top-0 z-50">
             <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
@@ -705,6 +751,30 @@ function SiteHeader() {
                                     {label}
                                 </a>
                             ))}
+
+                            <div className="group relative">
+                                <button
+                                    type="button"
+                                    className="flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-emerald-600"
+                                >
+                                    Ressources
+                                    <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" />
+                                </button>
+
+                                <div className="invisible absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3 opacity-0 transition duration-150 group-hover:visible group-hover:opacity-100">
+                                    <div className="w-60 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-900/10">
+                                        {resourceLinks.map((item) => (
+                                            <Link
+                                                key={item.label}
+                                                href={route(item.route)}
+                                                className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700"
+                                            >
+                                                {item.label}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
                         </nav>
 
                         <div className="hidden items-center gap-3 sm:flex">
@@ -761,6 +831,22 @@ function SiteHeader() {
                                             </a>
                                         ))}
                                     </nav>
+
+                                    <div className="mt-3 border-t border-slate-100 pt-3">
+                                        <p className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                                            Ressources pédagogiques
+                                        </p>
+                                        {resourceLinks.map((item) => (
+                                            <Link
+                                                key={item.label}
+                                                href={route(item.route)}
+                                                onClick={() => setMobileOpen(false)}
+                                                className="block rounded-xl px-3 py-3 text-sm font-semibold text-slate-600 hover:bg-emerald-50 hover:text-emerald-700"
+                                            >
+                                                {item.label}
+                                            </Link>
+                                        ))}
+                                    </div>
 
                                     <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">
                                         <Link
@@ -1460,6 +1546,201 @@ function FeatureMiniMockup({ type }) {
         );
     }
 
+    if (type === 'educmaster-export') {
+        return (
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-900/5">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] text-slate-400">
+                            Export EducMaster
+                        </p>
+                        <p className="mt-1 text-sm font-black text-slate-900">
+                            Génération en cours
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl bg-emerald-50 p-3 text-emerald-600">
+                        <ClipboardCheck className="h-5 w-5" />
+                    </div>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                    {[
+                        ['Vérification cohérence', 'Toutes les données validées', CheckCircle2],
+                        ['Modèle 1er trimestre', 'Prêt pour export', CheckCircle2],
+                        ['Modèle 2e trimestre', 'Prêt pour export', CheckCircle2],
+                        ['Modèle 3e trimestre', 'En préparation', Clock3],
+                    ].map(([title, status, Icon]) => (
+                        <div
+                            key={title}
+                            className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-3"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="rounded-xl bg-white p-2 text-emerald-600 shadow-sm">
+                                    <Icon className="h-3.5 w-3.5" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-800">
+                                        {title}
+                                    </p>
+                                    <p className="mt-1 text-[9px] text-slate-400">
+                                        {status}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="mt-4 rounded-2xl bg-emerald-50 p-4 border border-emerald-100">
+                    <p className="text-[9px] font-bold text-emerald-800">
+                        Conforme aux normes du Ministère de l'Éducation du Bénin
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    if (type === 'epreuves-bank') {
+        return (
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-900/5">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] text-slate-400">
+                            Banque d'épreuves
+                        </p>
+                        <p className="mt-1 text-sm font-black text-slate-900">
+                            1 247 épreuves disponibles
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl bg-emerald-50 p-3 text-emerald-600">
+                        <BookOpen className="h-5 w-5" />
+                    </div>
+                </div>
+
+                <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
+                    {['6e', '5e', '4e', '3e', '2nde', '1ère', 'Term'].map((niveau) => (
+                        <span
+                            key={niveau}
+                            className="whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[9px] font-semibold text-slate-600 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 transition"
+                        >
+                            {niveau}
+                        </span>
+                    ))}
+                </div>
+
+                <div className="mt-5 overflow-hidden rounded-2xl border border-slate-100">
+                    <div className="grid grid-cols-4 bg-slate-50 px-3 py-2 text-[9px] font-bold text-slate-400">
+                        <span>Matière</span>
+                        <span>Niveau</span>
+                        <span>Nombre</span>
+                        <span>Statut</span>
+                    </div>
+
+                    {[
+                        ['Mathématiques', '3e', '245', 'Publiées'],
+                        ['Français', '4e', '189', 'Publiées'],
+                        ['Physique-Chimie', '2nde', '156', 'Publiées'],
+                        ['SVT', '1ère S', '134', 'En révision'],
+                        ['Histoire-Géo', '6e', '98', 'Publiées'],
+                    ].map(([subject, niveau, count, status]) => (
+                        <div
+                            key={`${subject}-${niveau}`}
+                            className="grid grid-cols-4 items-center border-t border-slate-100 px-3 py-3 text-[10px]"
+                        >
+                            <span className="font-semibold text-slate-700">{subject}</span>
+                            <span className="font-medium text-slate-600">{niveau}</span>
+                            <span className="font-black text-slate-900">{count}</span>
+                            <span className="text-emerald-600 flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3" />
+                                {status}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (type === 'educational-game') {
+        return (
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-900/5">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] text-slate-400">
+                            Jeu éducatif
+                        </p>
+                        <p className="mt-1 text-sm font-black text-slate-900">
+                            Compétition du mois
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl bg-emerald-50 p-3 text-emerald-600">
+                        <GraduationCap className="h-5 w-5" />
+                    </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-5 text-white">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-bold text-emerald-100">
+                                Défi Mensuel - Octobre 2026
+                            </p>
+                            <h4 className="mt-1 text-lg font-black">
+                                Marathon des Mathématiques
+                            </h4>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-2xl font-black">🏆</p>
+                            <p className="text-[9px] text-emerald-100">Prix: Tablette + Bourses</p>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/20">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: '65%' }}
+                            transition={{ duration: 1.2 }}
+                            className="h-full rounded-full bg-white"
+                        />
+                    </div>
+                    <p className="mt-2 text-xs text-emerald-100 text-right">
+                        65% — 12 jours restants
+                    </p>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                    {[
+                        ['Quizz quotidiens', '15 min/jour', 'Maths, Français, Sciences'],
+                        ['Défis hebdomadaires', '45 min/sem', 'Problèmes complexes'],
+                        ['Classement écoles', 'National', 'Top 10 récompensés'],
+                    ].map(([title, duration, subjects]) => (
+                        <div
+                            key={title}
+                            className="rounded-xl bg-slate-50 p-4"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="rounded-xl bg-white p-2 text-emerald-600 shadow-sm">
+                                    <Sparkles className="h-3.5 w-3.5" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-[10px] font-black text-slate-800">
+                                        {title}
+                                    </p>
+                                    <p className="mt-1 text-[9px] text-slate-400">
+                                        {duration} • {subjects}
+                                    </p>
+                                </div>
+                                <ChevronRight className="h-4 w-4 text-slate-300" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-900/5">
             <div className="flex items-center justify-between">
@@ -2085,6 +2366,11 @@ export default function CoriSchoolLanding({
 
                 <SiteFooter />
             </div>
+
+            <WhatsAppButton
+                label="Service clientèle CoriSchool"
+                description="Vous découvrez CoriSchool ? Posez vos questions à notre équipe sur WhatsApp."
+            />
         </>
     );
 }

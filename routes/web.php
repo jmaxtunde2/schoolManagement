@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Admin\EmailSettingsController;
+use App\Http\Controllers\Assistant\AssistantController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\TwoFactorController;
@@ -9,10 +10,14 @@ use App\Http\Controllers\Censeur\EvaluationController;
 use App\Http\Controllers\Communication;
 use App\Http\Controllers\CoriSchoolLandingController;
 use App\Http\Controllers\DemoRequestController;
+use App\Http\Controllers\Director\DashboardController as DirectorDashboardController;
+use App\Http\Controllers\Director\EvaluationController as DirectorEvaluationController;
+use App\Http\Controllers\ExamBankController;
 use App\Http\Controllers\Finance;
 use App\Http\Controllers\Parent\ChildController;
 use App\Http\Controllers\Parent\FinanceController;
 use App\Http\Controllers\Parent\MessageController;
+use App\Http\Controllers\Parent\NotificationSettingsController;
 use App\Http\Controllers\Parent\TimetableController;
 use App\Http\Controllers\Platform\AcademicPeriodController;
 use App\Http\Controllers\Platform\AcademicYearController;
@@ -20,10 +25,12 @@ use App\Http\Controllers\Platform\AuditLogController;
 use App\Http\Controllers\Platform\CommunicationController as PlatformCommunicationController;
 use App\Http\Controllers\Platform\DashboardController;
 use App\Http\Controllers\Platform\DemoRequestController as PlatformDemoRequestController;
+use App\Http\Controllers\Platform\ExamBankController as PlatformExamBankController;
 use App\Http\Controllers\Platform\ImportController;
 use App\Http\Controllers\Platform\LicenseController;
 use App\Http\Controllers\Platform\SchoolController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicPreinscriptionController;
 use App\Http\Controllers\PublicSchoolController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\SitemapController;
@@ -33,6 +40,7 @@ use App\Http\Controllers\Staff\ManagementDashboardController;
 use App\Http\Controllers\Staff\ParentMessageController as StaffParentMessageController;
 use App\Http\Controllers\Teacher;
 use App\Http\Controllers\UserNotificationController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Services\Tenancy\TenantResolver;
 use App\Support\ReservedSchoolSlugs;
 use Illuminate\Http\Request;
@@ -69,8 +77,41 @@ Route::get('/ecole/{slug}', [
     'bySlug',
 ])->name('public.school.slug.legacy');
 
+/*
+| Préinscription en ligne (phase 7) — formulaire public du mini-site.
+| L'établissement est résolu depuis le slug, jamais depuis le formulaire.
+*/
+
+Route::get('/ecole/{slug}/preinscription', [
+    PublicPreinscriptionController::class,
+    'show',
+])->name('public.school.preinscription');
+
+Route::post('/ecole/{slug}/preinscription', [
+    PublicPreinscriptionController::class,
+    'store',
+])->middleware('throttle:6,1')->name('public.school.preinscription.store');
+
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 Route::get('/robots.txt', RobotsController::class)->name('robots');
+
+/*
+| Landing pages for pedagogical resources
+*/
+Route::get('/banque-epreuves', [
+    CoriSchoolLandingController::class,
+    'banqueEpreuves',
+])->name('public.banque-epreuves');
+
+Route::get('/jeu-educatif', [
+    CoriSchoolLandingController::class,
+    'jeuEducatif',
+])->name('public.jeu-educatif');
+
+Route::get('/competitions', [
+    CoriSchoolLandingController::class,
+    'competitions',
+])->name('public.competitions');
 
 /*
 |--------------------------------------------------------------------------
@@ -231,6 +272,27 @@ Route::middleware([
         'markAllAsRead',
     ])->name('notifications.read-all');
 
+    /*
+    |--------------------------------------------------------------------------
+    | Web Push (PWA)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/push/vapid-key', [
+        PushSubscriptionController::class,
+        'vapidKey',
+    ])->name('push.vapid-key');
+
+    Route::post('/push/subscriptions', [
+        PushSubscriptionController::class,
+        'store',
+    ])->name('push.subscriptions.store');
+
+    Route::delete('/push/subscriptions', [
+        PushSubscriptionController::class,
+        'destroy',
+    ])->name('push.subscriptions.destroy');
+
     Route::post('/logout', [
         AuthenticatedSessionController::class,
         'destroy',
@@ -382,6 +444,64 @@ Route::middleware([
             Route::put('/schools/{school}/academic-periods/{academicPeriod}', [AcademicPeriodController::class, 'update'])->name('schools.academic-periods.update');
             Route::delete('/schools/{school}/academic-periods/{academicPeriod}', [AcademicPeriodController::class, 'destroy'])->name('schools.academic-periods.destroy');
             Route::post('/schools/{school}/academic-periods/{academicPeriod}/toggle', [AcademicPeriodController::class, 'toggle'])->name('schools.academic-periods.toggle');
+
+            /*
+            | Banque d'épreuves (banque centrale de la plateforme)
+            */
+
+            Route::get('/exam-bank', [PlatformExamBankController::class, 'index'])->name('exam-bank.index');
+            Route::get('/exam-bank/references', [PlatformExamBankController::class, 'references'])->name('exam-bank.references');
+            Route::get('/exam-bank/create', [PlatformExamBankController::class, 'create'])->name('exam-bank.create');
+            Route::post('/exam-bank', [PlatformExamBankController::class, 'store'])->name('exam-bank.store');
+            Route::post('/exam-bank/levels', [PlatformExamBankController::class, 'storeLevel'])->name('exam-bank.levels.store');
+            Route::put('/exam-bank/levels/{platformLevel}', [PlatformExamBankController::class, 'updateLevel'])->name('exam-bank.levels.update');
+            Route::delete('/exam-bank/levels/{platformLevel}', [PlatformExamBankController::class, 'destroyLevel'])->name('exam-bank.levels.destroy');
+            Route::post('/exam-bank/subjects', [PlatformExamBankController::class, 'storeSubject'])->name('exam-bank.subjects.store');
+            Route::put('/exam-bank/subjects/{platformSubject}', [PlatformExamBankController::class, 'updateSubject'])->name('exam-bank.subjects.update');
+            Route::delete('/exam-bank/subjects/{platformSubject}', [PlatformExamBankController::class, 'destroySubject'])->name('exam-bank.subjects.destroy');
+            Route::get('/exam-bank/{examResource}', [PlatformExamBankController::class, 'show'])->name('exam-bank.show');
+            Route::get('/exam-bank/{examResource}/edit', [PlatformExamBankController::class, 'edit'])->name('exam-bank.edit');
+            Route::put('/exam-bank/{examResource}', [PlatformExamBankController::class, 'update'])->name('exam-bank.update');
+            Route::delete('/exam-bank/{examResource}', [PlatformExamBankController::class, 'destroy'])->name('exam-bank.destroy');
+            Route::patch('/exam-bank/{examResource}/status', [PlatformExamBankController::class, 'updateStatus'])->name('exam-bank.status');
+            Route::get('/exam-bank/{examResource}/attachments/{attachment}/download', [PlatformExamBankController::class, 'downloadAttachment'])->name('exam-bank.attachments.download');
+            Route::delete('/exam-bank/{examResource}/attachments/{attachment}', [PlatformExamBankController::class, 'destroyAttachment'])->name('exam-bank.attachments.destroy');
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Export EducMaster (admin, censeur, directeur)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware('role:admin,censeur,director')
+        ->prefix('educmaster')
+        ->name('educmaster.')
+        ->group(function () {
+            Route::get('/', [
+                Admin\EducMasterExportController::class,
+                'index',
+            ])->name('index');
+
+            Route::get('/students', [
+                Admin\EducMasterExportController::class,
+                'students',
+            ])->name('students');
+
+            Route::get('/evaluation-notes', [
+                Admin\EducMasterExportController::class,
+                'notes',
+            ])->name('notes');
+
+            Route::get('/classes', [
+                Admin\EducMasterExportController::class,
+                'classes',
+            ])->name('classes');
+
+            Route::get('/timetable', [
+                Admin\EducMasterExportController::class,
+                'timetable',
+            ])->name('timetable');
         });
 
     /*
@@ -401,6 +521,25 @@ Route::middleware([
 
             Route::get('/dashboard', Admin\DashboardController::class)
                 ->name('dashboard');
+
+            /*
+            | Banque d'épreuves (consultation)
+            */
+
+            Route::get('/banque-epreuves', [ExamBankController::class, 'index'])->name('exam-bank.index');
+            Route::get('/banque-epreuves/{examResource}', [ExamBankController::class, 'show'])->name('exam-bank.show');
+            Route::get('/banque-epreuves/{examResource}/attachments/{attachment}/download', [ExamBankController::class, 'download'])->name('exam-bank.download');
+            Route::get('/banque-epreuves/{examResource}/attachments/{attachment}/answer-key', [ExamBankController::class, 'downloadAnswerKey'])->name('exam-bank.answer-key');
+
+            /*
+            | CoriSchool Assistant — pilotage en langage naturel
+            */
+
+            Route::get('/assistant', [AssistantController::class, 'index'])
+                ->name('assistant.index');
+
+            Route::post('/assistant/ask', [AssistantController::class, 'ask'])
+                ->name('assistant.ask');
 
             /*
             | School Settings
@@ -850,6 +989,102 @@ Route::middleware([
             ])->name('students.destroy');
 
             /*
+            | Suivi des élèves en difficulté (phase 5)
+            */
+
+            Route::get('/students/at-risk', [
+                Admin\StudentFollowUpController::class,
+                'index',
+            ])->name('students.at-risk');
+
+            Route::get('/students/{student}/follow-up', [
+                Admin\StudentFollowUpController::class,
+                'show',
+            ])->name('students.follow-up');
+
+            Route::post('/students/{student}/follow-up', [
+                Admin\StudentFollowUpController::class,
+                'store',
+            ])->name('students.follow-up.store');
+
+            /*
+            | Centre de documents (phase 6)
+            */
+
+            Route::get('/documents', [
+                Admin\DocumentCenterController::class,
+                'index',
+            ])->name('documents.index');
+
+            Route::get('/documents/statistics', [
+                Admin\DocumentCenterController::class,
+                'statistics',
+            ])->name('documents.statistics');
+
+            Route::get('/documents/finance', [
+                Admin\DocumentCenterController::class,
+                'finance',
+            ])->name('documents.finance');
+
+            Route::get('/documents/students', [
+                Admin\DocumentCenterController::class,
+                'studentsList',
+            ])->name('documents.students');
+
+            Route::get('/documents/classes', [
+                Admin\DocumentCenterController::class,
+                'roomList',
+            ])->name('documents.classes');
+
+            Route::get('/documents/classes/{classRoom}', [
+                Admin\DocumentCenterController::class,
+                'classList',
+            ])->name('documents.class-list');
+
+            Route::get('/documents/students/{student}/certificate', [
+                Admin\DocumentCenterController::class,
+                'certificate',
+            ])->name('documents.certificate');
+
+            Route::get('/documents/students/{student}/attestation', [
+                Admin\DocumentCenterController::class,
+                'attestation',
+            ])->name('documents.attestation');
+
+            /*
+            | Préinscriptions (phase 7)
+            */
+
+            Route::get('/preinscriptions', [
+                Admin\PreinscriptionController::class,
+                'index',
+            ])->name('preinscriptions.index');
+
+            Route::post('/preinscriptions/{preinscription}/approve', [
+                Admin\PreinscriptionController::class,
+                'approve',
+            ])->name('preinscriptions.approve');
+
+            Route::post('/preinscriptions/{preinscription}/reject', [
+                Admin\PreinscriptionController::class,
+                'reject',
+            ])->name('preinscriptions.reject');
+
+            /*
+            | Journal d'activité (phase 9)
+            */
+
+            Route::get('/audit-logs', [
+                Admin\AuditLogController::class,
+                'index',
+            ])->name('audit-logs.index');
+
+            Route::get('/audit-logs/{auditLog}', [
+                Admin\AuditLogController::class,
+                'show',
+            ])->name('audit-logs.show');
+
+            /*
             | Evaluations
             */
 
@@ -879,6 +1114,16 @@ Route::middleware([
                 Admin\AcademicResultController::class,
                 'index',
             ])->name('academic.results.index');
+
+            Route::post('/academic/results/export-educmaster', [
+                Admin\AcademicResultController::class,
+                'exportEducMaster',
+            ])->name('academic.results.export-educmaster');
+
+            Route::get('/academic/results/prepare-educmaster', [
+                Admin\AcademicResultController::class,
+                'prepareEducMaster',
+            ])->name('academic.results.prepare-educmaster');
 
             Route::post('/academic/report-cards/generate', [
                 Admin\AcademicResultController::class,
@@ -1042,6 +1287,16 @@ Route::middleware([
                 Admin\AcademicResultController::class,
                 'index',
             ])->name('academic.results.index');
+
+            Route::post('/academic/results/export-educmaster', [
+                Admin\AcademicResultController::class,
+                'exportEducMaster',
+            ])->name('academic.results.export-educmaster');
+
+            Route::get('/academic/results/prepare-educmaster', [
+                Admin\AcademicResultController::class,
+                'prepareEducMaster',
+            ])->name('academic.results.prepare-educmaster');
 
             Route::post('/academic/report-cards/generate', [
                 Admin\AcademicResultController::class,
@@ -1267,14 +1522,260 @@ Route::middleware([
     |--------------------------------------------------------------------------
     */
 
-    Route::middleware('role:director,accountant')
-        ->group(function () {
+    /*
+    |--------------------------------------------------------------------------
+    | Comptabilité — pilotage financier en lecture
+    |--------------------------------------------------------------------------
+    */
 
-            Route::get('/direction/tableau-de-bord', ManagementDashboardController::class)
-                ->name('director.dashboard');
+    Route::middleware('role:accountant')
+        ->group(function () {
 
             Route::get('/comptabilite/tableau-de-bord', ManagementDashboardController::class)
                 ->name('accountant.dashboard');
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Directeur Primaire — gestion pédagogique (primaire uniquement)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware('role:director')
+        ->prefix('director')
+        ->name('director.')
+        ->group(function () {
+
+            Route::get('/dashboard',
+                DirectorDashboardController::class
+            )->name('dashboard');
+
+            Route::get('/assistant', [
+                AssistantController::class,
+                'index',
+            ])->name('assistant.index');
+
+            Route::post('/assistant/ask', [
+                AssistantController::class,
+                'ask',
+            ])->name('assistant.ask');
+
+            Route::get('/evaluations', [
+                DirectorEvaluationController::class,
+                'index',
+            ])->name('evaluations.index');
+
+            Route::get('/evaluations/{evaluation}/grades', [
+                StaffEvaluationController::class,
+                'grades',
+            ])->name('evaluations.grades');
+
+            Route::get('/academic/results', [
+                Admin\AcademicResultController::class,
+                'index',
+            ])->name('academic.results.index');
+
+            Route::post('/academic/results/export-educmaster', [
+                Admin\AcademicResultController::class,
+                'exportEducMaster',
+            ])->name('academic.results.export-educmaster');
+
+            Route::get('/academic/results/prepare-educmaster', [
+                Admin\AcademicResultController::class,
+                'prepareEducMaster',
+            ])->name('academic.results.prepare-educmaster');
+
+            Route::post('/academic/report-cards/generate', [
+                Admin\AcademicResultController::class,
+                'generate',
+            ])->name('academic.report-cards.generate');
+
+            Route::get('/report-cards', [
+                Admin\ReportCardController::class,
+                'index',
+            ])->name('report-cards.index');
+
+            Route::get('/report-cards/{reportCard}', [
+                Admin\ReportCardController::class,
+                'show',
+            ])->name('report-cards.show');
+
+            Route::put('/report-cards/{reportCard}/comments', [
+                Admin\ReportCardController::class,
+                'updateComments',
+            ])->name('report-cards.comments.update');
+
+            Route::post('/report-cards/{reportCard}/publish', [
+                Admin\ReportCardController::class,
+                'publish',
+            ])->middleware('2fa.fresh:publish_report_card')
+                ->name('report-cards.publish');
+
+            Route::post('/report-cards/{reportCard}/regenerate', [
+                Admin\ReportCardController::class,
+                'regenerate',
+            ])->middleware('2fa.fresh:regenerate_report_card')
+                ->name('report-cards.regenerate');
+
+            Route::get('/report-cards/{reportCard}/pdf', [
+                Admin\ReportCardController::class,
+                'download',
+            ])->name('report-cards.pdf');
+
+            Route::get('/attendance', [
+                AttendanceController::class,
+                'index',
+            ])->name('attendance.index');
+
+            Route::get('/attendance/create', [
+                AttendanceController::class,
+                'create',
+            ])->name('attendance.create');
+
+            Route::post('/attendance', [
+                AttendanceController::class,
+                'store',
+            ])->name('attendance.store');
+
+            Route::get('/attendance/students/{student}', [
+                AttendanceController::class,
+                'studentHistory',
+            ])->name('attendance.students.show');
+
+            Route::put('/attendance/{attendance}', [
+                AttendanceController::class,
+                'update',
+            ])->name('attendance.update');
+
+            Route::post('/attendance/{attendance}/justify', [
+                AttendanceController::class,
+                'reviewJustification',
+            ])->name('attendance.justify');
+
+            Route::post('/evaluations/{evaluation}/validate', [
+                Admin\EvaluationValidationController::class,
+                'store',
+            ])
+                ->middleware('2fa.fresh:validate_evaluation')
+                ->name('evaluations.validate');
+
+            Route::post('/evaluations/{evaluation}/return', [
+                Admin\EvaluationReturnController::class,
+                'store',
+            ])->name('evaluations.return');
+
+            Route::get('/classes', [
+                Admin\ClassRoomController::class,
+                'index',
+            ])->name('classes.index');
+
+            Route::post('/classes', [
+                Admin\ClassRoomController::class,
+                'store',
+            ])->name('classes.store');
+
+            Route::get('/subjects', [
+                Admin\SubjectController::class,
+                'index',
+            ])->name('subjects.index');
+
+            Route::post('/subjects', [
+                Admin\SubjectController::class,
+                'store',
+            ])->name('subjects.store');
+
+            Route::get('/teachers', [
+                Admin\TeacherController::class,
+                'index',
+            ])->name('teachers.index');
+
+            Route::get('/students', [
+                Admin\StudentController::class,
+                'index',
+            ])->name('students.index');
+
+            Route::get('/students/at-risk', [
+                Admin\StudentFollowUpController::class,
+                'index',
+            ])->name('students.at-risk');
+
+            Route::get('/students/{student}/follow-up', [
+                Admin\StudentFollowUpController::class,
+                'show',
+            ])->name('students.follow-up');
+
+            Route::post('/students/{student}/follow-up', [
+                Admin\StudentFollowUpController::class,
+                'store',
+            ])->name('students.follow-up.store');
+
+            Route::get('/guardians', [
+                Admin\GuardianController::class,
+                'index',
+            ])->name('guardians.index');
+
+            Route::get('/timetables', [
+                Admin\TimetableController::class,
+                'index',
+            ])->name('timetables.index');
+
+            /*
+            | Centre de documents (phase 6)
+            */
+
+            Route::get('/documents', [
+                Admin\DocumentCenterController::class,
+                'index',
+            ])->name('documents.index');
+
+            Route::get('/documents/statistics', [
+                Admin\DocumentCenterController::class,
+                'statistics',
+            ])->name('documents.statistics');
+
+            Route::get('/documents/students', [
+                Admin\DocumentCenterController::class,
+                'studentsList',
+            ])->name('documents.students');
+
+            Route::get('/documents/classes', [
+                Admin\DocumentCenterController::class,
+                'roomList',
+            ])->name('documents.classes');
+
+            Route::get('/documents/classes/{classRoom}', [
+                Admin\DocumentCenterController::class,
+                'classList',
+            ])->name('documents.class-list');
+
+            Route::get('/documents/students/{student}/certificate', [
+                Admin\DocumentCenterController::class,
+                'certificate',
+            ])->name('documents.certificate');
+
+            Route::get('/documents/students/{student}/attestation', [
+                Admin\DocumentCenterController::class,
+                'attestation',
+            ])->name('documents.attestation');
+
+            /*
+            | Préinscriptions (phase 7) — périmètre primaire
+            */
+
+            Route::get('/preinscriptions', [
+                Admin\PreinscriptionController::class,
+                'index',
+            ])->name('preinscriptions.index');
+
+            Route::post('/preinscriptions/{preinscription}/approve', [
+                Admin\PreinscriptionController::class,
+                'approve',
+            ])->name('preinscriptions.approve');
+
+            Route::post('/preinscriptions/{preinscription}/reject', [
+                Admin\PreinscriptionController::class,
+                'reject',
+            ])->name('preinscriptions.reject');
         });
 
     /*
@@ -1307,6 +1808,17 @@ Route::middleware([
                 ->name('timetable');
 
             /*
+            | Banque d'épreuves (consultation)
+            */
+
+            Route::middleware('role:teacher')->prefix('banque-epreuves')->name('exam-bank.')->group(function () {
+                Route::get('/', [ExamBankController::class, 'index'])->name('index');
+                Route::get('/{examResource}', [ExamBankController::class, 'show'])->name('show');
+                Route::get('/{examResource}/attachments/{attachment}/download', [ExamBankController::class, 'download'])->name('download');
+                Route::get('/{examResource}/attachments/{attachment}/answer-key', [ExamBankController::class, 'downloadAnswerKey'])->name('answer-key');
+            });
+
+            /*
             | Evaluations
             */
 
@@ -1319,6 +1831,16 @@ Route::middleware([
                 Admin\AcademicResultController::class,
                 'index',
             ])->name('academic.results.index');
+
+            Route::post('/academic/results/export-educmaster', [
+                Admin\AcademicResultController::class,
+                'exportEducMaster',
+            ])->name('academic.results.export-educmaster');
+
+            Route::get('/academic/results/prepare-educmaster', [
+                Admin\AcademicResultController::class,
+                'prepareEducMaster',
+            ])->name('academic.results.prepare-educmaster');
 
             Route::get('/report-cards', [
                 Admin\ReportCardController::class,
@@ -1485,6 +2007,16 @@ Route::middleware([
 
             Route::post('/messages', [MessageController::class, 'store'])
                 ->name('messages.store');
+
+            /*
+            | Notifications push (PWA)
+            */
+
+            Route::get('/notifications', [NotificationSettingsController::class, 'edit'])
+                ->name('notifications.edit');
+
+            Route::post('/notifications/test', [NotificationSettingsController::class, 'test'])
+                ->name('notifications.test');
         });
 
     /*

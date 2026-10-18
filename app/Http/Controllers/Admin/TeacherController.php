@@ -10,6 +10,7 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
@@ -17,10 +18,18 @@ use Inertia\Response;
 
 class TeacherController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $primaryClassIds = $request->user()->isDirector()
+            ? ClassRoom::primary()->pluck('id')
+            : null;
+
         return Inertia::render('Admin/Teachers/Index', [
             'teachers' => Teacher::with(['user:id,name,email,is_active', 'assignments.classRoom:id,name', 'assignments.subject:id,name'])
+                ->when($primaryClassIds !== null, fn ($q) => $q->whereHas(
+                    'assignments.classRoom',
+                    fn ($c) => $c->whereIn('classes.id', $primaryClassIds),
+                ))
                 ->latest()
                 ->get()
                 ->map(fn (Teacher $t) => [
@@ -34,7 +43,10 @@ class TeacherController extends Controller
                         'subject' => $a->subject->name,
                     ]),
                 ]),
-            'classes' => ClassRoom::orderBy('name')->get(['id', 'name']),
+            'classes' => ClassRoom::query()
+                ->when($primaryClassIds !== null, fn ($q) => $q->primary())
+                ->orderBy('name')
+                ->get(['id', 'name']),
             'subjects' => Subject::orderBy('name')->get(['id', 'name']),
         ]);
     }

@@ -25,6 +25,7 @@ import EmptyState from '@/Components/UI/EmptyState';
 import ExecutionBrief from '@/Components/Timetable/ExecutionBrief';
 import RecentIncidents from '@/Components/Attendance/RecentIncidents';
 import StudentGenderChart from '@/Components/Students/StudentGenderChart';
+import PilotagePanel from '@/Components/Dashboard/PilotagePanel';
 
 const statusTones = {
     draft: 'slate',
@@ -57,6 +58,7 @@ export default function Dashboard({
     recentSales = [],
     recentContributions = [],
     genderDistribution = null,
+    pilotage = null,
 }) {
     const { auth } = usePage().props;
 
@@ -297,6 +299,9 @@ export default function Dashboard({
 
             {/* Timetable execution brief */}
             <ExecutionBrief brief={timetableBrief} routePrefix={routePrefix} />
+
+            {/* Decision & pilotage */}
+            <PilotagePanel pilotage={pilotage} />
 
             {/* Latest delays & absences + recent evaluations */}
                 {finance ? (

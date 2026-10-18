@@ -3,6 +3,7 @@
 use App\Console\Commands\CheckSmsBalances;
 use App\Console\Commands\CleanupUserNotifications;
 use App\Console\Commands\DispatchScheduledAnnouncements;
+use App\Console\Commands\GenerateSchoolAlerts;
 use App\Console\Commands\NotifyValidatedEvaluations;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -25,7 +26,14 @@ Schedule::command(CheckSmsBalances::class)
     ->dailyAt('06:00')
     ->withoutOverlapping();
 
-// Notifications in-app : purge des éléments au-delà de la période de conservation.
+// Notifications in-app : purge des éléments au-delà de la période de rétention.
 Schedule::command(CleanupUserNotifications::class)
     ->dailyAt('03:00')
+    ->withoutOverlapping();
+
+// Alertes de pilotage : livrées chaque semaine (dimanche 16h00) au
+// fondateur/directeur afin de préparer l'allocution du lundi après le drapeau.
+Schedule::command(GenerateSchoolAlerts::class)
+    ->weeklyOn(0, '16:00')
+    ->timezone(config('app.timezone', 'UTC'))
     ->withoutOverlapping();

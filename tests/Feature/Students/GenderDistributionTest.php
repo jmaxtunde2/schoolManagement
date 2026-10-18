@@ -140,9 +140,9 @@ class GenderDistributionTest extends TestCase
                 ->where('genderDistribution.totals.students', 2));
 
         $this->actingAs(User::factory()->forSchool($this->school)->create([
-            'role' => Role::Director,
+            'role' => Role::Accountant,
         ]))
-            ->get(route('director.dashboard'))
+            ->get(route('accountant.dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Staff/ManagementDashboard')

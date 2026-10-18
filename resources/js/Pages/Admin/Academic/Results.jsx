@@ -10,8 +10,10 @@ import {
     GraduationCap,
     Medal,
     Printer,
+    ShieldCheck,
     TrendingUp,
     Users,
+    Download,
 } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -113,6 +115,23 @@ export default function AcademicResults({
                 class_id: filters.class_id,
                 period_id: filters.period_id,
                 student_id: studentId,
+            },
+            {
+                preserveScroll: true,
+            }
+        );
+    }
+
+    function exportEducMaster() {
+        if (!filters.class_id || !filters.period_id) {
+            return;
+        }
+
+        router.post(
+            route(`${routePrefix}.academic.results.export-educmaster`),
+            {
+                class_id: filters.class_id,
+                period_id: filters.period_id,
             },
             {
                 preserveScroll: true,
@@ -376,21 +395,61 @@ export default function AcademicResults({
                                 description={`${results.students.length} élève(s) · ${results.ranked_students} résultat(s) calculable(s)`}
                                 actions={
                                     canGenerate ? (
-                                        <Button
-                                            size="sm"
-                                            onClick={() => generate()}
-                                            disabled={
-                                                results.ranked_students === 0
-                                            }
-                                        >
-                                            <FileText className="h-4 w-4" />
-                                            <span className="hidden sm:inline">
-                                                Générer les bulletins
-                                            </span>
-                                            <span className="sm:hidden">
-                                                Bulletins
-                                            </span>
-                                        </Button>
+                                        <>
+                                            <Link
+                                                href={route(
+                                                    `${routePrefix}.academic.results.prepare-educmaster`,
+                                                    {
+                                                        class_id: filters.class_id,
+                                                        period_id: filters.period_id,
+                                                    }
+                                                )}
+                                            >
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="text-slate-600 hover:bg-slate-100"
+                                                >
+                                                    <ShieldCheck className="h-4 w-4" />
+                                                    <span className="hidden sm:inline">
+                                                        Préparer EducMaster
+                                                    </span>
+                                                    <span className="sm:hidden">
+                                                        Préparer
+                                                    </span>
+                                                </Button>
+                                            </Link>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => exportEducMaster()}
+                                                disabled={results.ranked_students === 0}
+                                                className="text-emerald-700 hover:bg-emerald-50"
+                                            >
+                                                <Download className="h-4 w-4" />
+                                                <span className="hidden sm:inline">
+                                                    Export EducMaster
+                                                </span>
+                                                <span className="sm:hidden">
+                                                    EducMaster
+                                                </span>
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                onClick={() => generate()}
+                                                disabled={
+                                                    results.ranked_students === 0
+                                                }
+                                            >
+                                                <FileText className="h-4 w-4" />
+                                                <span className="hidden sm:inline">
+                                                    Générer les bulletins
+                                                </span>
+                                                <span className="sm:hidden">
+                                                    Bulletins
+                                                </span>
+                                            </Button>
+                                        </>
                                     ) : null
                                 }
                             />

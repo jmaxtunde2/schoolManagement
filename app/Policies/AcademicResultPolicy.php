@@ -18,7 +18,12 @@ class AcademicResultPolicy
             return false;
         }
 
-        if ($user->isAdmin() || $user->isCenseur() || $user->isSecretary()) {
+        if ($user->isDirector()
+            && ! ClassRoom::query()->whereKey($classRoom->id)->primary()->exists()) {
+            return false;
+        }
+
+        if ($user->isAdmin() || $user->isCenseur() || $user->isDirector() || $user->isSecretary()) {
             return true;
         }
 

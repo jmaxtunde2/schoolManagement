@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Actions\Attendance\BuildRecentIncidents;
 use App\Actions\Finance\BuildFinanceSummary;
+use App\Actions\Pilotage\BuildPilotageDashboard;
 use App\Actions\Students\BuildGenderDistribution;
 use App\Actions\Timetable\BuildTimetableBrief;
 use App\Http\Controllers\Controller;
@@ -15,15 +16,17 @@ use App\Models\Sale;
 use App\Models\Student;
 use App\Models\StudentContribution;
 use App\Models\Teacher;
+use App\Services\Assistant\AssistantContext;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, BuildTimetableBrief $brief, BuildRecentIncidents $incidents, BuildGenderDistribution $genderDistribution, BuildFinanceSummary $financeSummary): Response
+    public function __invoke(Request $request, BuildTimetableBrief $brief, BuildRecentIncidents $incidents, BuildGenderDistribution $genderDistribution, BuildFinanceSummary $financeSummary, BuildPilotageDashboard $pilotage): Response
     {
         return Inertia::render('Admin/Dashboard', [
+            'pilotage' => $pilotage->handle(AssistantContext::for($request->user()), 'admin'),
             'stats' => [
                 'students' => Student::count(),
                 'teachers' => Teacher::count(),

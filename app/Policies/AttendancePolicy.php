@@ -14,6 +14,7 @@ class AttendancePolicy
     {
         return $user->isAdmin()
             || $user->isCenseur()
+            || $user->isDirector()
             || $user->isSurveillant()
             || $user->isSecretary()
             || $user->isTeacher();
@@ -25,7 +26,7 @@ class AttendancePolicy
             return false;
         }
 
-        if ($user->isAdmin() || $user->isCenseur() || $user->isSurveillant() || $user->isSecretary()) {
+        if ($user->isAdmin() || $user->isCenseur() || $user->isDirector() || $user->isSurveillant() || $user->isSecretary()) {
             return true;
         }
 
@@ -43,7 +44,7 @@ class AttendancePolicy
             return false;
         }
 
-        if ($user->isAdmin() || $user->isCenseur() || $user->isSurveillant() || $user->isSecretary()) {
+        if ($user->isAdmin() || $user->isCenseur() || $user->isDirector() || $user->isSurveillant() || $user->isSecretary()) {
             return true;
         }
 
@@ -64,7 +65,7 @@ class AttendancePolicy
     {
         return (int) $record->school_id === (int) $user->school_id
             && $record->status === AttendanceStatus::Absent
-            && ($user->isAdmin() || $user->isCenseur() || $user->isSurveillant() || $user->isSecretary());
+            && ($user->isAdmin() || $user->isCenseur() || $user->isDirector() || $user->isSurveillant() || $user->isSecretary());
     }
 
     public function submitJustification(User $user, AttendanceRecord $record): bool

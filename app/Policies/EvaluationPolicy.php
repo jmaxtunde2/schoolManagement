@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\EvaluationStatus;
+use App\Models\ClassRoom;
 use App\Models\Evaluation;
 use App\Models\User;
 
@@ -22,8 +23,13 @@ class EvaluationPolicy
             return false;
         }
 
+        if ($user->isDirector() && ! $this->inDirectorScope($evaluation)) {
+            return false;
+        }
+
         return $user->isAdmin()
             || $user->isCenseur()
+            || $user->isDirector()
             || $user->isSecretary()
             || $evaluation->teacher_id === $user->teacher?->id;
     }
@@ -84,8 +90,8 @@ class EvaluationPolicy
     /**
      * Validation définitive.
      *
-     * Seuls l'administrateur et le censeur peuvent
-     * valider une évaluation en attente.
+     * Seuls l'administrateur, le censeur et le directeur
+     * peuvent valider une évaluation en attente.
      */
     public function validateEvaluation(
         User $user,
@@ -101,7 +107,12 @@ class EvaluationPolicy
         if (
             ! $user->isAdmin()
             && ! $user->isCenseur()
+            && ! $user->isDirector()
         ) {
+            return false;
+        }
+
+        if ($user->isDirector() && ! $this->inDirectorScope($evaluation)) {
             return false;
         }
 
@@ -129,10 +140,26 @@ class EvaluationPolicy
         if (
             ! $user->isAdmin()
             && ! $user->isCenseur()
+            && ! $user->isDirector()
         ) {
             return false;
         }
 
+        if ($user->isDirector() && ! $this->inDirectorScope($evaluation)) {
+            return false;
+        }
+
         return $evaluation->status === EvaluationStatus::InProgress;
+    }
+
+    /**
+     * Le directeur primaire ne pilote que les évaluations du primaire.
+     */
+    private function inDirectorScope(Evaluation $evaluation): bool
+    {
+        return ClassRoom::query()
+            ->whereKey($evaluation->class_id)
+            ->primary()
+            ->exists();
     }
 }

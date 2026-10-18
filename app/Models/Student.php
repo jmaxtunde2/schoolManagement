@@ -91,6 +91,11 @@ class Student extends Model
         return $this->hasMany(AttendanceRecord::class);
     }
 
+    public function followUps(): HasMany
+    {
+        return $this->hasMany(StudentFollowUp::class);
+    }
+
     /** URL publique de la photo, ou null si l'élève n'en a pas. Jamais de Base64 en base. */
     public function getPhotoUrlAttribute(): ?string
     {

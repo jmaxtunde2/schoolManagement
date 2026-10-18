@@ -35,8 +35,15 @@ const empty = {
 };
 
 export default function ClassesIndex({ classes, genderDistribution }) {
-    const isCenseur = usePage().props.auth.user.role === 'censeur';
-    const routePrefix = isCenseur ? 'censeur' : 'admin';
+    const role = usePage().props.auth.user.role;
+    const isCenseur = role === 'censeur';
+    const isDirector = role === 'director';
+    const readOnly = isCenseur || isDirector;
+    const routePrefix = isDirector
+        ? 'director'
+        : isCenseur
+          ? 'censeur'
+          : 'admin';
     const [activeTab, setActiveTab] = useState('classes');
     const [editing, setEditing] = useState(null);
     const [showForm, setShowForm] = useState(false);
@@ -772,7 +779,8 @@ export default function ClassesIndex({ classes, genderDistribution }) {
                                 {
                                     key: 'actions',
                                     header: '',
-                                    render: (classroom) => (
+                                    render: (classroom) =>
+                                        readOnly ? null : (
                                         <div className="flex justify-end gap-1">
                                             <button
                                                 type="button"

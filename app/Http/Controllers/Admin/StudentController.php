@@ -18,7 +18,12 @@ class StudentController extends Controller
 {
     public function index(Request $request): Response
     {
+        $primaryClassIds = $request->user()->isDirector()
+            ? ClassRoom::primary()->pluck('id')
+            : null;
+
         $students = Student::with(['classRoom:id,name', 'guardians:id,name,phone,phone_secondary'])
+            ->when($primaryClassIds !== null, fn ($q) => $q->whereIn('class_id', $primaryClassIds))
             ->when($request->filled('class_id'), fn ($q) => $q->where('class_id', $request->integer('class_id')))
             ->when($request->filled('search'), function ($q) use ($request) {
                 $term = '%'.$request->string('search').'%';
@@ -31,7 +36,10 @@ class StudentController extends Controller
 
         return Inertia::render('Admin/Students/Index', [
             'students' => $students,
-            'classes' => ClassRoom::orderBy('name')->get(['id', 'name']),
+            'classes' => ClassRoom::query()
+                ->when($primaryClassIds !== null, fn ($q) => $q->primary())
+                ->orderBy('name')
+                ->get(['id', 'name']),
             'guardians' => ParentGuardian::orderBy('name')->get(['id', 'name', 'phone', 'phone_secondary']),
             'filters' => $request->only(['class_id', 'search']),
         ]);

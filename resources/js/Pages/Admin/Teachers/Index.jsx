@@ -43,7 +43,10 @@ export default function TeachersIndex({
     classes,
     subjects,
 }) {
-    const isCenseur = usePage().props.auth.user.role === 'censeur';
+    const role = usePage().props.auth.user.role;
+    const isCenseur = role === 'censeur';
+    const isDirector = role === 'director';
+    const readOnly = isCenseur || isDirector;
     const [editing, setEditing] = useState(null);
     const [showForm, setShowForm] = useState(false);
     const [toDelete, setToDelete] = useState(null);
@@ -287,7 +290,7 @@ export default function TeachersIndex({
                             </p>
                         </div>
 
-                        {!isCenseur && <Button
+                        {!readOnly && <Button
                             onClick={openCreate}
                             className="bg-white text-blue-700 shadow-sm hover:bg-blue-50"
                         >
@@ -345,7 +348,7 @@ export default function TeachersIndex({
                 <Card>
                     <Card.Header
                         title="Liste des enseignants"
-                        actions={!isCenseur && (
+                        actions={!readOnly && (
                             <Button
                                 onClick={openCreate}
                                 size="sm"
@@ -469,7 +472,7 @@ export default function TeachersIndex({
                                         icon={Search}
                                         title="Aucun résultat"
                                         description="Aucun enseignant ne correspond aux critères de recherche."
-                                        action={!isCenseur && (
+                                        action={!readOnly && (
                                             <Button
                                                 variant="secondary"
                                                 onClick={() => {

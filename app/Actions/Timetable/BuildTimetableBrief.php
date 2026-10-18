@@ -21,9 +21,10 @@ class BuildTimetableBrief
     /** Heure de bascule entre le matin et le soir. */
     public const EVENING_STARTS_AT = '12:00';
 
-    public function handle(?Carbon $now = null): array
+    public function handle(?Carbon $now = null, ?iterable $classIds = null): array
     {
         $now ??= now();
+        $classIds = $classIds === null ? null : collect($classIds)->map(fn ($id) => (int) $id)->all();
         $currentTime = $now->format('H:i');
         $dayOfWeek = (int) $now->isoWeekday(); // 1 = lundi … 6 = samedi, 7 = dimanche
         $isSchoolDay = array_key_exists($dayOfWeek, Timetable::days());
@@ -39,6 +40,7 @@ class BuildTimetableBrief
                 'teacher.user:id,name',
                 'room:id,name',
             ])
+                ->when($classIds !== null, fn ($query) => $query->whereIn('class_id', $classIds))
                 ->when($year, fn ($query) => $query->where('academic_year_id', $year->id))
                 ->where('day_of_week', $dayOfWeek)
                 ->orderBy('starts_at')

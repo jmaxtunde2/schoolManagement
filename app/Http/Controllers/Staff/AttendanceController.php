@@ -32,8 +32,10 @@ class AttendanceController extends Controller
         $user = $request->user();
         $schoolId = $user->school_id;
         $recordedBy = $user->isTeacher() ? $user->id : null;
+        $primaryClassIds = $user->isDirector() ? ClassRoom::primary()->pluck('id') : null;
         $query = AttendanceRecord::withoutGlobalScopes()
             ->where('school_id', $schoolId)
+            ->when($primaryClassIds !== null, fn ($records) => $records->whereIn('class_room_id', $primaryClassIds))
             ->with([
                 'student:id,school_id,class_id,first_name,last_name,matricule',
                 'classRoom:id,name',
@@ -91,6 +93,7 @@ class AttendanceController extends Controller
 
         $stats = AttendanceRecord::withoutGlobalScopes()
             ->where('school_id', $schoolId)
+            ->when($primaryClassIds !== null, fn ($records) => $records->whereIn('class_room_id', $primaryClassIds))
             ->when($recordedBy !== null, fn ($records) => $records->where('recorded_by', $recordedBy));
         $today = now()->toDateString();
         $monthStart = now()->startOfMonth()->toDateString();
@@ -361,18 +364,6 @@ class AttendanceController extends Controller
         ]);
     }
 
-    private function classesFor(User $user)
-    {
-        $classes = ClassRoom::query()->orderBy('name');
-        $classIds = $this->classIdsFor($user);
-
-        if ($classIds !== null) {
-            $classes->whereIn('id', $classIds);
-        }
-
-        return $classes->get();
-    }
-
     private function classIdsFor(User $user): ?Collection
     {
         if (! $user->isTeacher()) {
@@ -387,8 +378,23 @@ class AttendanceController extends Controller
         return match (true) {
             $request->user()->isAdmin() => 'admin',
             $request->user()->isCenseur() => 'censeur',
+            $request->user()->isDirector() => 'director',
             $request->user()->isSurveillant() => 'surveillant',
             default => 'teacher',
         };
+    }
+
+    private function classesFor(User $user)
+    {
+        $classes = ClassRoom::query()->orderBy('name');
+        $classIds = $this->classIdsFor($user);
+
+        if ($user->isDirector()) {
+            $classes->primary();
+        } elseif ($classIds !== null) {
+            $classes->whereIn('id', $classIds);
+        }
+
+        return $classes->get();
     }
 }

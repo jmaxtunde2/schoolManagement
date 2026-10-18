@@ -95,6 +95,58 @@ class PublicSchoolController extends Controller
             ->take(5)
             ->values();
 
+        $tuitionFees = collect($publicSite['tuition_fees'] ?? [])
+            ->filter(fn ($fee) => is_array($fee) && filled($fee['label'] ?? null))
+            ->map(fn ($fee) => [
+                'label' => Str::limit(strip_tags((string) $fee['label']), 100, ''),
+                'amount' => is_string($fee['amount'] ?? null) && filled($fee['amount'])
+                    ? Str::limit(strip_tags($fee['amount']), 40, '')
+                    : null,
+                'note' => is_string($fee['note'] ?? null) && filled($fee['note'])
+                    ? Str::limit(strip_tags($fee['note']), 200, '')
+                    : null,
+            ])
+            ->take(10)
+            ->values();
+
+        $curriculum = collect($publicSite['curriculum'] ?? [])
+            ->filter(fn ($item) => is_array($item) && filled($item['title'] ?? null))
+            ->map(fn ($item) => [
+                'title' => Str::limit(strip_tags((string) $item['title']), 100, ''),
+                'description' => is_string($item['description'] ?? null) && filled($item['description'])
+                    ? Str::limit(strip_tags($item['description']), 800, '')
+                    : null,
+            ])
+            ->take(8)
+            ->values();
+
+        $calendar = collect($publicSite['calendar'] ?? [])
+            ->filter(fn ($item) => is_array($item) && filled($item['label'] ?? null))
+            ->map(fn ($item) => [
+                'label' => Str::limit(strip_tags((string) $item['label']), 120, ''),
+                'date' => is_string($item['date'] ?? null) && filled($item['date'])
+                    ? Str::limit(strip_tags($item['date']), 120, '')
+                    : null,
+                'description' => is_string($item['description'] ?? null) && filled($item['description'])
+                    ? Str::limit(strip_tags($item['description']), 300, '')
+                    : null,
+            ])
+            ->take(20)
+            ->values();
+
+        $tuitionCurrency = is_string($publicSite['tuition_currency'] ?? null)
+            ? Str::limit(strip_tags($publicSite['tuition_currency']), 12, '')
+            : null;
+        $tuitionNote = is_string($publicSite['tuition_note'] ?? null)
+            ? Str::limit(strip_tags($publicSite['tuition_note']), 300, '')
+            : null;
+        $curriculumIntro = is_string($publicSite['curriculum_intro'] ?? null)
+            ? Str::limit(strip_tags($publicSite['curriculum_intro']), 1000, '')
+            : null;
+        $calendarIntro = is_string($publicSite['calendar_intro'] ?? null)
+            ? Str::limit(strip_tags($publicSite['calendar_intro']), 1000, '')
+            : null;
+
         $testimonials = SchoolPublicTestimonial::withoutGlobalScopes()
             ->where('school_id', $school->id)
             ->where('is_active', true)
@@ -209,6 +261,12 @@ class PublicSchoolController extends Controller
                 'vision' => is_string($publicSite['vision'] ?? null)
                     ? strip_tags($publicSite['vision'])
                     : null,
+                'results_headline' => is_string($publicSite['results_headline'] ?? null)
+                    ? Str::limit(strip_tags($publicSite['results_headline']), 160, '')
+                    : null,
+                'results_note' => is_string($publicSite['results_note'] ?? null)
+                    ? Str::limit(strip_tags($publicSite['results_note']), 160, '')
+                    : null,
                 'values' => $values,
                 'logo_url' => $logoUrl,
                 'hero_image_url' => $heroImageUrl,
@@ -235,8 +293,22 @@ class PublicSchoolController extends Controller
             'stats' => $stats,
             'testimonials' => $testimonials,
             'gallery' => $gallery,
+            'tuition' => [
+                'currency' => $tuitionCurrency,
+                'note' => $tuitionNote,
+                'fees' => $tuitionFees,
+            ],
+            'curriculum' => [
+                'intro' => $curriculumIntro,
+                'items' => $curriculum,
+            ],
+            'calendar' => [
+                'intro' => $calendarIntro,
+                'items' => $calendar,
+            ],
             'preview' => $preview,
             'preview_dashboard_url' => $previewDashboardUrl,
+            'preinscription_url' => route('public.school.preinscription', $school->slug),
         ]);
     }
 }

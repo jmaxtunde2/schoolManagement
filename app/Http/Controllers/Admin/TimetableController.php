@@ -29,6 +29,10 @@ class TimetableController extends Controller
     {
         Gate::authorize('viewAny', Timetable::class);
 
+        $primaryClassIds = $request->user()->isDirector()
+            ? ClassRoom::primary()->pluck('id')
+            : null;
+
         $academicYears = AcademicYear::orderByDesc('starts_on')->get(['id', 'name', 'is_current']);
 
         $selectedYearId = $request->integer('academic_year_id')
@@ -42,6 +46,7 @@ class TimetableController extends Controller
             'room:id,name',
         ])
             ->when($selectedYearId, fn ($q) => $q->where('academic_year_id', $selectedYearId))
+            ->when($primaryClassIds !== null, fn ($q) => $q->whereIn('class_id', $primaryClassIds))
             ->when($request->filled('class_id'), fn ($q) => $q->where('class_id', $request->integer('class_id')))
             ->orderBy('day_of_week')
             ->orderBy('starts_at')
@@ -60,7 +65,10 @@ class TimetableController extends Controller
                 'is_current' => $year->is_current,
             ])->values(),
             'selectedAcademicYearId' => $selectedYearId,
-            'classes' => ClassRoom::orderBy('name')->get(['id', 'name']),
+            'classes' => ClassRoom::query()
+                ->when($primaryClassIds !== null, fn ($q) => $q->primary())
+                ->orderBy('name')
+                ->get(['id', 'name']),
             'subjects' => Subject::orderBy('name')->get(['id', 'name']),
             'rooms' => Room::orderBy('building')->orderBy('name')->get(['id', 'name']),
             'teachers' => Teacher::with(['user:id,name,is_active', 'assignments'])->get()
@@ -79,9 +87,11 @@ class TimetableController extends Controller
                 ->values(),
             'filters' => $request->only(['academic_year_id', 'class_id']),
             'canManage' => $request->user()->can('create', Timetable::class),
-            'routePrefix' => $request->routeIs('censeur.*')
-                ? 'censeur'
-                : ($request->routeIs('surveillant.*') ? 'surveillant' : 'admin'),
+            'routePrefix' => $request->routeIs('director.*')
+                ? 'director'
+                : ($request->routeIs('censeur.*')
+                    ? 'censeur'
+                    : ($request->routeIs('surveillant.*') ? 'surveillant' : 'admin')),
         ]);
     }
 

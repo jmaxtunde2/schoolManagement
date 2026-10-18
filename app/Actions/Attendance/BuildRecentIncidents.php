@@ -14,13 +14,19 @@ use Illuminate\Support\Collection;
  */
 class BuildRecentIncidents
 {
-    public function handle(int $limit = 10): array
+    /**
+     * @param  iterable<int>|null  $classIds  Restreint le périmètre à ces classes.
+     */
+    public function handle(int $limit = 10, ?iterable $classIds = null): array
     {
+        $classIds = $classIds === null ? null : collect($classIds)->map(fn ($id) => (int) $id)->all();
+
         $records = AttendanceRecord::query()
             ->with([
                 'student:id,first_name,last_name,matricule',
                 'classRoom:id,name',
             ])
+            ->when($classIds !== null, fn ($query) => $query->whereIn('class_room_id', $classIds))
             ->whereIn('status', [
                 AttendanceStatus::Late->value,
                 AttendanceStatus::Absent->value,

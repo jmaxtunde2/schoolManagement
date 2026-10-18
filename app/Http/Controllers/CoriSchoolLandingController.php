@@ -21,6 +21,40 @@ class CoriSchoolLandingController extends Controller
             'plans' => PricingPlan::plans(),
             'smsNote' => PricingPlan::smsNote(),
             'faq' => PricingPlan::faq(),
+            'support' => [
+                'whatsapp' => config('cori.support.whatsapp'),
+                'whatsapp_message' => config('cori.support.whatsapp_message'),
+            ],
+        ]);
+    }
+
+    public function banqueEpreuves(): Response
+    {
+        return Inertia::render('Public/BanqueEpreuvesLanding', [
+            'support' => [
+                'whatsapp' => config('cori.support.whatsapp'),
+                'whatsapp_message' => config('cori.support.whatsapp_message'),
+            ],
+        ]);
+    }
+
+    public function jeuEducatif(): Response
+    {
+        return Inertia::render('Public/JeuEducatifLanding', [
+            'support' => [
+                'whatsapp' => config('cori.support.whatsapp'),
+                'whatsapp_message' => config('cori.support.whatsapp_message'),
+            ],
+        ]);
+    }
+
+    public function competitions(): Response
+    {
+        return Inertia::render('Public/CompetitionsLanding', [
+            'support' => [
+                'whatsapp' => config('cori.support.whatsapp'),
+                'whatsapp_message' => config('cori.support.whatsapp_message'),
+            ],
         ]);
     }
 }
