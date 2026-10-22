@@ -21,18 +21,25 @@ class SchoolAnalyticsService
      */
     public function studentCount(): array
     {
-        $scope = fn () => Student::query()->when(
+        $query = Student::query()->when(
             $this->context->allowedClassIds !== null,
             fn ($query) => $query->whereIn('class_id', $this->context->allowedClassIds),
         );
 
-        $active = $scope()->where('is_active', true);
+        $counts = (clone $query)
+            ->selectRaw('
+                COUNT(*) as total,
+                SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN is_active = 1 AND gender = "F" THEN 1 ELSE 0 END) as female,
+                SUM(CASE WHEN is_active = 1 AND gender = "M" THEN 1 ELSE 0 END) as male
+            ')
+            ->first();
 
         return [
-            'active' => (clone $active)->count(),
-            'total' => $scope()->count(),
-            'female' => (clone $active)->where('gender', 'F')->count(),
-            'male' => (clone $active)->where('gender', 'M')->count(),
+            'active' => (int) ($counts->active ?? 0),
+            'total' => (int) ($counts->total ?? 0),
+            'female' => (int) ($counts->female ?? 0),
+            'male' => (int) ($counts->male ?? 0),
         ];
     }
 

@@ -54,6 +54,11 @@ const justificationLabels = {
     rejected: 'Refusée',
 };
 
+const validationLabels = {
+    pending: 'À valider',
+    validated: 'Validé',
+};
+
 export default function AttendanceIndex({
     records,
     classes,
@@ -62,9 +67,11 @@ export default function AttendanceIndex({
     routePrefix,
     evolution,
     initialTab = 'liste',
+    canValidate = false,
 }) {
     const [editing, setEditing] = useState(null);
     const [activeTab, setActiveTab] = useState(initialTab);
+    const [selected, setSelected] = useState([]);
     const [chartFilters, setChartFilters] = useState({
         granularity: evolution?.granularity ?? 'day',
         start: evolution?.granularity === 'custom' ? evolution.start : '',
@@ -168,6 +175,39 @@ export default function AttendanceIndex({
         );
     }
 
+    const selectableIds = records.data
+        .filter((record) => record.can_validate)
+        .map((record) => record.id);
+
+    function toggleSelected(id) {
+        setSelected((current) =>
+            current.includes(id)
+                ? current.filter((itemId) => itemId !== id)
+                : [...current, id]
+        );
+    }
+
+    function toggleSelectAll() {
+        setSelected((current) =>
+            current.length === selectableIds.length ? [] : selectableIds
+        );
+    }
+
+    function validateRecords(recordIds) {
+        if (recordIds.length === 0) {
+            return;
+        }
+
+        router.post(
+            route(`${routePrefix}.attendance.validate`),
+            { record_ids: recordIds },
+            {
+                preserveScroll: true,
+                onFinish: () => setSelected([]),
+            }
+        );
+    }
+
     const cards = [
         {
             label: "Assiduité (ce mois)",
@@ -197,6 +237,17 @@ export default function AttendanceIndex({
             cardClass:
                 'bg-gradient-to-br from-blue-500 to-indigo-600',
         },
+        ...(canValidate
+            ? [
+                  {
+                      label: 'En attente de validation',
+                      value: stats.pending_validation,
+                      icon: ClipboardCheck,
+                      cardClass:
+                          'bg-gradient-to-br from-slate-500 to-slate-700',
+                  },
+              ]
+            : []),
     ];
 
     return (
@@ -247,7 +298,11 @@ export default function AttendanceIndex({
                 {/* =====================================================
                     KPI
                 ====================================================== */}
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <div
+                    className={`grid grid-cols-2 gap-4 ${
+                        canValidate ? 'lg:grid-cols-5' : 'lg:grid-cols-4'
+                    }`}
+                >
                     {cards.map((card) => {
                         const Icon = card.icon;
 
@@ -425,7 +480,6 @@ export default function AttendanceIndex({
                                 </div>
 
                                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-
                                     <Input
                                         name="student"
                                         defaultValue={
@@ -525,6 +579,27 @@ export default function AttendanceIndex({
                                             Non justifiée
                                         </option>
                                     </Select>
+
+                                    {canValidate && (
+                                        <Select
+                                            name="validation"
+                                            defaultValue={
+                                                filters.validation ?? ''
+                                            }
+                                        >
+                                            <option value="">
+                                                Toutes validations
+                                            </option>
+
+                                            <option value="pending">
+                                                En attente de validation
+                                            </option>
+
+                                            <option value="validated">
+                                                Validé
+                                            </option>
+                                        </Select>
+                                    )}
                                 </div>
 
                                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -538,6 +613,30 @@ export default function AttendanceIndex({
                                 </div>
                             </form>
                         </div>
+
+                        {/* =================================================
+                            BULK VALIDATION BAR
+                        ================================================== */}
+                        {canValidate && records.data.length > 0 && (
+                            <div className="flex flex-col gap-3 border-b border-slate-100 bg-emerald-50/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                                <p className="text-xs font-semibold text-emerald-800">
+                                    {selected.length === 0
+                                        ? 'Sélectionnez les relevés à valider — les parents des élèves absents, en retard ou en permission seront notifiés.'
+                                        : `${selected.length} relevé(s) sélectionné(s)`}
+                                </p>
+
+                                <Button
+                                    type="button"
+                                    disabled={selected.length === 0}
+                                    onClick={() =>
+                                        validateRecords(selected)
+                                    }
+                                >
+                                    <ShieldCheck className="h-4 w-4" />
+                                    Valider la sélection
+                                </Button>
+                            </div>
+                        )}
 
                         {/* =================================================
                             EMPTY STATE
@@ -576,6 +675,25 @@ export default function AttendanceIndex({
                                     <table className="min-w-full text-sm">
                                         <thead className="border-b border-slate-100 bg-slate-50/50">
                                             <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                                {canValidate && (
+                                                    <th className="w-10 px-4 py-4">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={
+                                                                selectableIds.length >
+                                                                    0 &&
+                                                                selected.length ===
+                                                                    selectableIds.length
+                                                            }
+                                                            onChange={
+                                                                toggleSelectAll
+                                                            }
+                                                            className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                                            aria-label="Sélectionner tous les relevés en attente"
+                                                        />
+                                                    </th>
+                                                )}
+
                                                 <th className="px-6 py-4">
                                                     Date
                                                 </th>
@@ -594,6 +712,10 @@ export default function AttendanceIndex({
 
                                                 <th className="px-4 py-4">
                                                     Motif / retard
+                                                </th>
+
+                                                <th className="px-4 py-4">
+                                                    Validation
                                                 </th>
 
                                                 <th className="px-4 py-4">
@@ -624,6 +746,27 @@ export default function AttendanceIndex({
                                                         key={record.id}
                                                         className="group transition-colors hover:bg-slate-50/70"
                                                     >
+                                                        {canValidate && (
+                                                            <td className="px-4 py-4">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selected.includes(
+                                                                        record.id
+                                                                    )}
+                                                                    onChange={() =>
+                                                                        toggleSelected(
+                                                                            record.id
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        !record.can_validate
+                                                                    }
+                                                                    className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-40"
+                                                                    aria-label={`Sélectionner le relevé de ${record.student.name}`}
+                                                                />
+                                                            </td>
+                                                        )}
+
                                                         <td className="whitespace-nowrap px-6 py-4">
                                                             <div className="flex items-center gap-2">
                                                                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
@@ -720,6 +863,34 @@ export default function AttendanceIndex({
                                                         </td>
 
                                                         <td className="px-4 py-4">
+                                                            <div>
+                                                                <Badge
+                                                                    tone={
+                                                                        record.validation_status ===
+                                                                        'validated'
+                                                                            ? 'green'
+                                                                            : 'amber'
+                                                                    }
+                                                                >
+                                                                    {validationLabels[
+                                                                        record
+                                                                            .validation_status
+                                                                    ] ??
+                                                                        '—'}
+                                                                </Badge>
+
+                                                                {record.validator_name && (
+                                                                    <p className="mt-1 max-w-48 truncate text-xs text-slate-500">
+                                                                        par{' '}
+                                                                        {
+                                                                            record.validator_name
+                                                                        }
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </td>
+
+                                                        <td className="px-4 py-4">
                                                             {latestJustification ? (
                                                                 <div>
                                                                     <Badge
@@ -784,8 +955,23 @@ export default function AttendanceIndex({
                                                         </td>
 
                                                         <td className="px-6 py-4">
-                                                            <div className="flex justify-end gap-2">
-                                                                {record.can_update && (
+                                                                <div className="flex justify-end gap-2">
+                                                                    {record.can_validate && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                validateRecords([
+                                                                                    record.id,
+                                                                                ])
+                                                                            }
+                                                                            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                                                                        >
+                                                                            <ShieldCheck className="h-3.5 w-3.5" />
+                                                                            Valider
+                                                                        </button>
+                                                                    )}
+
+                                                                    {record.can_update && (
                                                                     <button
                                                                         type="button"
                                                                         onClick={() =>
@@ -980,7 +1166,21 @@ export default function AttendanceIndex({
                                                 )}
 
                                                 <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4">
-                                                    <div>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <Badge
+                                                            tone={
+                                                                record.validation_status ===
+                                                                'validated'
+                                                                    ? 'green'
+                                                                    : 'amber'
+                                                            }
+                                                        >
+                                                            {validationLabels[
+                                                                record
+                                                                    .validation_status
+                                                            ] ?? '—'}
+                                                        </Badge>
+
                                                         {latestJustification ? (
                                                             <Badge
                                                                 tone={
@@ -1009,6 +1209,21 @@ export default function AttendanceIndex({
                                                     </div>
 
                                                     <div className="flex flex-wrap gap-2">
+                                                        {record.can_validate && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    validateRecords([
+                                                                        record.id,
+                                                                    ])
+                                                                }
+                                                                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+                                                            >
+                                                                <ShieldCheck className="h-3.5 w-3.5" />
+                                                                Valider
+                                                            </button>
+                                                        )}
+
                                                         {record.can_update && (
                                                             <button
                                                                 type="button"

@@ -758,3 +758,6 @@ L'objectif n'est pas simplement d'ajouter des fonctionnalités.
 L'objectif est de faire de CoriSchool un véritable :
 
 ### **Outil de gestion et de pilotage de l'établissement scolaire.**
+
+
+

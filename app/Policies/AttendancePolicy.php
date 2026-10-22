@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\AttendanceJustificationStatus;
 use App\Enums\AttendanceStatus;
+use App\Enums\AttendanceValidationStatus;
 use App\Models\AttendanceRecord;
 use App\Models\ClassRoom;
 use App\Models\User;
@@ -59,6 +60,13 @@ class AttendancePolicy
         }
 
         return $user->isAdmin() || $user->isSurveillant();
+    }
+
+    public function validate(User $user, AttendanceRecord $record): bool
+    {
+        return (int) $record->school_id === (int) $user->school_id
+            && $record->validation_status === AttendanceValidationStatus::Pending
+            && ($user->isAdmin() || $user->isCenseur() || $user->isDirector() || $user->isSurveillant());
     }
 
     public function justify(User $user, AttendanceRecord $record): bool

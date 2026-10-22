@@ -3,6 +3,7 @@
 namespace App\Actions\Attendance;
 
 use App\Enums\AttendanceStatus;
+use App\Enums\AttendanceValidationStatus;
 use App\Models\AttendanceRecord;
 use App\Models\ClassRoom;
 use App\Models\School;
@@ -47,6 +48,16 @@ class RecordDailyAttendance
                     'recorded_by' => $recorderId,
                     'recorded_at' => now(),
                 ]);
+
+                $contentChanged = ! $existed || $before !== $record->only([
+                    'class_room_id', 'status', 'delay_minutes', 'reason', 'note',
+                ]);
+
+                if ($contentChanged) {
+                    $record->validation_status = AttendanceValidationStatus::Pending;
+                    $record->validated_at = null;
+                    $record->validated_by = null;
+                }
 
                 if ($status === AttendanceStatus::Permission) {
                     $record->justified_at = now();

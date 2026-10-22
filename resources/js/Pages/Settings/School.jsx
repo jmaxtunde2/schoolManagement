@@ -44,6 +44,8 @@ export default function SchoolSettings({
     settings,
     defaults,
     schoolTypes,
+    departments,
+    foundedYearOptions,
 }) {
     const [tab, setTab] = useState('general');
 
@@ -63,6 +65,7 @@ export default function SchoolSettings({
         founded_year: settings.founded_year ?? '',
         address: settings.address ?? '',
         city: settings.city ?? '',
+        department: settings.department ?? '',
         country: settings.country ?? '',
         phone: settings.phone ?? '',
         phone_secondary:
@@ -202,6 +205,8 @@ export default function SchoolSettings({
                                         schoolTypes={
                                             schoolTypes
                                         }
+                                        departments={departments}
+                                        foundedYearOptions={foundedYearOptions}
                                     />
                                 )}
 
@@ -423,6 +428,8 @@ function GeneralTab({
     setData,
     errors,
     schoolTypes,
+    departments,
+    foundedYearOptions,
 }) {
     return (
         <div className="space-y-6">
@@ -543,26 +550,53 @@ function GeneralTab({
                 description="Informations complémentaires sur l'établissement."
                 tone="emerald"
             >
-                <Field
-                    label="Année de création"
-                    error={errors.founded_year}
-                    hint="Année de fondation de l'établissement."
-                >
-                    <Input
-                        type="number"
-                        min="1800"
-                        max="2100"
-                        className="max-w-[180px]"
-                        value={data.founded_year}
-                        onChange={(e) =>
-                            setData(
-                                'founded_year',
-                                e.target.value
-                            )
-                        }
-                        placeholder="Ex : 1998"
-                    />
-                </Field>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Field
+                        label="Année de création"
+                        error={errors.founded_year}
+                        hint="Année de fondation de l'établissement."
+                    >
+                        <Select
+                            value={data.founded_year}
+                            onChange={(e) =>
+                                setData(
+                                    'founded_year',
+                                    e.target.value
+                                )
+                            }
+                        >
+                            <option value="">— Sélectionner —</option>
+                            {foundedYearOptions.map((year) => (
+                                <option key={year} value={year}>
+                                    {year} {year === new Date().getFullYear() ? '(année en cours)' : ''}
+                                </option>
+                            ))}
+                        </Select>
+                    </Field>
+
+                    <Field
+                        label="Département (Bénin)"
+                        error={errors.department}
+                        hint="Département où se situe l'établissement."
+                    >
+                        <Select
+                            value={data.department}
+                            onChange={(e) =>
+                                setData(
+                                    'department',
+                                    e.target.value
+                                )
+                            }
+                        >
+                            <option value="">— Sélectionner —</option>
+                            {departments.map((dept) => (
+                                <option key={dept} value={dept}>
+                                    {dept}
+                                </option>
+                            ))}
+                        </Select>
+                    </Field>
+                </div>
             </Section>
         </div>
     );

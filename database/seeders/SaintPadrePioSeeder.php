@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\AttendanceJustificationStatus;
 use App\Enums\AttendanceStatus;
+use App\Enums\AttendanceValidationStatus;
 use App\Enums\ExpenseCategory;
 use App\Enums\ExpenseStatus;
 use App\Enums\NotificationStatus;
@@ -836,6 +837,9 @@ class SaintPadrePioSeeder extends Seeder
                     'recorded_at' => $at,
                     'justified_at' => $isPermission ? $at : null,
                     'justified_by' => $isPermission ? $recorder->id : null,
+                    'validation_status' => AttendanceValidationStatus::Validated,
+                    'validated_at' => $at,
+                    'validated_by' => $recorder->id,
                 ]);
 
                 $record->save();

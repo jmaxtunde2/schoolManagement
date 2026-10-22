@@ -182,6 +182,16 @@ export default function AttendanceCreate({
                             <p className="mt-1 text-sm text-slate-500">
                                 Enregistrez la présence, les absences et les retards des élèves.
                             </p>
+
+                            <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-700">
+                                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                <span>
+                                    L’assiduité enregistrée doit être validée par le
+                                    surveillant, le censeur, le directeur ou
+                                    l’administrateur. Les parents ne sont notifiés
+                                    qu’après validation.
+                                </span>
+                            </p>
                         </div>
                     </div>
 

@@ -56,6 +56,197 @@ class PublicSchoolController extends Controller
         return $this->renderSchool($request, $school);
     }
 
+    public function index(Request $request): Response
+    {
+        $locale = $request->get('locale', 'fr');
+        $request->session()->put('locale', $locale);
+
+        $query = School::query()
+            ->where('is_active', true)
+            ->with(['settings'])
+            ->withCount(['students' => fn ($q) => $q->where('is_active', true)])
+            ->withCount(['teachers' => fn ($q) => $q->whereHas('user', fn ($uq) => $uq->where('is_active', true))])
+            ->withCount('classRooms');
+
+        // Search by name
+        if ($request->filled('search')) {
+            $search = $request->string('search')->toString();
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('slug', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by school type
+        if ($request->filled('school_type')) {
+            $query->whereHas('settings', fn ($q) => $q->where('school_type', $request->string('school_type')->toString()));
+        }
+
+        // Filter by country
+        if ($request->filled('country')) {
+            $query->whereHas('settings', fn ($q) => $q->where('country', $request->string('country')->toString()));
+        }
+
+        // Filter by city
+        if ($request->filled('city')) {
+            $query->whereHas('settings', fn ($q) => $q->where('city', $request->string('city')->toString()));
+        }
+
+        // Filter by minimum students
+        if ($request->filled('min_students')) {
+            $query->having('students_count', '>=', (int) $request->string('min_students')->toString());
+        }
+
+        // Filter by bilingual (FR/EN)
+        if ($request->boolean('bilingual')) {
+            $query->whereHas('settings', fn ($q) => $q->whereJsonContains('languages', 'fr')->whereJsonContains('languages', 'en'));
+        }
+
+        // Sort
+        $sort = $request->string('sort')->toString();
+        $direction = $request->string('direction')->toString() === 'desc' ? 'desc' : 'asc';
+        switch ($sort) {
+            case 'name':
+                $query->orderBy('name', $direction);
+                break;
+            case 'students':
+                $query->orderBy('students_count', $direction);
+                break;
+            case 'teachers':
+                $query->orderBy('teachers_count', $direction);
+                break;
+            case 'classes':
+                $query->orderBy('class_rooms_count', $direction);
+                break;
+            case 'newest':
+                $query->latest('id');
+                break;
+            default:
+                $query->orderBy('name', 'asc');
+        }
+
+        $perPage = min(max((int) $request->integer('per_page', 12), 6), 48);
+        $schools = $query->paginate($perPage)->withQueryString();
+
+        // Filter by quartier
+        if ($request->filled('quartier')) {
+            $query->whereHas('settings', fn ($q) => $q->where('quartier', $request->string('quartier')->toString()));
+        }
+
+        // Filter by program
+        if ($request->filled('program')) {
+            $query->whereHas('settings', fn ($q) => $q->whereJsonContains('programs', $request->string('program')->toString()));
+        }
+
+        // Get filter options
+        $schoolTypes = SchoolSetting::SCHOOL_TYPES;
+        $countries = SchoolSetting::query()
+            ->whereNotNull('country')
+            ->where('country', '!=', '')
+            ->distinct()
+            ->pluck('country')
+            ->sort()
+            ->values();
+        $cities = SchoolSetting::query()
+            ->whereNotNull('city')
+            ->where('city', '!=', '')
+            ->distinct()
+            ->pluck('city')
+            ->sort()
+            ->values();
+        $quartiers = SchoolSetting::query()
+            ->whereNotNull('quartier')
+            ->where('quartier', '!=', '')
+            ->distinct()
+            ->pluck('quartier')
+            ->sort()
+            ->values();
+        $programs = SchoolSetting::query()
+            ->whereNotNull('programs')
+            ->where('programs', '!=', '[]')
+            ->pluck('programs')
+            ->flatten()
+            ->unique()
+            ->sort()
+            ->values();
+
+        // Transform schools for the view
+        $schoolsData = $schools->getCollection()->map(function ($school) {
+            $setting = $school->settings;
+            $publicSite = data_get($setting?->options, 'public_site', []);
+            $heroImagePath = $publicSite['hero_image_path'] ?? null;
+            $heroImageUrl = $heroImagePath
+                ? Storage::disk('public')->url($heroImagePath)
+                : null;
+            $languages = $setting?->languages ?? [];
+            $programs = $setting?->programs ?? [];
+
+            return [
+                'id' => $school->id,
+                'name' => $setting?->school_name ?: $school->name,
+                'slug' => $school->slug,
+                'short_name' => $setting?->short_name,
+                'slogan' => $setting?->slogan,
+                'description' => $setting?->description,
+                'school_type' => $setting?->school_type,
+                'school_type_label' => $setting?->school_type ? (SchoolSetting::SCHOOL_TYPES[$setting->school_type] ?? $setting->school_type) : null,
+                'city' => $setting?->city,
+                'quartier' => $setting?->quartier,
+                'country' => $setting?->country,
+                'address' => $setting?->address,
+                'phone' => $setting?->phone,
+                'email' => $setting?->email,
+                'website' => $setting?->website,
+                'logo_url' => $setting?->logo_url,
+                'hero_image_url' => $heroImageUrl,
+                'primary_color' => $setting?->primary_color ?: '#059669',
+                'secondary_color' => $setting?->secondary_color ?: '#2563EB',
+                'accent_color' => $setting?->accent_color ?: '#D97706',
+                'founded_year' => $setting?->founded_year,
+                'students_count' => $school->students_count,
+                'teachers_count' => $school->teachers_count,
+                'classes_count' => $school->class_rooms_count,
+                'public_url' => $school->publicUrl(),
+                'languages' => $languages,
+                'programs' => $programs,
+                'is_bilingual' => in_array('fr', $languages) && in_array('en', $languages),
+            ];
+        });
+
+        return Inertia::render('Public/SchoolListing', [
+            'schools' => [
+                'data' => $schoolsData,
+                'current_page' => $schools->currentPage(),
+                'last_page' => $schools->lastPage(),
+                'per_page' => $schools->perPage(),
+                'total' => $schools->total(),
+                'from' => $schools->firstItem(),
+                'to' => $schools->lastItem(),
+            ],
+            'filters' => [
+                'search' => $request->string('search')->toString(),
+                'school_type' => $request->string('school_type')->toString(),
+                'country' => $request->string('country')->toString(),
+                'city' => $request->string('city')->toString(),
+                'quartier' => $request->string('quartier')->toString(),
+                'program' => $request->string('program')->toString(),
+                'min_students' => $request->string('min_students')->toString(),
+                'bilingual' => $request->boolean('bilingual'),
+                'sort' => $sort,
+                'direction' => $direction,
+                'per_page' => $perPage,
+            ],
+            'options' => [
+                'school_types' => $schoolTypes,
+                'countries' => $countries,
+                'cities' => $cities,
+                'quartiers' => $quartiers,
+                'programs' => $programs,
+            ],
+            'locale' => $locale,
+        ]);
+    }
+
     private function renderSchool(Request $request, ?School $school): Response|RedirectResponse
     {
         if (! $school) {

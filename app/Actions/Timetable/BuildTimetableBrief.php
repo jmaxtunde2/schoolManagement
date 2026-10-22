@@ -3,6 +3,8 @@
 namespace App\Actions\Timetable;
 
 use App\Models\AcademicYear;
+use App\Models\ClassRoom;
+use App\Models\SchoolSetting;
 use App\Models\Timetable;
 use Illuminate\Support\Carbon;
 
@@ -14,16 +16,18 @@ use Illuminate\Support\Carbon;
  * déjà passés, en cours d'exécution et à venir.
  *
  * Le découpage matin / soir se fait sur l'heure de début (12:00). Le statut de
- * chaque cours est calculé à partir de l'heure courante de l'application.
+ * chaque cours est calculé à partir de l'heure courante dans le fuseau horaire
+ * de l'établissement.
  */
 class BuildTimetableBrief
 {
     /** Heure de bascule entre le matin et le soir. */
     public const EVENING_STARTS_AT = '12:00';
 
-    public function handle(?Carbon $now = null, ?iterable $classIds = null): array
+    public function handle(?Carbon $now = null, ?iterable $classIds = null, ?string $timezone = null): array
     {
-        $now ??= now();
+        $timezone ??= $this->resolveTimezone($classIds);
+        $now ??= now($timezone);
         $classIds = $classIds === null ? null : collect($classIds)->map(fn ($id) => (int) $id)->all();
         $currentTime = $now->format('H:i');
         $dayOfWeek = (int) $now->isoWeekday(); // 1 = lundi … 6 = samedi, 7 = dimanche
@@ -60,13 +64,30 @@ class BuildTimetableBrief
             'day_label' => Timetable::days()[$dayOfWeek] ?? 'Dimanche',
             'is_school_day' => $isSchoolDay,
             'current_time' => $currentTime,
-            'timezone' => config('app.timezone'),
+            'timezone' => $timezone,
             'academic_year' => $year?->only(['id', 'name']),
             'total' => $slots->count(),
             'in_progress_count' => $slots->where('status', 'current')->count(),
             'morning' => $this->group('Matin', $morning),
             'evening' => $this->group('Soir', $evening),
         ];
+    }
+
+    private function resolveTimezone(?iterable $classIds): string
+    {
+        if ($classIds === null) {
+            return config('app.timezone');
+        }
+
+        $schoolId = ClassRoom::whereIn('id', $classIds)
+            ->value('school_id');
+
+        if (! $schoolId) {
+            return config('app.timezone');
+        }
+
+        return SchoolSetting::where('school_id', $schoolId)
+            ->value('timezone') ?? config('app.timezone');
     }
 
     /**

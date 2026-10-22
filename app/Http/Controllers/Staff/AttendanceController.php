@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Staff;
 
 use App\Actions\Attendance\BuildAttendanceEvolution;
 use App\Actions\Attendance\RecordDailyAttendance;
+use App\Actions\Attendance\ValidateAttendanceRecords;
 use App\Enums\AttendanceJustificationStatus;
 use App\Enums\AttendanceStatus;
+use App\Enums\AttendanceValidationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Attendance\StoreAttendanceRequest;
 use App\Models\AcademicPeriod;
@@ -40,6 +42,7 @@ class AttendanceController extends Controller
                 'student:id,school_id,class_id,first_name,last_name,matricule',
                 'classRoom:id,name',
                 'recorder:id,name',
+                'validator:id,name',
                 'period:id,name,is_closed',
                 'justifications.parent:id,name',
                 'justifications.reviewer:id,name',
@@ -55,6 +58,7 @@ class AttendanceController extends Controller
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
             'status' => ['nullable', Rule::enum(AttendanceStatus::class)],
+            'validation' => ['nullable', Rule::in(['pending', 'validated'])],
             'justification' => ['nullable', Rule::in(['pending', 'approved', 'rejected', 'unjustified'])],
             'granularity' => ['nullable', Rule::in(BuildAttendanceEvolution::GRANULARITIES)],
             'start' => ['nullable', 'date'],
@@ -80,6 +84,9 @@ class AttendanceController extends Controller
         }
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
+        }
+        if (! empty($filters['validation'])) {
+            $query->where('validation_status', $filters['validation']);
         }
         if (($filters['justification'] ?? null) === 'unjustified') {
             $query->where('status', AttendanceStatus::Absent->value)
@@ -109,6 +116,8 @@ class AttendanceController extends Controller
                 'id' => $record->id,
                 'attendance_date' => $record->attendance_date->format('Y-m-d'),
                 'status' => $record->status->value,
+                'validation_status' => $record->validation_status->value,
+                'validated_at' => $record->validated_at?->toDateTimeString(),
                 'delay_minutes' => $record->delay_minutes,
                 'reason' => $record->reason,
                 'note' => $record->note,
@@ -122,6 +131,7 @@ class AttendanceController extends Controller
                 'period_name' => $record->period?->name,
                 'recorder_name' => $record->recorder?->name,
                 'recorded_at' => $record->recorded_at_label,
+                'validator_name' => $record->validator?->name,
                 'justifications' => $record->justifications->map(fn (AttendanceJustification $justification) => [
                     'id' => $justification->id,
                     'parent_name' => $justification->parent?->name,
@@ -131,6 +141,7 @@ class AttendanceController extends Controller
                 ])->values(),
                 'can_update' => Gate::allows('update', $record),
                 'can_justify' => Gate::allows('justify', $record),
+                'can_validate' => Gate::allows('validate', $record),
             ]);
 
         return Inertia::render('Staff/Attendance/Index', [
@@ -141,6 +152,7 @@ class AttendanceController extends Controller
             ]),
             'filters' => $filters,
             'routePrefix' => $routePrefix,
+            'canValidate' => $user->isAdmin() || $user->isCenseur() || $user->isDirector() || $user->isSurveillant(),
             'initialTab' => $filters['tab'] ?? 'liste',
             'evolution' => $evolution->handle(
                 $filters['granularity'] ?? 'day',
@@ -155,6 +167,7 @@ class AttendanceController extends Controller
                 'absent_today' => (clone $stats)->whereDate('attendance_date', $today)->where('status', AttendanceStatus::Absent->value)->count(),
                 'late_today' => (clone $stats)->whereDate('attendance_date', $today)->where('status', AttendanceStatus::Late->value)->count(),
                 'unjustified' => (clone $stats)->where('status', AttendanceStatus::Absent->value)->whereNull('justified_at')->whereDoesntHave('justifications', fn ($justifications) => $justifications->where('status', AttendanceJustificationStatus::Approved->value))->count(),
+                'pending_validation' => (clone $stats)->where('validation_status', AttendanceValidationStatus::Pending->value)->count(),
             ],
         ]);
     }
@@ -236,7 +249,36 @@ class AttendanceController extends Controller
 
         return redirect()
             ->route($this->routePrefix($request).'.attendance.index')
-            ->with('success', 'L’assiduité de la classe a été enregistrée.');
+            ->with('success', 'L’assiduité de la classe a été enregistrée. Elle est en attente de validation par le surveillant, le censeur, le directeur ou l’administrateur.');
+    }
+
+    public function validateRecords(Request $request, ValidateAttendanceRecords $action): RedirectResponse
+    {
+        $data = $request->validate([
+            'record_ids' => ['required', 'array', 'min:1'],
+            'record_ids.*' => ['integer', 'exists:attendance_records,id'],
+        ]);
+
+        $records = AttendanceRecord::withoutGlobalScopes()
+            ->where('school_id', $request->user()->school_id)
+            ->whereIn('id', $data['record_ids'])
+            ->get();
+
+        abort_if($records->isEmpty(), 404);
+
+        $pending = collect();
+        foreach ($records as $record) {
+            if ($record->validation_status === AttendanceValidationStatus::Validated) {
+                continue;
+            }
+
+            Gate::authorize('validate', $record);
+            $pending->push($record);
+        }
+
+        $result = $action->handle($pending, $request->user());
+
+        return back()->with('success', "{$result['validated']} relevé(s) d’assiduité validé(s) — {$result['notified']} famille(s) notifiée(s).");
     }
 
     public function update(Request $request, AttendanceRecord $attendance, AuditService $audit): RedirectResponse
@@ -273,6 +315,9 @@ class AttendanceController extends Controller
             },
             'recorded_by' => $request->user()->id,
             'recorded_at' => now(),
+            'validation_status' => AttendanceValidationStatus::Pending,
+            'validated_at' => null,
+            'validated_by' => null,
         ])->save();
 
         $audit->log('attendance.updated', $attendance, [

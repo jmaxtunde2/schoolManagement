@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import {
+    ArrowRight,
     Building2,
     ChevronDown,
     ChevronUp,
     Filter,
-    Search,
     Plus,
     RotateCcw,
+    Search,
     Users,
     GraduationCap,
     Key,
@@ -283,6 +284,13 @@ export default function SchoolsIndex({ schools, filters }) {
                                 <option value="true">Actives</option>
                                 <option value="false">Suspendues</option>
                             </Select>
+
+                            <Link href={route('platform.schools.create')}>
+                                <Button variant="primary" className="gap-2">
+                                    <Plus className="h-4 w-4" />
+                                    Créer une école
+                                </Button>
+                            </Link>
                         </div>
                     }
                 />
@@ -359,16 +367,24 @@ export default function SchoolsIndex({ schools, filters }) {
             </Card>
 
             {/* Actions rapides */}
-            <div className="mt-6 flex items-center justify-between">
+<div className="mt-6 flex items-center justify-between">
                 <p className="text-sm text-slate-500">
                     Actions rapides
                 </p>
-                <Link href={route('demo.request')}>
-                    <Button variant="primary" className="gap-2">
-                        <Plus className="h-4 w-4" strokeWidth={2} />
-                        Nouvelle demande de démo
-                    </Button>
-                </Link>
+                <div className="flex items-center gap-2">
+                    <Link href={route('platform.schools.create')}>
+                        <Button variant="primary" className="gap-2">
+                            <Plus className="h-4 w-4" />
+                            Créer une école
+                        </Button>
+                    </Link>
+                    <Link href={route('demo.request')}>
+                        <Button variant="secondary" className="gap-2">
+                            <ArrowRight className="h-4 w-4" />
+                            Demande de démo
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
             <ConfirmDialog

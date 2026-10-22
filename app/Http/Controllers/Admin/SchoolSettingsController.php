@@ -35,6 +35,7 @@ class SchoolSettingsController extends Controller
                 'founded_year' => $setting->founded_year,
                 'address' => $setting->address,
                 'city' => $setting->city,
+                'department' => $setting->department,
                 'country' => $setting->country,
                 'phone' => $setting->phone,
                 'phone_secondary' => $setting->phone_secondary,
@@ -50,6 +51,8 @@ class SchoolSettingsController extends Controller
             'schoolTypes' => collect(SchoolSetting::SCHOOL_TYPES)
                 ->map(fn ($label, $value) => ['value' => $value, 'label' => $label])
                 ->values(),
+            'departments' => SchoolSetting::BENIN_DEPARTMENTS,
+            'foundedYearOptions' => SchoolSetting::foundedYearOptions(),
         ]);
     }
 

@@ -53,6 +53,29 @@ class TimetableController extends Controller
             ->get()
             ->map(fn (Timetable $slot) => $this->present($slot));
 
+        // Charger uniquement les enseignants actifs avec leurs matières assignées
+        // pour éviter les problèmes de performance sur les grandes écoles
+        $teachers = Teacher::query()
+            ->whereHas('user', fn ($q) => $q->where('is_active', true))
+            ->with([
+                'user:id,name,is_active',
+                'assignments.subject:id,name',
+            ])
+            ->get()
+            ->filter(fn (Teacher $teacher) => $teacher->user !== null)
+            ->map(fn (Teacher $teacher) => [
+                'id' => $teacher->id,
+                'name' => $teacher->user->name,
+                'is_active' => $teacher->user->is_active,
+                'subject_ids' => $teacher->assignments
+                    ->pluck('subject_id')
+                    ->unique()
+                    ->values()
+                    ->all(),
+            ])
+            ->sortBy('name')
+            ->values();
+
         return Inertia::render('Admin/Timetables/Index', [
             'slots' => $slots,
             'days' => collect(Timetable::days())->map(fn ($label, $value) => [
@@ -71,20 +94,7 @@ class TimetableController extends Controller
                 ->get(['id', 'name']),
             'subjects' => Subject::orderBy('name')->get(['id', 'name']),
             'rooms' => Room::orderBy('building')->orderBy('name')->get(['id', 'name']),
-            'teachers' => Teacher::with(['user:id,name,is_active', 'assignments'])->get()
-                ->filter(fn (Teacher $teacher) => $teacher->user !== null)
-                ->map(fn (Teacher $teacher) => [
-                    'id' => $teacher->id,
-                    'name' => $teacher->user->name,
-                    'is_active' => $teacher->user->is_active,
-                    'subject_ids' => $teacher->assignments
-                        ->pluck('subject_id')
-                        ->unique()
-                        ->values()
-                        ->all(),
-                ])
-                ->sortBy('name')
-                ->values(),
+            'teachers' => $teachers,
             'filters' => $request->only(['academic_year_id', 'class_id']),
             'canManage' => $request->user()->can('create', Timetable::class),
             'routePrefix' => $request->routeIs('director.*')

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Platform;
 
+use App\Actions\School\RegisterSchool;
 use App\Http\Controllers\Controller;
 use App\Models\School;
 use App\Models\User;
@@ -30,6 +31,75 @@ class SchoolController extends Controller
                 'status' => $request->query('status'),
             ],
         ]);
+    }
+
+    public function create(): Response
+    {
+        return Inertia::render('Platform/Schools/Create');
+    }
+
+    public function store(Request $request, RegisterSchool $registerSchool): RedirectResponse
+    {
+        $validated = $request->validate([
+            'school_name' => 'required|string|max:255',
+            'short_name' => 'required|string|max:50',
+            'address' => 'required|string|max:500',
+            'city' => 'required|string|max:100',
+            'quartier' => 'nullable|string|max:255',
+            'department' => 'required|string|max:100',
+            'country' => 'required|string|max:100',
+            'phone' => 'required|string|max:30',
+            'primary_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'secondary_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'accent_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'languages' => 'nullable|array',
+            'languages.*' => 'string|max:5',
+            'programs' => 'nullable|array',
+            'programs.*' => 'string|max:100',
+            'academic_year_name' => 'required|string|max:50',
+            'academic_year_starts_on' => 'required|date',
+            'academic_year_ends_on' => 'required|date|after:academic_year_starts_on',
+            'admin_name' => 'required|string|max:255',
+            'admin_email' => 'required|email|max:255|unique:users,email',
+            'admin_password' => 'required|string|min:8|confirmed',
+            'admin_phone' => 'nullable|string|max:30',
+        ]);
+
+        $schoolData = [
+            'school_name' => $validated['school_name'],
+            'short_name' => $validated['short_name'],
+            'address' => $validated['address'],
+            'city' => $validated['city'],
+            'quartier' => $validated['quartier'] ?? null,
+            'department' => $validated['department'],
+            'country' => $validated['country'],
+            'phone' => $validated['phone'],
+            'primary_color' => $validated['primary_color'] ?? '#047857',
+            'secondary_color' => $validated['secondary_color'] ?? '#0F766E',
+            'accent_color' => $validated['accent_color'] ?? '#D97706',
+            'languages' => $validated['languages'] ?? ['fr'],
+            'programs' => $validated['programs'] ?? [],
+            'academic_year_name' => $validated['academic_year_name'],
+            'academic_year_starts_on' => $validated['academic_year_starts_on'],
+            'academic_year_ends_on' => $validated['academic_year_ends_on'],
+        ];
+
+        $adminData = [
+            'name' => $validated['admin_name'],
+            'email' => $validated['admin_email'],
+            'password' => $validated['admin_password'],
+            'phone' => $validated['admin_phone'],
+        ];
+
+        $result = $registerSchool->handle($schoolData, $adminData);
+
+        app(AuditService::class)->log('school.created_by_platform_admin', $result['school'], [
+            'by' => $request->user()->id,
+        ]);
+
+        return redirect()
+            ->route('platform.schools.show', $result['school'])
+            ->with('success', 'École « '.$result['school']->name.' » créée et activée. Identifiants administrateur : '.$result['admin']->email.' / '.$validated['admin_password']);
     }
 
     public function show(School $school): Response

@@ -439,10 +439,9 @@ class EvaluationController extends Controller
      */
     private function allTeacherAssignments($user): Collection
     {
-        return Teacher::where(
-            'school_id',
-            $user->school_id
-        )
+        return Teacher::query()
+            ->where('school_id', $user->school_id)
+            ->whereHas('user', fn ($q) => $q->where('is_active', true))
             ->with([
                 'assignments.classRoom:id,name',
                 'assignments.subject:id,name',
@@ -453,15 +452,10 @@ class EvaluationController extends Controller
                 fn ($teacher) => $teacher->assignments->map(
                     fn ($assignment) => [
                         'class_id' => $assignment->class_id,
-
                         'class_name' => $assignment->classRoom->name,
-
                         'subject_id' => $assignment->subject_id,
-
                         'subject_name' => $assignment->subject->name,
-
                         'teacher_id' => $teacher->id,
-
                         'teacher_name' => $teacher->user->name,
                     ]
                 )

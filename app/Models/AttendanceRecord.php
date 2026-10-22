@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AttendanceStatus;
+use App\Enums\AttendanceValidationStatus;
 use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +22,7 @@ class AttendanceRecord extends Model
         'academic_period_id',
         'attendance_date',
         'status',
+        'validation_status',
         'delay_minutes',
         'reason',
         'note',
@@ -28,6 +30,8 @@ class AttendanceRecord extends Model
         'recorded_at',
         'justified_at',
         'justified_by',
+        'validated_at',
+        'validated_by',
     ];
 
     protected function casts(): array
@@ -35,8 +39,10 @@ class AttendanceRecord extends Model
         return [
             'attendance_date' => 'date:Y-m-d',
             'status' => AttendanceStatus::class,
+            'validation_status' => AttendanceValidationStatus::class,
             'recorded_at' => 'datetime',
             'justified_at' => 'datetime',
+            'validated_at' => 'datetime',
         ];
     }
 
@@ -89,6 +95,11 @@ class AttendanceRecord extends Model
     public function justifiedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'justified_by');
+    }
+
+    public function validator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'validated_by');
     }
 
     public function justifications(): HasMany

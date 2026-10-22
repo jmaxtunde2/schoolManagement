@@ -32,6 +32,7 @@ use App\Http\Controllers\Platform\SchoolController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicPreinscriptionController;
 use App\Http\Controllers\PublicSchoolController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\Staff\AttendanceController;
@@ -40,7 +41,6 @@ use App\Http\Controllers\Staff\ManagementDashboardController;
 use App\Http\Controllers\Staff\ParentMessageController as StaffParentMessageController;
 use App\Http\Controllers\Teacher;
 use App\Http\Controllers\UserNotificationController;
-use App\Http\Controllers\PushSubscriptionController;
 use App\Services\Tenancy\TenantResolver;
 use App\Support\ReservedSchoolSlugs;
 use Illuminate\Http\Request;
@@ -56,21 +56,29 @@ Route::get('/', function (Request $request) {
     $user = auth()->user();
     $preview = $request->boolean('preview');
 
-    if ($user && ! $preview) {
-        return redirect()->route($user->role->homeRoute());
+    $resolver = app(TenantResolver::class);
+    $isPlatformHost = ! $resolver->hasSchoolDomain($request->getHost());
+
+    // Sur l'hôte de la plateforme : toujours afficher la landing CoriSchool
+    // (même pour les utilisateurs connectés)
+    if ($isPlatformHost) {
+        return app(CoriSchoolLandingController::class)();
     }
 
-    $resolver = app(TenantResolver::class);
-
-    // En mode aperçu depuis l'hôte de la plateforme, on montre la landing
-    // CoriSchool plutôt que le site de l'école de l'utilisateur connecté.
-    if ($preview && ! $resolver->hasSchoolDomain($request->getHost())) {
-        return app(CoriSchoolLandingController::class)();
+    // Sur un domaine d'école : rediriger les utilisateurs connectés vers leur dashboard
+    // sauf s'ils demandent explicitement l'aperçu (preview)
+    if ($user && ! $preview) {
+        return redirect()->route($user->role->homeRoute());
     }
 
     return app(PublicSchoolController::class)
         ->__invoke($request, $resolver);
 })->name('public.school.home');
+
+Route::get('/ecoles', [
+    PublicSchoolController::class,
+    'index',
+])->name('public.schools.index');
 
 Route::get('/ecole/{slug}', [
     PublicSchoolController::class,
@@ -112,6 +120,16 @@ Route::get('/competitions', [
     CoriSchoolLandingController::class,
     'competitions',
 ])->name('public.competitions');
+
+/*
+|--------------------------------------------------------------------------
+| Landing CoriSchool (plateforme) - accessible à tous
+|--------------------------------------------------------------------------
+*/
+Route::get('/plateforme', [
+    CoriSchoolLandingController::class,
+    '__invoke',
+])->name('public.platform.landing');
 
 /*
 |--------------------------------------------------------------------------
@@ -393,6 +411,8 @@ Route::middleware([
             | Écoles
             */
             Route::get('/schools', [SchoolController::class, 'index'])->name('schools.index');
+            Route::get('/schools/create', [SchoolController::class, 'create'])->name('schools.create');
+            Route::post('/schools', [SchoolController::class, 'store'])->name('schools.store');
             Route::get('/schools/{school}', [SchoolController::class, 'show'])->name('schools.show');
             Route::post('/schools/{school}/toggle', [SchoolController::class, 'toggle'])
                 ->middleware('2fa.fresh:toggle_school')->name('schools.toggle');
@@ -1192,6 +1212,11 @@ Route::middleware([
                 'reviewJustification',
             ])->name('attendance.justify');
 
+            Route::post('/attendance/validate', [
+                AttendanceController::class,
+                'validateRecords',
+            ])->name('attendance.validate');
+
             /*
             | Notifications
             */
@@ -1365,6 +1390,11 @@ Route::middleware([
                 'reviewJustification',
             ])->name('attendance.justify');
 
+            Route::post('/attendance/validate', [
+                AttendanceController::class,
+                'validateRecords',
+            ])->name('attendance.validate');
+
             Route::post('/evaluations/{evaluation}/validate', [
                 Admin\EvaluationValidationController::class,
                 'store',
@@ -1500,6 +1530,11 @@ Route::middleware([
                 AttendanceController::class,
                 'reviewJustification',
             ])->name('attendance.justify');
+
+            Route::post('/attendance/validate', [
+                AttendanceController::class,
+                'validateRecords',
+            ])->name('attendance.validate');
 
             /*
             | Élèves & classes — lecture
@@ -1651,6 +1686,11 @@ Route::middleware([
                 AttendanceController::class,
                 'reviewJustification',
             ])->name('attendance.justify');
+
+            Route::post('/attendance/validate', [
+                AttendanceController::class,
+                'validateRecords',
+            ])->name('attendance.validate');
 
             Route::post('/evaluations/{evaluation}/validate', [
                 Admin\EvaluationValidationController::class,

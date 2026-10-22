@@ -4,7 +4,6 @@ namespace App\Actions\Attendance;
 
 use App\Enums\AttendanceStatus;
 use App\Models\AttendanceRecord;
-use Illuminate\Support\Collection;
 
 /**
  * Derniers cas de retard et d'absence à afficher sur les tableaux de bord.

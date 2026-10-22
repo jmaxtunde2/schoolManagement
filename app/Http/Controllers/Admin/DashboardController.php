@@ -18,6 +18,7 @@ use App\Models\StudentContribution;
 use App\Models\Teacher;
 use App\Services\Assistant\AssistantContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -25,18 +26,29 @@ class DashboardController extends Controller
 {
     public function __invoke(Request $request, BuildTimetableBrief $brief, BuildRecentIncidents $incidents, BuildGenderDistribution $genderDistribution, BuildFinanceSummary $financeSummary, BuildPilotageDashboard $pilotage): Response
     {
-        return Inertia::render('Admin/Dashboard', [
-            'pilotage' => $pilotage->handle(AssistantContext::for($request->user()), 'admin'),
-            'stats' => [
+        $schoolId = $request->user()->school_id;
+        $cacheKey = "dashboard:admin:{$schoolId}";
+
+        $stats = Cache::remember($cacheKey.':stats', 300, function () use ($schoolId) {
+            return [
                 'students' => Student::count(),
                 'teachers' => Teacher::count(),
                 'classes' => ClassRoom::count(),
                 'evaluations' => Evaluation::count(),
                 'notifications_sent' => Notification::whereIn('status', ['sent', 'delivered'])->count(),
                 'notifications_failed' => Notification::where('status', 'failed')->count(),
-            ],
-            'recentEvaluations' => Evaluation::with(['classRoom:id,name', 'subject:id,name', 'teacher.user:id,name'])
-                ->latest('evaluation_date')->take(5)->get(),
+            ];
+        });
+
+        $recentEvaluations = Cache::remember($cacheKey.':recent_evaluations', 300, function () use ($schoolId) {
+            return Evaluation::with(['classRoom:id,name', 'subject:id,name', 'teacher.user:id,name'])
+                ->latest('evaluation_date')->take(5)->get();
+        });
+
+        return Inertia::render('Admin/Dashboard', [
+            'pilotage' => $pilotage->handle(AssistantContext::for($request->user()), 'admin'),
+            'stats' => $stats,
+            'recentEvaluations' => $recentEvaluations,
             'routePrefix' => 'admin',
             'timetableBrief' => $brief->handle(),
             'recentIncidents' => $incidents->handle(10),

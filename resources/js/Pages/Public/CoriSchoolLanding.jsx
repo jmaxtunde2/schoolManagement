@@ -1980,6 +1980,32 @@ function Pricing({ plans = [], smsNote }) {
                                     ))}
                                 </div>
 
+                                {plan.pricing_tiers && (
+                                    <div className="mt-6 space-y-2 border-t border-slate-100 pt-6">
+                                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                                            À partir de la 2e année
+                                        </p>
+                                        <div className="space-y-1.5">
+                                            {plan.pricing_tiers.map((tier, tierIndex) => (
+                                                <div
+                                                    key={tierIndex}
+                                                    className="flex items-center justify-between text-sm"
+                                                >
+                                                    <span className="text-slate-600">
+                                                        {tier.label}
+                                                    </span>
+                                                    <span className="font-semibold text-slate-900">
+                                                        {tier.price}
+                                                        <span className="font-medium text-slate-400">
+                                                            {tier.period}
+                                                        </span>
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <Link
                                     href={route('demo.request')}
                                     className={cn(
@@ -2279,12 +2305,12 @@ function SiteFooter() {
                                 Fonctionnalités
                             </a>
 
-                            <a
+                            {/* <a
                                 href="#tarifs"
                                 className="block text-sm text-slate-400 transition hover:text-white"
                             >
                                 Tarifs
-                            </a>
+                            </a> */}
 
                             <a
                                 href="#faq"

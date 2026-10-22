@@ -19,65 +19,57 @@ class PricingPlan
     {
         return [
             [
-                'key' => 'starter',
-                'name' => 'Starter',
-                'price' => '1 000 FCFA',
-                'period' => 'par élève / par an',
-                'tagline' => 'Pour les petites écoles qui veulent abandonner le cahier de notes.',
-                'featured' => false,
-                'features' => [
-                    'Élèves, classes et matières',
-                    'Enseignants et affectations',
-                    'Évaluations, notes et moyennes',
-                    'Bulletins scolaires',
-                    'Gestion des présences',
-                    'Emploi du temps',
-                    'Portail parent',
-                    'Notifications et SMS',
-                    'Authentification 2FA',
-                    'Tableau de bord direction',
-                    'Espace enseignant',
-                    'Historique académique de base',
-                    'Exports standards',
-                ],
-            ],
-            [
-                'key' => 'pro',
-                'name' => 'Pro',
-                'price' => '1 500 FCFA',
-                'period' => 'par élève / par an',
-                'tagline' => 'Tout Starter, plus le pilotage analytique et la gestion financière.',
+                'key' => 'year1',
+                'name' => '1re année',
+                'price' => '100 000 FCFA',
+                'period' => 'par section',
+                'tagline' => 'Installation, configuration et période de test incluses.',
                 'featured' => true,
                 'features' => [
-                    'Tout ce que contient Starter',
-                    'Statistiques avancées',
-                    'Suivi des performances',
-                    'Historique académique complet',
-                    'Exports avancés',
-                    'Gestion des frais scolaires',
-                    'Paiements et reçus',
-                    'Tableaux de bord analytiques',
+                    'Installation et configuration complète',
+                    'Période de test incluse',
+                    'Toutes les fonctionnalités CoriSchool',
+                    'Gestion élèves, classes, matières',
+                    'Notes, bulletins, présences',
+                    'Portail parents et enseignants',
+                    'Frais scolaires et paiements',
+                    'Export EducMaster (Bénin)',
+                    'Banque d\'épreuves partagée',
+                    'Jeu éducatif et compétitions',
+                    'Authentification 2FA',
+                    'Séparation des données par école',
+                    'Support technique',
                 ],
+                'note' => 'Valable par section (Primaire ou Secondaire).',
             ],
             [
-                'key' => 'enterprise',
-                'name' => 'Enterprise',
-                'price' => '2 500 FCFA',
-                'period' => 'par élève / par an',
-                'tagline' => 'Pour les groupes scolaires multi-écoles et multi-campus.',
+                'key' => 'small',
+                'name' => 'Jusqu\'à 220 élèves (dès 2e année)',
+                'price' => '75 000 FCFA',
+                'period' => '/ an',
+                'tagline' => 'Tarif forfaitaire pour petites structures.',
                 'featured' => false,
                 'features' => [
-                    'Tout ce que contient Pro',
-                    'Groupes scolaires',
-                    'Multi-écoles et multi-campus',
-                    'Administration centralisée',
-                    'Tableaux de bord consolidés',
-                    'API et intégrations',
-                    'Domaine personnalisé',
-                    'Migration de données',
-                    'Personnalisation',
-                    'Support prioritaire et SLA',
+                    'Toutes les fonctionnalités CoriSchool',
+                    'Jusqu\'à 220 élèves inclus',
+                    'Pas de coût par élève supplémentaire',
+                    'Idéal pour écoles primaires',
                 ],
+                'note' => 'Applicable à partir de la 2e année.',
+            ],
+            [
+                'key' => 'standard',
+                'name' => '221 élèves et plus (dès 2e année)',
+                'price' => '400 FCFA',
+                'period' => '/ élève / an',
+                'tagline' => 'Tarification à l\'élève pour écoles moyennes et grandes.',
+                'featured' => false,
+                'features' => [
+                    'Toutes les fonctionnalités CoriSchool',
+                    'Facturation au nombre exact d\'élèves',
+                    'Évolutif selon vos effectifs',
+                ],
+                'note' => 'Applicable à partir de la 2e année. 350 FCFA/élève/an (5 000–10 000), 341 FCFA/élève/an (10 000+).',
             ],
         ];
     }
@@ -88,7 +80,7 @@ class PricingPlan
      */
     public static function smsNote(): string
     {
-        return "Les SMS sont consommés par volume et restent séparables de l'abonnement : une école ne paie que ce qu'elle envoie.";
+        return 'Les canaux SMS sont inclus dans l\'abonnement ; les messages envoyés sont consommés par volume via des crédits prépayés.';
     }
 
     /**
@@ -101,7 +93,7 @@ class PricingPlan
         return [
             [
                 'question' => 'Combien coûte CoriSchool ?',
-                'answer' => "L'abonnement dépend du nombre d'élèves et de l'offre choisie : 1 000 FCFA par élève et par an (Starter), 1 500 FCFA (Pro) ou 2 500 FCFA (Enterprise).",
+                'answer' => "L’installation de CoriSchool, sa configuration et la période de test coûtent 100 000 FCFA pour la première année par niveau (primaire, secondaire, etc.). À partir de la deuxième année, l’abonnement est calculé en fonction du nombre d’élèves et coûte 400 FCFA par élève et par an",
             ],
             [
                 'question' => 'Comment inscrire mon école ?',
@@ -117,7 +109,7 @@ class PricingPlan
             ],
             [
                 'question' => 'Les SMS sont-ils inclus ?',
-                'answer' => "Les canaux SMS sont inclus dans l'abonnement, mais les messages envoyés sont consommés par volume via des crédits SMS. Le coût reste ainsi maîtrisé, sans consommation illimitée.",
+                'answer' => "Les canaux SMS (WhatsApp) sont inclus dans l'abonnement, mais les messages envoyés sont consommés par volume via des crédits SMS. Le coût reste ainsi maîtrisé, sans consommation illimitée.",
             ],
             [
                 'question' => 'Mes données sont-elles séparées des autres écoles ?',
