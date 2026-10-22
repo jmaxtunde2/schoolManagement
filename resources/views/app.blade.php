@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-title" content="CoriSchool">
     <link rel="icon" type="image/png" href="/icons/favicon-32.png">
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">
-    <style id="school-theme">
+    <style id="school-theme" nonce="{{ $csp_nonce }}">
         :root {
             --school-primary: {{ $branding['primary_color'] }};
             --school-primary-contrast: {{ $branding['primary_contrast'] }};

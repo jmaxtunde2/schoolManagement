@@ -2,6 +2,7 @@
 
 namespace App\Actions\Evaluations;
 
+use App\Enums\EvaluationStatus;
 use App\Models\AcademicPeriod;
 use App\Models\Evaluation;
 use App\Models\Student;
@@ -16,7 +17,7 @@ class CreateEvaluation
         private readonly EvaluationNotificationService $notifications
     ) {}
 
-    public function handle(Teacher $teacher, array $data, int $actorId): Evaluation
+    public function handle(Teacher $teacher, array $data, int $actorId, bool $validateDirectly = false): Evaluation
     {
         $academicYearId = $teacher->school->academicYears()->where('is_current', true)->value('id')
             ?? $teacher->school->academicYears()->latest('id')->value('id');
@@ -27,7 +28,7 @@ class CreateEvaluation
 
         $academicPeriodId = $this->currentPeriodId($teacher->school_id, $academicYearId);
 
-        return DB::transaction(function () use ($teacher, $data, $academicYearId, $academicPeriodId, $actorId) {
+        return DB::transaction(function () use ($teacher, $data, $academicYearId, $academicPeriodId, $actorId, $validateDirectly) {
             $evaluation = Evaluation::create([
                 ...$data,
                 'teacher_id' => $teacher->id,
@@ -35,7 +36,9 @@ class CreateEvaluation
                 'academic_period_id' => $academicPeriodId,
                 'created_by' => $actorId,
                 'entered_by' => $actorId,
-                'status' => 'draft',
+                'status' => $validateDirectly ? EvaluationStatus::InProgress->value : 'draft',
+                'submitted_at' => $validateDirectly ? now() : null,
+                'submitted_by' => $validateDirectly ? $actorId : null,
             ]);
 
             foreach (Student::where('class_id', $evaluation->class_id)->where('is_active', true)->orderBy('last_name')->orderBy('first_name')->pluck('id') as $studentId) {

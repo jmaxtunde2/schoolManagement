@@ -420,6 +420,20 @@ Route::middleware([
                 ->middleware('2fa.fresh:delete_school')->name('schools.destroy');
 
             /*
+            | Mini-site public (par école) — Admin plateforme
+            */
+            Route::get('/schools/{school}/public-site', [SchoolController::class, 'editPublicSite'])->name('schools.public-site.edit');
+            Route::put('/schools/{school}/public-site', [SchoolController::class, 'updatePublicSite'])->name('schools.public-site.update');
+
+            /*
+            | Emploi du temps (par école) — Admin plateforme
+            */
+            Route::get('/schools/{school}/timetable', [SchoolController::class, 'showTimetable'])->name('schools.timetable.show');
+            Route::post('/schools/{school}/timetable', [SchoolController::class, 'storeTimetableSlot'])->name('schools.timetable.store');
+            Route::put('/schools/{school}/timetable/{timetable}', [SchoolController::class, 'updateTimetableSlot'])->name('schools.timetable.update');
+            Route::delete('/schools/{school}/timetable/{timetable}', [SchoolController::class, 'destroyTimetableSlot'])->name('schools.timetable.destroy');
+
+            /*
             | Licences
             */
             Route::get('/licenses', [LicenseController::class, 'index'])->name('licenses.index');
@@ -1303,11 +1317,26 @@ Route::middleware([
                 'index',
             ])->name('evaluations.index');
 
+            Route::get('/evaluations/create', [
+                EvaluationController::class,
+                'create',
+            ])->name('evaluations.create');
+
+            Route::post('/evaluations', [
+                EvaluationController::class,
+                'store',
+            ])->name('evaluations.store');
+
             Route::get('/evaluations/{evaluation}/grades', [
                 StaffEvaluationController::class,
                 'grades',
             ])->name('evaluations.grades');
 
+
+            Route::put('/evaluations/{evaluation}/grades', [
+                StaffEvaluationController::class,
+                'updateGrades',
+            ])->name('evaluations.grades.update');
             Route::get('/academic/results', [
                 Admin\AcademicResultController::class,
                 'index',

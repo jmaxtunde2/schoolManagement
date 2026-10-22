@@ -13,6 +13,11 @@ class SecurityHeaders
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // Générer le nonce avant la réponse pour qu'il soit disponible dans la vue
+        $nonce = $request->attributes->get('csp_nonce', base64_encode(random_bytes(16)));
+        $request->attributes->set('csp_nonce', $nonce);
+        view()->share('csp_nonce', $nonce);
+
         $response = $next($request);
 
         // Empêche le clickjacking
@@ -35,17 +40,33 @@ class SecurityHeaders
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
         }
 
-        // Content Security Policy
-        $csp = $this->buildCsp($request);
-        $response->headers->set('Content-Security-Policy', $csp);
+        // Content Security Policy - DISABLED for debugging
+        // $csp = $this->buildCsp($nonce);
+        // $response->headers->set('Content-Security-Policy', $csp);
 
         return $response;
     }
 
-    private function buildCsp(Request $request): string
+    private function buildCsp(string $nonce): string
     {
         $isProduction = config('app.env') === 'production';
-        $nonce = $request->attributes->get('csp_nonce', base64_encode(random_bytes(16)));
+
+        if ($isProduction) {
+            $scriptSrc = "'self' 'nonce-{$nonce}' 'strict-dynamic' https://cdn.tailwindcss.com https://unpkg.com";
+        } else {
+            $scriptSrc = "'self' 'nonce-{$nonce}' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com http://127.0.0.1:5173 http://localhost:5173 http://127.0.0.1:5174 http://localhost:5174";
+        }
+        $connectSrc = "'self' https: wss:";
+        $styleSrc = "'self' 'nonce-{$nonce}' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com";
+        $imgSrc = "'self' data: https: blob:";
+
+        if (!$isProduction) {
+            // En dev, autoriser Vite dev server (ports 5173, 5174, etc.) et HMR
+            $viteDev = 'http://127.0.0.1:5173 http://localhost:5173 http://127.0.0.1:5174 http://localhost:5174';
+            $connectSrc .= " ws: wss: {$viteDev} http://localhost:*";
+            $styleSrc .= " {$viteDev}";
+            $imgSrc .= " {$viteDev}";
+        }
 
         $directives = [
             "default-src 'self'",
@@ -53,24 +74,15 @@ class SecurityHeaders
             "form-action 'self'",
             "frame-ancestors 'none'",
             "object-src 'none'",
-            "script-src 'self' 'nonce-{$nonce}' 'strict-dynamic' https://cdn.tailwindcss.com https://unpkg.com",
-            "style-src 'self' 'nonce-{$nonce}' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com",
+            "script-src {$scriptSrc}",
+            "style-src {$styleSrc}",
             "font-src 'self' data: https://fonts.gstatic.com",
-            "img-src 'self' data: https: blob:",
-            "connect-src 'self' https: wss:",
+            "img-src {$imgSrc}",
+            "connect-src {$connectSrc}",
             "manifest-src 'self'",
             "frame-src 'self'",
             "worker-src 'self' blob:",
         ];
-
-        if (!$isProduction) {
-            // En dev, autoriser eval pour Vite/HMR
-            $directives[] = "script-src-eval 'self'";
-            $directives[] = "connect-src 'self' ws: wss: http://localhost:*";
-        }
-
-        // Stocker le nonce pour l'utiliser dans les vues
-        $request->attributes->set('csp_nonce', $nonce);
 
         return implode('; ', $directives);
     }

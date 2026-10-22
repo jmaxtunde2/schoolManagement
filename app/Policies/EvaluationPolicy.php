@@ -37,9 +37,10 @@ class EvaluationPolicy
     /**
      * Modification des notes.
      *
-     * Autorisée uniquement :
+     * Autorisée :
      * - par l'enseignant responsable ;
      * - ou par le secrétaire ;
+     * - ou par le censeur (saisie manuelle pour le compte d'un enseignant) ;
      * - lorsque l'évaluation est un brouillon
      *   ou a été retournée pour correction.
      */
@@ -71,7 +72,7 @@ class EvaluationPolicy
             return $evaluation->teacher_id === $user->teacher?->id;
         }
 
-        return $user->isSecretary();
+        return $user->isSecretary() || $user->isCenseur();
     }
 
     /**

@@ -219,6 +219,27 @@ export default function SchoolShow({ school, admins, license, latestPayments }) 
                         </Card.Body>
                     </Card>
 
+                    {/* Mini-site et emploi du temps */}
+                    <Card>
+                        <Card.Header title="Configuration de l'établissement" icon={FileText} />
+                        <Card.Body>
+                            <div className="flex flex-wrap gap-2">
+                                <Link href={route('platform.schools.public-site.edit', school.id)}>
+                                    <Button variant="outline" className="gap-2">
+                                        <FileText className="h-4 w-4" strokeWidth={2} />
+                                        Gérer le mini-site
+                                    </Button>
+                                </Link>
+                                <Link href={route('platform.schools.timetable.show', school.id)}>
+                                    <Button variant="outline" className="gap-2">
+                                        <CalendarDays className="h-4 w-4" strokeWidth={2} />
+                                        Gérer l'emploi du temps
+                                    </Button>
+                                </Link>
+                            </div>
+                        </Card.Body>
+                    </Card>
+
                     {/* Licence actuelle */}
                     {license && (
                         <Card>
