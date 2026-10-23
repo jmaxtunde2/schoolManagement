@@ -4,9 +4,11 @@ namespace App\Providers;
 
 use App\Services\Communication\CommunicationTransport;
 use App\Services\Communication\ProviderCommunicationTransport;
+use App\Services\Sms\ClickSendProvider;
 use App\Services\Sms\EsmsAfricaProvider;
 use App\Services\Sms\LogSmsProvider;
 use App\Services\Sms\MetaWhatsAppProvider;
+use App\Services\Sms\MultitexterProvider;
 use App\Services\Sms\SmsProviderInterface;
 use Illuminate\Support\ServiceProvider;
 
@@ -14,13 +16,15 @@ class SmsServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // SMS_PROVIDER=log (défaut) tant qu'aucun fournisseur réel n'est branché.
-        // whatsapp : Meta WhatsApp Business Cloud API (envoi moins coûteux que le SMS).
+        // SMS_PROVIDER=multitexter | esms_africa | whatsapp | log
         $this->app->bind(SmsProviderInterface::class, function () {
-            return match (config('services.sms.provider', 'log')) {
+            return match (config('services.sms.provider', 'multitexter')) {
+                'clicksend' => new ClickSendProvider,
                 'esms_africa' => new EsmsAfricaProvider,
                 'whatsapp' => new MetaWhatsAppProvider,
-                default => new LogSmsProvider,
+                'multitexter' => new MultitexterProvider,
+                'log' => new LogSmsProvider,
+                default => new MultitexterProvider,
             };
         });
 

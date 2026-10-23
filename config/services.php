@@ -42,11 +42,22 @@ return [
     ],
 
     'sms' => [
-        'provider' => env('SMS_PROVIDER', 'log'),
+        'provider' => env('SMS_PROVIDER', 'multitexter'),
         'api_url' => env('SMS_API_URL', 'https://sms.esmsafrica.io'),
         'token' => env('ESMS_TOKEN', env('SMS_API_KEY')),
         'api_secret' => env('SMS_API_SECRET'),
         'sender_id' => env('SMS_SENDER_ID'),
+        'multitexter' => [
+            'email' => env('SMS_EMAIL'),
+            'password' => env('SMS_PASS'),
+            'sender' => env('SMS_SENDER_NAME') ?: (env('SMS_SENDER_ID') ?: 'LCRS'),
+        ],
+        'clicksend' => [
+            'username' => env('CLICKSEND_USERNAME'),
+            'api_key' => env('CLICKSEND_API_KEY'),
+            'sender' => env('CLICKSEND_SENDER_ID'),
+            'api_url' => env('CLICKSEND_API_URL', 'https://rest.clicksend.com/v3'),
+        ],
         // Endpoint facultatif de consultation du solde fournisseur. Si absent,
         // le solde local (school_communication_settings.sms_balance) fait foi.
         'balance_url' => env('SMS_BALANCE_URL'),
