@@ -65,6 +65,7 @@ class EvaluationWorkflowTest extends TestCase
             'subject_id' => $this->subject->id,
             'teacher_id' => $this->teacher->id,
             'status' => 'in_progress',
+            'entered_by' => $this->teacher->user_id,
             'submitted_by' => $this->teacher->user_id,
             'submitted_at' => now(),
         ]);
@@ -194,6 +195,91 @@ class EvaluationWorkflowTest extends TestCase
             $evaluation->fresh()->notification_status
         );
         Queue::assertNotPushed(SendSmsNotificationJob::class);
+    }
+
+    public function test_censeur_can_save_a_draft_but_cannot_submit_it_for_validation(): void
+    {
+        Queue::fake();
+        $student = Student::factory()->create([
+            'school_id' => $this->school->id,
+            'class_id' => $this->class->id,
+        ]);
+        $censeur = User::factory()->forSchool($this->school)->create(['role' => 'censeur']);
+
+        $this->actingAs($censeur)->post('/censeur/evaluations', $this->payload())
+            ->assertRedirect()->assertSessionHasNoErrors()->assertSessionHas('success');
+
+        $evaluation = Evaluation::firstOrFail();
+        $this->assertSame($this->teacher->id, $evaluation->teacher_id);
+        $this->actingAs($censeur)->put("/censeur/evaluations/{$evaluation->id}/grades", [
+            'results' => [['student_id' => $student->id, 'score' => 16, 'is_absent' => false]],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('draft', $evaluation->fresh()->status->value);
+        $this->assertSame($censeur->id, $evaluation->fresh()->entered_by);
+        $this->actingAs($censeur)
+            ->post("/censeur/evaluations/{$evaluation->id}/submit")
+            ->assertNotFound();
+    }
+
+    public function test_censeur_direct_entry_can_be_validated_but_not_returned(): void
+    {
+        Queue::fake();
+        $student = Student::factory()->create([
+            'school_id' => $this->school->id,
+            'class_id' => $this->class->id,
+        ]);
+        $censeur = User::factory()->forSchool($this->school)->create(['role' => 'censeur']);
+
+        $this->actingAs($censeur)->post('/censeur/evaluations', $this->payload([
+            'teacher_id' => $this->teacher->id,
+        ]))->assertRedirect();
+
+        $evaluation = Evaluation::firstOrFail();
+        $this->assertSame('draft', $evaluation->status->value);
+        $this->actingAs($censeur)->put("/censeur/evaluations/{$evaluation->id}/grades", [
+            'results' => [['student_id' => $student->id, 'score' => 16, 'is_absent' => false]],
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAsTwoFactorVerified($censeur)
+            ->post("/censeur/evaluations/{$evaluation->id}/return", [
+                'reason' => 'Correction demandée.',
+            ])
+            ->assertForbidden();
+
+        $this->actingAsTwoFactorVerifiedFor('validate_evaluation', $censeur)
+            ->post("/censeur/evaluations/{$evaluation->id}/validate")
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('validated', $evaluation->fresh()->status->value);
+    }
+
+    public function test_censeur_can_create_and_validate_evaluation_without_assigned_teacher(): void
+    {
+        Queue::fake();
+        $student = Student::factory()->create([
+            'school_id' => $this->school->id,
+            'class_id' => $this->class->id,
+        ]);
+        $censeur = User::factory()->forSchool($this->school)->create(['role' => 'censeur']);
+        $this->teacher->assignments()->delete();
+
+        $this->actingAs($censeur)->post('/censeur/evaluations', $this->payload())
+            ->assertRedirect()->assertSessionHasNoErrors();
+
+        $evaluation = Evaluation::firstOrFail();
+        $this->assertNull($evaluation->teacher_id);
+        $this->assertSame($censeur->id, $evaluation->entered_by);
+
+        $this->actingAs($censeur)->put("/censeur/evaluations/{$evaluation->id}/grades", [
+            'results' => [['student_id' => $student->id, 'score' => 16, 'is_absent' => false]],
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAsTwoFactorVerifiedFor('validate_evaluation', $censeur)
+            ->post("/censeur/evaluations/{$evaluation->id}/validate")
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('validated', $evaluation->fresh()->status->value);
     }
 
     public function test_teacher_cannot_validate_own_evaluation(): void

@@ -7,10 +7,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Evaluations\StoreEvaluationRequest;
 use App\Models\AcademicPeriod;
 use App\Models\AcademicYear;
+use App\Models\ClassRoom;
 use App\Models\Evaluation;
+use App\Models\Subject;
 use App\Models\Teacher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,7 +21,31 @@ class EvaluationController extends Controller
 {
     public function index(Request $request)
     {
-        $evaluations = Evaluation::with(['classRoom:id,name', 'subject:id,name', 'teacher.user:id,name'])->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))->latest('evaluation_date')->latest('id')->paginate(20)->withQueryString();
+        $evaluations = Evaluation::with([
+            'classRoom:id,name',
+            'subject:id,name',
+            'teacher.user:id,name',
+            'enteredBy:id,name,role',
+            'submitter:id,name,role',
+        ])
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+            ->latest('created_at')
+            ->latest('id')
+            ->paginate(20)
+            ->withQueryString();
+
+        $evaluations->through(function (Evaluation $evaluation) {
+            $data = $evaluation->toArray();
+            unset($data['entered_by']);
+
+            return [
+                ...$data,
+                'entered_by_role' => $evaluation->enteredBy?->role?->value
+                    ?? $evaluation->submitter?->role?->value,
+                'can_validate' => Gate::allows('validateEvaluation', $evaluation),
+                'can_return' => Gate::allows('returnEvaluation', $evaluation),
+            ];
+        });
 
         return Inertia::render('Admin/Evaluations/Index', ['evaluations' => $evaluations, 'filters' => $request->only('status'), 'routePrefix' => 'censeur']);
     }
@@ -54,6 +81,19 @@ class EvaluationController extends Controller
             'Censeur/Evaluations/Create',
             [
                 'assignments' => $assignments,
+                'classes' => ClassRoom::query()
+                    ->with('subjects:id,name')
+                    ->orderBy('name')
+                    ->get(['id', 'name'])
+                    ->map(fn (ClassRoom $classRoom) => [
+                        'id' => $classRoom->id,
+                        'name' => $classRoom->name,
+                        'subjects' => $classRoom->subjects->map(fn (Subject $subject) => [
+                            'id' => $subject->id,
+                            'name' => $subject->name,
+                        ])->values(),
+                    ])
+                    ->values(),
                 'types' => \App\Enums\EvaluationType::options(),
                 'isCenseur' => true,
                 'academicYear' => $academicYear ? [
@@ -75,32 +115,37 @@ class EvaluationController extends Controller
         $user = $request->user();
 
         try {
-            $teacherId = (int) $request->validated('teacher_id');
-
-            $teacher = Teacher::withoutGlobalScopes()
-                ->where('school_id', $user->school_id)
-                ->findOrFail($teacherId);
-
             $validated = $request->validated();
-            $validateDirectly = $validated['validate_directly'] ?? false;
-            unset($validated['validate_directly']);
+            $teacherId = filled($validated['teacher_id'] ?? null)
+                ? (int) $validated['teacher_id']
+                : null;
+            if (! $teacherId) {
+                $teacherId = Teacher::withoutGlobalScopes()
+                    ->where('school_id', $user->school_id)
+                    ->whereHas('user', fn ($query) => $query->where('is_active', true))
+                    ->whereHas('assignments', fn ($query) => $query
+                        ->where('class_id', $validated['class_id'])
+                        ->where('subject_id', $validated['subject_id']))
+                    ->value('id');
+            }
+            unset($validated['teacher_id']);
+
+            $teacher = $teacherId
+                ? Teacher::withoutGlobalScopes()
+                    ->where('school_id', $user->school_id)
+                    ->findOrFail($teacherId)
+                : null;
 
             $evaluation = $action->handle(
                 $teacher,
                 $validated,
                 $user->id,
-                $validateDirectly
+                (int) $user->school_id
             );
-
-            if ($validateDirectly) {
-                return redirect()
-                    ->route('censeur.evaluations.grades', $evaluation)
-                    ->with('success', 'Évaluation créée. Vous pouvez saisir les notes puis la valider directement.');
-            }
 
             return redirect()
                 ->route('censeur.evaluations.grades', $evaluation)
-                ->with('success', 'Évaluation créée en brouillon. Vous pouvez saisir les notes.');
+                ->with('success', 'Évaluation créée en brouillon. Saisissez les notes puis validez-la, ou laissez-la en brouillon.');
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }

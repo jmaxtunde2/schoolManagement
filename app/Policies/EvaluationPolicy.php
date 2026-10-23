@@ -31,7 +31,7 @@ class EvaluationPolicy
             || $user->isCenseur()
             || $user->isDirector()
             || $user->isSecretary()
-            || $evaluation->teacher_id === $user->teacher?->id;
+            || ($evaluation->teacher_id !== null && $evaluation->teacher_id === $user->teacher?->id);
     }
 
     /**
@@ -55,21 +55,17 @@ class EvaluationPolicy
             return false;
         }
 
-        if (
-            ! in_array(
-                $evaluation->status,
-                [
-                    EvaluationStatus::Draft,
-                    EvaluationStatus::Returned,
-                ],
-                true
-            )
-        ) {
+        $editableStatuses = [
+            EvaluationStatus::Draft,
+            EvaluationStatus::Returned,
+        ];
+
+        if (! in_array($evaluation->status, $editableStatuses, true)) {
             return false;
         }
 
         if ($user->isTeacher()) {
-            return $evaluation->teacher_id === $user->teacher?->id;
+            return $evaluation->teacher_id !== null && $evaluation->teacher_id === $user->teacher?->id;
         }
 
         return $user->isSecretary() || $user->isCenseur();
@@ -85,6 +81,25 @@ class EvaluationPolicy
         User $user,
         Evaluation $evaluation
     ): bool {
+        // Le censeur enregistre en brouillon ou valide directement ;
+        // la soumission appartient à l'enseignant.
+        if ($user->isCenseur()) {
+            return false;
+        }
+
+        if (
+            ! in_array(
+                $evaluation->status,
+                [
+                    EvaluationStatus::Draft,
+                    EvaluationStatus::Returned,
+                ],
+                true
+            )
+        ) {
+            return false;
+        }
+
         return $this->update($user, $evaluation);
     }
 
@@ -115,6 +130,13 @@ class EvaluationPolicy
 
         if ($user->isDirector() && ! $this->inDirectorScope($evaluation)) {
             return false;
+        }
+
+        if ($user->isCenseur()) {
+            return ($evaluation->status === EvaluationStatus::Draft
+                    && (int) $evaluation->entered_by === (int) $user->id)
+                || ($evaluation->status === EvaluationStatus::InProgress
+                    && $this->wasEnteredByTeacher($evaluation));
         }
 
         return $evaluation->status === EvaluationStatus::InProgress;
@@ -150,7 +172,14 @@ class EvaluationPolicy
             return false;
         }
 
-        return $evaluation->status === EvaluationStatus::InProgress;
+        return $evaluation->status === EvaluationStatus::InProgress
+            && (! $user->isCenseur() || $this->wasEnteredByTeacher($evaluation));
+    }
+
+    private function wasEnteredByTeacher(Evaluation $evaluation): bool
+    {
+        return $evaluation->enteredBy?->isTeacher() === true
+            || $evaluation->submitter?->isTeacher() === true;
     }
 
     /**

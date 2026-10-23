@@ -16,6 +16,7 @@ import {
     Filter,
     Eye,
     RotateCcw,
+    Plus,
 } from 'lucide-react';
 
 import Button from '@/Components/UI/Button';
@@ -44,6 +45,13 @@ const statusLabels = {
     validated: 'Validée',
     returned: 'Retournée pour correction',
 };
+
+const formatCreatedAt = (value) => value
+    ? new Date(value).toLocaleString('fr-FR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+    })
+    : null;
 
 export default function EvaluationsIndex({
     evaluations,
@@ -255,6 +263,14 @@ export default function EvaluationsIndex({
                         description={`${evaluations.total} évaluation(s) enregistrée(s)`}
                         actions={
                             <div className="flex items-center gap-2">
+                                {routePrefix === 'censeur' && (
+                                    <Button
+                                        onClick={() => router.visit(route('censeur.evaluations.create'))}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Ajouter une évaluation
+                                    </Button>
+                                )}
                                 <Filter className="hidden h-4 w-4 text-slate-400 sm:block" />
 
                                 <Select
@@ -445,11 +461,16 @@ export default function EvaluationsIndex({
                                     key: 'evaluation_date',
                                     header: 'Date',
                                     render: (evaluation) => (
-                                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                                            <CalendarDays className="h-4 w-4 text-cyan-500" />
-
-                                            {evaluation.evaluation_date ??
-                                                '—'}
+                                        <div>
+                                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                                                <CalendarDays className="h-4 w-4 text-cyan-500" />
+                                                {evaluation.evaluation_date ?? '—'}
+                                            </div>
+                                            {formatCreatedAt(evaluation.created_at) && (
+                                                <p className="mt-1 pl-6 text-xs text-slate-400">
+                                                    Saisie le {formatCreatedAt(evaluation.created_at)}
+                                                </p>
+                                            )}
                                         </div>
                                     ),
                                 },
@@ -496,9 +517,9 @@ export default function EvaluationsIndex({
                                                 </span>
                                             </Link>
 
-                                            {evaluation.status ===
-                                            'in_progress' ? (
+                                            {(evaluation.status === 'in_progress' || (routePrefix === 'censeur' && evaluation.can_validate)) ? (
                                                 <>
+                                                    {((routePrefix !== 'censeur' && evaluation.status === 'in_progress') || evaluation.can_validate) && (
                                                     <Button
                                                         size="sm"
                                                         onClick={() =>
@@ -516,7 +537,9 @@ export default function EvaluationsIndex({
                                                             Valider
                                                         </span>
                                                     </Button>
+                                                    )}
 
+                                                    {(routePrefix !== 'censeur' || evaluation.can_return) && (
                                                     <Button
                                                         size="sm"
                                                         variant="danger"
@@ -532,6 +555,7 @@ export default function EvaluationsIndex({
                                                             Retourner
                                                         </span>
                                                     </Button>
+                                                    )}
                                                 </>
                                             ) : null}
 

@@ -189,7 +189,7 @@ export default function Grades({ evaluation, results }) {
 
         put(
             route(
-                'teacher.evaluations.grades.update',
+                `${evaluation.route_prefix}.evaluations.grades.update`,
                 evaluation.id
             ),
             {
@@ -213,7 +213,7 @@ export default function Grades({ evaluation, results }) {
         // enregistrer les notes.
         put(
             route(
-                'teacher.evaluations.grades.update',
+                `${evaluation.route_prefix}.evaluations.grades.update`,
                 evaluation.id
             ),
             {
@@ -224,7 +224,7 @@ export default function Grades({ evaluation, results }) {
                     // soumettre l'évaluation.
                     router.post(
                         route(
-                            'teacher.evaluations.submit',
+                            `${evaluation.route_prefix}.evaluations.submit`,
                             evaluation.id
                         ),
                         {},
@@ -253,6 +253,27 @@ export default function Grades({ evaluation, results }) {
         );
     }
 
+    function validateDirectly() {
+        if (!evaluation.can_validate || !allGraded || hasScoreErrors || processing) {
+            return;
+        }
+
+        setValidating(true);
+        put(
+            route(`${evaluation.route_prefix}.evaluations.grades.update`, evaluation.id),
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    router.post(route(evaluation.validation_route, evaluation.id), {}, {
+                        preserveScroll: true,
+                        onFinish: () => setValidating(false),
+                    });
+                },
+                onError: () => setValidating(false),
+            }
+        );
+    }
+
     function submitReturn() {
         if (!evaluation.can_return || !returnData.reason.trim() || returning) {
             return;
@@ -275,10 +296,7 @@ export default function Grades({ evaluation, results }) {
      * lorsqu'elle est en attente de validation
      * ou déjà validée.
      */
-    const disabled =
-        !evaluation.can_edit ||
-        evaluation.is_validated ||
-        evaluation.status === 'in_progress';
+    const disabled = !evaluation.can_edit || evaluation.is_validated;
 
     return (
         <AuthenticatedLayout title={evaluation.title}>
@@ -672,7 +690,7 @@ export default function Grades({ evaluation, results }) {
                 </Card.Body>
 
                 {/* =====================================================
-                    ACTIONS ENSEIGNANT
+                    ACTIONS DE SAISIE
                 ===================================================== */}
 
                 {evaluation.can_edit && !disabled && (
@@ -714,15 +732,15 @@ export default function Grades({ evaluation, results }) {
                                 Enregistrer le brouillon
                             </Button>
 
-                            <Button
-                                onClick={() =>
-                                    setShowValidate(true)
-                                }
-                                disabled={!canSubmit}
-                            >
-                                <CheckCircle2 className="h-4 w-4" />
-                                Soumettre pour validation
-                            </Button>
+                            {!evaluation.is_censeur && (
+                                <Button
+                                    onClick={() => setShowValidate(true)}
+                                    disabled={!canSubmit}
+                                >
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    Soumettre pour validation
+                                </Button>
+                            )}
                         </div>
                     </div>
                 )}
@@ -731,30 +749,41 @@ export default function Grades({ evaluation, results }) {
                     VALIDATION ADMIN / CENSEUR
                 ===================================================== */}
 
+                {evaluation.is_censeur &&
+                    evaluation.status === 'in_progress' &&
+                    evaluation.entered_by_role === 'teacher' && (
+                        <div className="border-t border-blue-200 bg-blue-50 p-4 sm:p-5">
+                            <p className="text-sm font-semibold text-blue-900">
+                                Évaluation soumise à l’administration
+                            </p>
+                            <p className="mt-1 text-xs text-blue-800">
+                                Elle peut être vérifiée puis validée ou retournée par le censeur ou le fondateur.
+                            </p>
+                        </div>
+                    )}
+
                 {evaluation.can_validate &&
-                    evaluation.status === 'in_progress' && (
+                    (evaluation.status === 'in_progress' || (evaluation.is_censeur && evaluation.status === 'draft')) && (
                         <div className="border-t border-amber-200 bg-amber-50 p-4 sm:flex sm:items-center sm:justify-between sm:p-5">
                             <div className="mb-3 sm:mb-0">
                                 <p className="text-sm font-semibold text-amber-900">
-                                    Évaluation en attente de validation
+                                    {evaluation.is_censeur && evaluation.entered_by_role === 'censeur'
+                                        ? 'Votre saisie est prête à être validée'
+                                        : 'Évaluation en attente de validation'}
                                 </p>
 
                                 <p className="mt-1 text-xs text-amber-700">
-                                    Vérifiez les notes avant de
-                                    procéder à la validation.
+                                    {evaluation.is_censeur && evaluation.entered_by_role === 'censeur'
+                                        ? 'Validez pour confirmer les notes et lancer leur notification aux parents.'
+                                        : 'Vérifiez les notes saisies par l’enseignant avant de les valider ou de les retourner.'}
                                 </p>
                             </div>
 
                             <div className="flex flex-col gap-2 sm:flex-row">
                                 <Button
-                                    onClick={() =>
-                                        router.post(
-                                            route(
-                                                evaluation.validation_route,
-                                                evaluation.id
-                                            )
-                                        )
-                                    }
+                                    onClick={validateDirectly}
+                                    loading={validating}
+                                    disabled={!allGraded || hasScoreErrors || processing}
                                 >
                                     <CheckCircle2 className="h-4 w-4" />
                                     Valider l'évaluation

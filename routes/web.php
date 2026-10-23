@@ -1337,6 +1337,18 @@ Route::middleware([
                 StaffEvaluationController::class,
                 'updateGrades',
             ])->name('evaluations.grades.update');
+
+            Route::post('/evaluations/{evaluation}/validate', [
+                App\Http\Controllers\Censeur\EvaluationValidationController::class,
+                'store',
+            ])
+                ->middleware('2fa.fresh:validate_evaluation')
+                ->name('evaluations.validate');
+
+            Route::post('/evaluations/{evaluation}/return', [
+                Admin\EvaluationReturnController::class,
+                'store',
+            ])->name('evaluations.return');
             Route::get('/academic/results', [
                 Admin\AcademicResultController::class,
                 'index',

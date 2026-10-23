@@ -7,7 +7,6 @@ import Select from '@/Components/UI/Select';
 import Button from '@/Components/UI/Button';
 import EmptyState from '@/Components/UI/EmptyState';
 import Alert from '@/Components/UI/Alert';
-import Checkbox from '@/Components/UI/Checkbox';
 
 import {
     ArrowRight,
@@ -17,13 +16,12 @@ import {
     ClipboardList,
     GraduationCap,
     UserRound,
-    ShieldCheck,
 } from 'lucide-react';
 
 export default function CreateEvaluation({
     assignments = [],
+    classes = [],
     types = [],
-    isCenseur = false,
     academicYear = null,
     academicPeriod = null,
 }) {
@@ -42,52 +40,47 @@ export default function CreateEvaluation({
         max_score: 20,
         coefficient: 1,
         teacher_id: '',
-        validate_directly: false,
     });
 
-    const selectedAssignment = assignments.find(
+    const selectedClass = classes.find(
+        (classRoom) => String(classRoom.id) === String(data.class_id)
+    );
+    const availableSubjects = selectedClass?.subjects ?? [];
+    const selectedSubject = availableSubjects.find(
+        (subject) => String(subject.id) === String(data.subject_id)
+    );
+    const assignedTeachers = assignments.filter(
         (assignment) =>
             String(assignment.class_id) === String(data.class_id) &&
-            String(assignment.subject_id) === String(data.subject_id) &&
-            (
-                !isCenseur ||
-                String(assignment.teacher_id || '') ===
-                    String(data.teacher_id || '')
-            )
+            String(assignment.subject_id) === String(data.subject_id)
     );
 
-    const selectedValue =
-        selectedAssignment
-            ? `${selectedAssignment.class_id}|${selectedAssignment.subject_id}|${selectedAssignment.teacher_id || ''}`
-            : '';
-
-    function handleAssignmentChange(event) {
-        const value = event.target.value;
-
-        if (!value) {
-            setData((current) => ({
-                ...current,
-                class_id: '',
-                subject_id: '',
-                teacher_id: '',
-            }));
-
-            return;
-        }
-
-        const [class_id, subject_id, teacher_id = ''] =
-            value.split('|');
-
+    function handleClassChange(event) {
         setData((current) => ({
             ...current,
-            class_id,
-            subject_id,
-            teacher_id,
+            class_id: event.target.value,
+            subject_id: '',
+            teacher_id: '',
         }));
     }
 
-    function handleValidateDirectlyChange(event) {
-        setData('validate_directly', event.target.checked);
+    function handleSubjectChange(event) {
+        const subjectId = event.target.value;
+        const teachers = assignments.filter(
+            (assignment) =>
+                String(assignment.class_id) === String(data.class_id) &&
+                String(assignment.subject_id) === String(subjectId)
+        );
+
+        setData((current) => ({
+            ...current,
+            subject_id: subjectId,
+            teacher_id: teachers.length === 1 ? String(teachers[0].teacher_id) : '',
+        }));
+    }
+
+    function handleTeacherChange(event) {
+        setData('teacher_id', event.target.value);
     }
 
     function submit(event) {
@@ -96,7 +89,7 @@ export default function CreateEvaluation({
         post(route('censeur.evaluations.store'));
     }
 
-    if (assignments.length === 0) {
+    if (classes.length === 0 || !classes.some((classRoom) => classRoom.subjects?.length)) {
         return (
             <AuthenticatedLayout title="Nouvelle évaluation">
                 <Head title="Nouvelle évaluation" />
@@ -124,8 +117,8 @@ export default function CreateEvaluation({
                         <Card.Body>
                             <EmptyState
                                 icon={BookOpen}
-                                title="Aucune affectation disponible"
-                                description="Contactez l'administration pour affecter des enseignants à des classes et matières avant de créer une évaluation."
+                                title="Aucune classe ou matière disponible"
+                                description="Ajoutez des classes et leurs matières avant de créer une évaluation. Le censeur pourra saisir les notes même sans enseignant affecté."
                             />
                         </Card.Body>
                     </Card>
@@ -161,14 +154,14 @@ export default function CreateEvaluation({
                             </h1>
 
                             <p className="mt-2 max-w-2xl text-sm leading-6 text-emerald-50 sm:text-base">
-                                Configurez l'évaluation, saisissez les notes et validez directement si souhaité.
+                                Choisissez une classe et une matière, puis saisissez les notes avec ou sans enseignant affecté.
                             </p>
                         </div>
                     </div>
                 </div>
 
                 {/* Selection preview */}
-                {selectedAssignment && (
+                {selectedClass && selectedSubject && (
                     <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 p-4 sm:p-5">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex items-center gap-3">
@@ -178,26 +171,36 @@ export default function CreateEvaluation({
 
                                 <div>
                                     <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
-                                        Affectation sélectionnée
+                                        Saisie sélectionnée
                                     </p>
 
                                     <div className="mt-1 flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-800">
                                         <span>
-                                            {selectedAssignment.class_name}
+                                            {selectedClass.name}
                                         </span>
 
                                         <ArrowRight className="h-4 w-4 text-emerald-500" />
 
                                         <span>
-                                            {selectedAssignment.subject_name}
+                                            {selectedSubject.name}
                                         </span>
                                     </div>
 
-                                    {selectedAssignment.teacher_name && (
+                                    {assignedTeachers.length > 0 && data.teacher_id && (
                                         <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                                             <UserRound className="h-3.5 w-3.5" />
                                             Enseignant :{' '}
-                                            {selectedAssignment.teacher_name}
+                                            {assignedTeachers.find((teacher) => String(teacher.teacher_id) === String(data.teacher_id))?.teacher_name}
+                                        </div>
+                                    )}
+                                    {assignedTeachers.length > 0 && !data.teacher_id && (
+                                        <div className="mt-1 text-xs text-slate-500">
+                                            L'enseignant affecté sera associé automatiquement.
+                                        </div>
+                                    )}
+                                    {assignedTeachers.length === 0 && (
+                                        <div className="mt-1 text-xs font-medium text-amber-700">
+                                            Aucun enseignant affecté : votre saisie sera enregistrée sous votre identité.
                                         </div>
                                     )}
                                 </div>
@@ -246,47 +249,36 @@ export default function CreateEvaluation({
                                             Classe, matière et enseignant
                                         </p>
 
-                                        <p className="text-xs text-slate-500">
-                                            Sélectionnez l'affectation concernée.
+                                <p className="text-xs text-slate-500">
+                                            Choisissez une classe et une matière. Si un enseignant y est affecté, sélectionnez-le.
                                         </p>
                                     </div>
                                 </div>
 
-                                <Field
-                                    label="Affectation"
-                                    required
-                                    error={
-                                        errors.class_id ||
-                                        errors.subject_id ||
-                                        errors.teacher_id
-                                    }
-                                >
-                                    <Select
-                                        value={selectedValue}
-                                        onChange={
-                                            handleAssignmentChange
-                                        }
-                                    >
-                                        <option value="">
-                                            Choisir une classe, une matière et un enseignant…
-                                        </option>
-
-                                        {assignments.map(
-                                            (assignment, index) => (
-                                                <option
-                                                    key={`${assignment.class_id}-${assignment.subject_id}-${assignment.teacher_id || index}`}
-                                                    value={`${assignment.class_id}|${assignment.subject_id}|${assignment.teacher_id || ''}`}
-                                                >
-                                                    {assignment.class_name}
-                                                    {' — '}
-                                                    {assignment.subject_name}
-                                                    {' — '}
-                                                    {assignment.teacher_name}
-                                                </option>
-                                            )
-                                        )}
-                                    </Select>
-                                </Field>
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <Field label="Classe" required error={errors.class_id}>
+                                        <Select value={data.class_id} onChange={handleClassChange}>
+                                            <option value="">Choisir une classe…</option>
+                                            {classes.map((classRoom) => <option key={classRoom.id} value={classRoom.id}>{classRoom.name}</option>)}
+                                        </Select>
+                                    </Field>
+                                    <Field label="Matière" required error={errors.subject_id}>
+                                        <Select value={data.subject_id} onChange={handleSubjectChange} disabled={!data.class_id}>
+                                            <option value="">Choisir une matière…</option>
+                                            {availableSubjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
+                                        </Select>
+                                    </Field>
+                                </div>
+                                {selectedSubject && assignedTeachers.length > 0 && (
+                                    <div className="mt-4">
+                                        <Field label="Enseignant affecté (facultatif)" error={errors.teacher_id}>
+                                            <Select value={data.teacher_id} onChange={handleTeacherChange}>
+                                                <option value="">Associer automatiquement l'enseignant affecté</option>
+                                                {assignedTeachers.map((teacher) => <option key={teacher.teacher_id} value={teacher.teacher_id}>{teacher.teacher_name}</option>)}
+                                            </Select>
+                                        </Field>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Censeur information */}
@@ -298,15 +290,13 @@ export default function CreateEvaluation({
 
                                     <div>
                                         <p className="text-sm font-semibold text-amber-900">
-                                            Saisie pour le compte d'un enseignant
+                                            {assignedTeachers.length ? 'Enseignant affecté' : 'Aucun enseignant affecté'}
                                         </p>
 
                                         <p className="mt-1 text-sm leading-6 text-amber-800">
-                                            L'enseignant sélectionné restera
-                                            associé à l'évaluation. Votre
-                                            identité sera conservée comme
-                                            personne ayant effectué la saisie
-                                            et la soumission.
+                                            {assignedTeachers.length
+                                                ? "L'enseignant sélectionné restera associé à l'évaluation. Votre identité sera enregistrée comme personne ayant saisi les notes."
+                                                : "Vous pouvez saisir les notes sans affectation. Votre identité sera enregistrée comme personne ayant effectué la saisie."}
                                         </p>
                                     </div>
                                 </div>
@@ -515,51 +505,16 @@ export default function CreateEvaluation({
                                 </div>
                             </div>
 
-                            {/* Validate directly option */}
-                            <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 p-4 sm:p-5">
-                                <div className="flex items-start gap-3">
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-                                        <ShieldCheck className="h-5 w-5" />
-                                    </div>
-
-                                    <div className="flex-1">
-                                        <p className="text-sm font-semibold text-emerald-900">
-                                            Validation directe
-                                        </p>
-
-                                        <p className="mt-1 text-sm leading-6 text-emerald-800">
-                                            Si cette option est cochée, l'évaluation sera créée avec le statut
-                                            « En cours de validation » (au lieu de « Brouillon »).
-                                            Vous pourrez alors saisir les notes et la valider immédiatement
-                                            sans passer par l'étape de soumission.
-                                        </p>
-
-                                        <div className="mt-3">
-                                            <Field
-                                                label=""
-                                                className="pt-0"
-                                            >
-                                                <Checkbox
-                                                    checked={data.validate_directly}
-                                                    onChange={handleValidateDirectlyChange}
-                                                    label="Valider directement après saisie des notes"
-                                                />
-                                            </Field>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
                             {/* Footer */}
                             <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="text-xs leading-5 text-slate-500">
-                                    {selectedAssignment ? (
+                                    {data.class_id && data.subject_id ? (
                                         <span className="flex items-center gap-1.5 text-emerald-600">
                                             <CheckCircle2 className="h-4 w-4" />
-                                            Classe, matière et enseignant sélectionnés
+                                            Classe et matière sélectionnées
                                         </span>
                                     ) : (
-                                        'Sélectionnez une classe, une matière et un enseignant pour continuer.'
+                                        'Sélectionnez une classe et une matière pour continuer.'
                                     )}
                                 </div>
 
@@ -567,7 +522,7 @@ export default function CreateEvaluation({
                                     type="submit"
                                     className="w-full sm:w-auto"
                                     loading={processing}
-                                    disabled={!selectedAssignment}
+                                    disabled={!(data.class_id && data.subject_id)}
                                 >
                                     <ClipboardList className="h-4 w-4" />
                                     Créer et saisir les notes

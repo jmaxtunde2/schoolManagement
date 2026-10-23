@@ -37,7 +37,7 @@ class DashboardController extends Controller
                 'subject:id,name',
                 'teacher.user:id,name',
             ])->whereIn('class_id', $primaryClassIds)
-                ->latest('evaluation_date')
+                ->latest('created_at')
                 ->limit(8)
                 ->get(),
             'routePrefix' => 'director',

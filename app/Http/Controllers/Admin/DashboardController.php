@@ -42,7 +42,7 @@ class DashboardController extends Controller
 
         $recentEvaluations = Cache::remember($cacheKey.':recent_evaluations', 300, function () use ($schoolId) {
             return Evaluation::with(['classRoom:id,name', 'subject:id,name', 'teacher.user:id,name'])
-                ->latest('evaluation_date')->take(5)->get();
+                ->latest('created_at')->take(5)->get();
         });
 
         return Inertia::render('Admin/Dashboard', [

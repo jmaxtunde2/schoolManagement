@@ -33,7 +33,7 @@ class DashboardController extends Controller
             'subject:id,name',
         ])
             ->where('teacher_id', $teacher->id)
-            ->latest('evaluation_date')
+            ->latest('created_at')
             ->take(5)
             ->get();
 

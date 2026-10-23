@@ -56,8 +56,15 @@ class SaveGrades
                     ]);
             }
 
+            // Une évaluation déjà soumise (in_progress) reste dans cet état
+            // lorsque le censeur corrige les notes : elle doit pouvoir être
+            // validée ensuite sans repasser par une soumission.
+            $status = $evaluation->status === EvaluationStatus::InProgress
+                ? EvaluationStatus::InProgress->value
+                : EvaluationStatus::Draft->value;
+
             $evaluation->update([
-                'status' => EvaluationStatus::Draft->value,
+                'status' => $status,
                 'entered_by' => $userId,
             ]);
         });

@@ -21,7 +21,7 @@ class DashboardController extends Controller
                 'validated' => Evaluation::where('status', 'validated')->count(),
             ],
             'recentEvaluations' => Evaluation::with(['classRoom:id,name', 'subject:id,name', 'teacher.user:id,name'])
-                ->latest('evaluation_date')
+                ->latest('created_at')
                 ->limit(8)
                 ->get(),
             'timetableBrief' => $brief->handle(),

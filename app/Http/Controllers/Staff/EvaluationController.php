@@ -46,7 +46,7 @@ class EvaluationController extends Controller
                     $user->teacher?->id
                 )
             )
-            ->latest('evaluation_date')
+            ->latest('created_at')
             ->latest('id')
             ->paginate(15)
             ->withQueryString();
@@ -161,7 +161,8 @@ class EvaluationController extends Controller
             $evaluation = $action->handle(
                 $teacher,
                 $request->validated(),
-                $user->id
+                $user->id,
+                (int) $user->school_id
             );
         } catch (RuntimeException $e) {
             return back()->with(
@@ -200,7 +201,7 @@ class EvaluationController extends Controller
             'academicYear:id,name',
             'academicPeriod:id,name',
             'enteredBy:id,name',
-            'submitter:id,name',
+            'submitter:id,name,role',
             'validator:id,name',
             'results.student' => fn ($query) => $query
                 ->orderBy('last_name')
@@ -212,6 +213,11 @@ class EvaluationController extends Controller
             [
                 'evaluation' => [
                     'id' => $evaluation->id,
+
+                    'route_prefix' => $request->user()->isCenseur() ? 'censeur' : 'teacher',
+                    'is_censeur' => $request->user()->isCenseur(),
+                    'entered_by_role' => $evaluation->enteredBy?->role?->value
+                        ?? $evaluation->submitter?->role?->value,
 
                     'title' => $evaluation->title,
 
@@ -237,7 +243,10 @@ class EvaluationController extends Controller
 
                     'academic_period_name' => $evaluation->academicPeriod?->name,
 
-                    'teacher_name' => $evaluation->teacher->user->name,
+                    'teacher_name' => $evaluation->teacher?->user?->name
+                        ?? ($evaluation->enteredBy?->isCenseur()
+                            ? $evaluation->enteredBy->name
+                            : 'Non affecté'),
 
                     'entered_by' => $evaluation->enteredBy?->name,
 
@@ -320,7 +329,7 @@ class EvaluationController extends Controller
 
         return back()->with(
             'success',
-            'Notes enregistrées en brouillon.'
+            'Notes enregistrées.'
         );
     }
 

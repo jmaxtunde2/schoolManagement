@@ -16,18 +16,15 @@ class StoreEvaluationRequest extends FormRequest
 
     public function rules(): array
     {
-        $isSecretaryOrCenseur = $this->user()->isSecretary() || $this->user()->isCenseur();
-
         return [
             'class_id' => ['required', 'integer', Rule::exists('classes', 'id')->where('school_id', $this->user()->school_id)],
             'subject_id' => ['required', 'integer', Rule::exists('subjects', 'id')->where('school_id', $this->user()->school_id)],
-            'teacher_id' => [Rule::requiredIf($isSecretaryOrCenseur), 'nullable', 'integer', Rule::exists('teachers', 'id')->where('school_id', $this->user()->school_id)],
+            'teacher_id' => [Rule::requiredIf($this->user()->isSecretary()), 'nullable', 'integer', Rule::exists('teachers', 'id')->where('school_id', $this->user()->school_id)],
             'title' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::in(array_column(EvaluationType::cases(), 'value'))],
             'evaluation_date' => ['required', 'date', 'before_or_equal:today'],
             'max_score' => ['required', 'numeric', 'min:1', 'max:1000'],
             'coefficient' => ['required', 'numeric', 'min:0.5', 'max:10'],
-            'validate_directly' => ['boolean'],
         ];
     }
 
@@ -42,11 +39,15 @@ class StoreEvaluationRequest extends FormRequest
                 $validator->errors()->add('subject_id', "Vous n'êtes pas habilité à évaluer cette matière dans cette classe.");
             }
 
-            if (($this->user()->isSecretary() || $this->user()->isCenseur()) && $class && $subject && $teacherId) {
-                $teacher = \App\Models\Teacher::withoutGlobalScopes()
+            if (($this->user()->isSecretary() || $this->user()->isCenseur()) && $class && $subject) {
+                $assignedTeachers = \App\Models\Teacher::withoutGlobalScopes()
                     ->where('school_id', $this->user()->school_id)
-                    ->find($teacherId);
-                if ($teacher && ! $teacher->isAssignedTo($class, $subject)) {
+                    ->whereHas('user', fn ($query) => $query->where('is_active', true))
+                    ->whereHas('assignments', fn ($query) => $query
+                        ->where('class_id', $class)
+                        ->where('subject_id', $subject));
+
+                if ($teacherId && ! $assignedTeachers->whereKey($teacherId)->exists()) {
                     $validator->errors()->add('teacher_id', "L'enseignant sélectionné n'est pas affecté à cette classe et cette matière.");
                 }
             }

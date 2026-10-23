@@ -37,7 +37,7 @@ class DashboardController extends Controller
                 'classRoom:id,name',
                 'subject:id,name',
                 'teacher.user:id,name',
-            ])->latest('evaluation_date')->limit(8)->get(),
+            ])->latest('created_at')->limit(8)->get(),
             'routePrefix' => 'surveillant',
             'finance' => false,
             'timetableBrief' => $brief->handle(),

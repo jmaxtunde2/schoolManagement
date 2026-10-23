@@ -5,6 +5,7 @@ namespace App\Actions\Evaluations;
 use App\Enums\EvaluationNotificationStatus;
 use App\Enums\EvaluationStatus;
 use App\Models\Evaluation;
+use App\Models\User;
 use App\Services\AuditService;
 use App\Services\UserNotifications\EvaluationNotificationService;
 use Illuminate\Support\Facades\DB;
@@ -19,10 +20,19 @@ class ValidateEvaluation
     public function handle(Evaluation $evaluation, int $validatorId): Evaluation
     {
         $validated = DB::transaction(function () use ($evaluation, $validatorId) {
-            $evaluation = Evaluation::withoutGlobalScopes()->lockForUpdate()->findOrFail($evaluation->id);
+            $evaluation = Evaluation::withoutGlobalScopes()
+                ->with('enteredBy')
+                ->lockForUpdate()
+                ->findOrFail($evaluation->id);
 
-            if ($evaluation->status !== EvaluationStatus::InProgress) {
-                throw new \RuntimeException('Cette évaluation doit être en cours de validation.');
+            $validator = User::query()->findOrFail($validatorId);
+            $censeurDraft = $evaluation->status === EvaluationStatus::Draft
+                && $validator->isCenseur()
+                && (int) $evaluation->entered_by === $validatorId
+                && $evaluation->enteredBy?->isCenseur();
+
+            if ($evaluation->status !== EvaluationStatus::InProgress && ! $censeurDraft) {
+                throw new \RuntimeException('Cette évaluation ne peut pas être validée dans son état actuel.');
             }
 
             $total = $evaluation->results()->count();

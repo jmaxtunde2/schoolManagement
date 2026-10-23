@@ -18,7 +18,7 @@ class EvaluationController extends Controller
         $evaluations = Evaluation::with(['classRoom:id,name', 'subject:id,name', 'teacher.user:id,name'])
             ->whereIn('class_id', $primaryClassIds)
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
-            ->latest('evaluation_date')
+            ->latest('created_at')
             ->latest('id')
             ->paginate(20)
             ->withQueryString();

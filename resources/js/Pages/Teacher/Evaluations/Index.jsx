@@ -33,6 +33,13 @@ const statusLabels = {
     returned: 'Retournée pour correction',
 };
 
+const formatCreatedAt = (value) => value
+    ? new Date(value).toLocaleString('fr-FR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+    })
+    : null;
+
 const statusIcons = {
     draft: FileEdit,
     in_progress: Clock3,
@@ -285,11 +292,16 @@ export default function TeacherEvaluationsIndex({
                                                         </td>
 
                                                         <td className="px-4 py-4">
-                                                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                                                                <CalendarDays className="h-4 w-4 text-slate-400" />
-                                                                {
-                                                                    evaluation.evaluation_date
-                                                                }
+                                                            <div>
+                                                                <div className="flex items-center gap-2 text-sm text-slate-600">
+                                                                    <CalendarDays className="h-4 w-4 text-slate-400" />
+                                                                    {evaluation.evaluation_date}
+                                                                </div>
+                                                                {formatCreatedAt(evaluation.created_at) && (
+                                                                    <p className="mt-1 pl-6 text-xs text-slate-400">
+                                                                        Saisie le {formatCreatedAt(evaluation.created_at)}
+                                                                    </p>
+                                                                )}
                                                             </div>
                                                         </td>
 
@@ -386,11 +398,16 @@ export default function TeacherEvaluationsIndex({
                                                         </div>
 
                                                         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                                                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                                                                <CalendarDays className="h-3.5 w-3.5" />
-                                                                {
-                                                                    evaluation.evaluation_date
-                                                                }
+                                                            <div>
+                                                                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                                                                    <CalendarDays className="h-3.5 w-3.5" />
+                                                                    {evaluation.evaluation_date}
+                                                                </div>
+                                                                {formatCreatedAt(evaluation.created_at) && (
+                                                                    <p className="mt-1 pl-5 text-[11px] text-slate-400">
+                                                                        Saisie le {formatCreatedAt(evaluation.created_at)}
+                                                                    </p>
+                                                                )}
                                                             </div>
 
                                                             <Badge
