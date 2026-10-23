@@ -22,6 +22,7 @@ export default function CreateEvaluation({
     assignments = [],
     classes = [],
     types = [],
+    isAdmin = false,
     academicYear = null,
     academicPeriod = null,
 }) {
@@ -86,7 +87,7 @@ export default function CreateEvaluation({
     function submit(event) {
         event.preventDefault();
 
-        post(route('censeur.evaluations.store'));
+        post(route(`${isAdmin ? 'admin' : 'censeur'}.evaluations.store`));
     }
 
     if (classes.length === 0 || !classes.some((classRoom) => classRoom.subjects?.length)) {
@@ -118,7 +119,7 @@ export default function CreateEvaluation({
                             <EmptyState
                                 icon={BookOpen}
                                 title="Aucune classe ou matière disponible"
-                                description="Ajoutez des classes et leurs matières avant de créer une évaluation. Le censeur pourra saisir les notes même sans enseignant affecté."
+                                description="Ajoutez des classes et leurs matières avant de créer une évaluation. L'administration pourra saisir les notes même sans enseignant affecté."
                             />
                         </Card.Body>
                     </Card>
@@ -281,7 +282,7 @@ export default function CreateEvaluation({
                                 )}
                             </div>
 
-                            {/* Censeur information */}
+                            {/* Administration information */}
                             <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-4">
                                 <div className="flex items-start gap-3">
                                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">

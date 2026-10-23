@@ -1127,10 +1127,19 @@ Route::middleware([
                 'index',
             ])->name('evaluations.index');
 
+            Route::get('/evaluations/create', [Admin\EvaluationController::class, 'create'])
+                ->name('evaluations.create');
+
+            Route::post('/evaluations', [Admin\EvaluationController::class, 'store'])
+                ->name('evaluations.store');
+
             Route::get('/evaluations/{evaluation}/grades', [
                 StaffEvaluationController::class,
                 'grades',
             ])->name('evaluations.grades');
+
+            Route::put('/evaluations/{evaluation}/grades', [StaffEvaluationController::class, 'updateGrades'])
+                ->name('evaluations.grades.update');
 
             Route::post('/evaluations/{evaluation}/validate', [
                 Admin\EvaluationValidationController::class,

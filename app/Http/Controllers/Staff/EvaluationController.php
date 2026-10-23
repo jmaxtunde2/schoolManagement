@@ -214,8 +214,9 @@ class EvaluationController extends Controller
                 'evaluation' => [
                     'id' => $evaluation->id,
 
-                    'route_prefix' => $request->user()->isCenseur() ? 'censeur' : 'teacher',
+                    'route_prefix' => $request->user()->isCenseur() ? 'censeur' : ($request->user()->isAdmin() ? 'admin' : 'teacher'),
                     'is_censeur' => $request->user()->isCenseur(),
+                    'is_admin' => $request->user()->isAdmin(),
                     'entered_by_role' => $evaluation->enteredBy?->role?->value
                         ?? $evaluation->submitter?->role?->value,
 
@@ -244,7 +245,7 @@ class EvaluationController extends Controller
                     'academic_period_name' => $evaluation->academicPeriod?->name,
 
                     'teacher_name' => $evaluation->teacher?->user?->name
-                        ?? ($evaluation->enteredBy?->isCenseur()
+                        ?? (($evaluation->enteredBy?->isCenseur() || $evaluation->enteredBy?->isAdmin())
                             ? $evaluation->enteredBy->name
                             : 'Non affecté'),
 

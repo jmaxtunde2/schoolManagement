@@ -282,6 +282,33 @@ class EvaluationWorkflowTest extends TestCase
         $this->assertSame('validated', $evaluation->fresh()->status->value);
     }
 
+    public function test_school_admin_can_enter_and_directly_validate_evaluation(): void
+    {
+        Queue::fake();
+        $student = Student::factory()->create([
+            'school_id' => $this->school->id,
+            'class_id' => $this->class->id,
+        ]);
+        $admin = User::factory()->forSchool($this->school)->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->post('/admin/evaluations', $this->payload())
+            ->assertRedirect()->assertSessionHasNoErrors();
+
+        $evaluation = Evaluation::firstOrFail();
+        $this->assertSame($this->teacher->id, $evaluation->teacher_id);
+        $this->assertSame($admin->id, $evaluation->entered_by);
+
+        $this->actingAs($admin)->put("/admin/evaluations/{$evaluation->id}/grades", [
+            'results' => [['student_id' => $student->id, 'score' => 17, 'is_absent' => false]],
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAsTwoFactorVerifiedFor('validate_evaluation', $admin)
+            ->post("/admin/evaluations/{$evaluation->id}/validate")
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('validated', $evaluation->fresh()->status->value);
+    }
+
     public function test_teacher_cannot_validate_own_evaluation(): void
     {
         $this->actingAs($this->teacher->user)->post('/teacher/evaluations', $this->payload());

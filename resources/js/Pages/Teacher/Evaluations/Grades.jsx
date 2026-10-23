@@ -732,7 +732,7 @@ export default function Grades({ evaluation, results }) {
                                 Enregistrer le brouillon
                             </Button>
 
-                            {!evaluation.is_censeur && (
+                            {!evaluation.is_censeur && !evaluation.is_admin && (
                                 <Button
                                     onClick={() => setShowValidate(true)}
                                     disabled={!canSubmit}
@@ -749,7 +749,7 @@ export default function Grades({ evaluation, results }) {
                     VALIDATION ADMIN / CENSEUR
                 ===================================================== */}
 
-                {evaluation.is_censeur &&
+                {(evaluation.is_censeur || evaluation.is_admin) &&
                     evaluation.status === 'in_progress' &&
                     evaluation.entered_by_role === 'teacher' && (
                         <div className="border-t border-blue-200 bg-blue-50 p-4 sm:p-5">
@@ -757,23 +757,23 @@ export default function Grades({ evaluation, results }) {
                                 Évaluation soumise à l’administration
                             </p>
                             <p className="mt-1 text-xs text-blue-800">
-                                Elle peut être vérifiée puis validée ou retournée par le censeur ou le fondateur.
+                                Elle peut être vérifiée puis validée ou retournée par l'administrateur, le censeur ou le fondateur.
                             </p>
                         </div>
                     )}
 
                 {evaluation.can_validate &&
-                    (evaluation.status === 'in_progress' || (evaluation.is_censeur && evaluation.status === 'draft')) && (
+                    (evaluation.status === 'in_progress' || ((evaluation.is_censeur || evaluation.is_admin) && evaluation.status === 'draft')) && (
                         <div className="border-t border-amber-200 bg-amber-50 p-4 sm:flex sm:items-center sm:justify-between sm:p-5">
                             <div className="mb-3 sm:mb-0">
                                 <p className="text-sm font-semibold text-amber-900">
-                                    {evaluation.is_censeur && evaluation.entered_by_role === 'censeur'
+                                    {(evaluation.is_censeur || evaluation.is_admin) && evaluation.entered_by_role === (evaluation.is_admin ? 'admin' : 'censeur')
                                         ? 'Votre saisie est prête à être validée'
                                         : 'Évaluation en attente de validation'}
                                 </p>
 
                                 <p className="mt-1 text-xs text-amber-700">
-                                    {evaluation.is_censeur && evaluation.entered_by_role === 'censeur'
+                                    {(evaluation.is_censeur || evaluation.is_admin) && evaluation.entered_by_role === (evaluation.is_admin ? 'admin' : 'censeur')
                                         ? 'Validez pour confirmer les notes et lancer leur notification aux parents.'
                                         : 'Vérifiez les notes saisies par l’enseignant avant de les valider ou de les retourner.'}
                                 </p>

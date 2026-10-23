@@ -26,12 +26,13 @@ class ValidateEvaluation
                 ->findOrFail($evaluation->id);
 
             $validator = User::query()->findOrFail($validatorId);
-            $censeurDraft = $evaluation->status === EvaluationStatus::Draft
-                && $validator->isCenseur()
+            $staffDraft = $evaluation->status === EvaluationStatus::Draft
+                && ($validator->isCenseur() || $validator->isAdmin())
                 && (int) $evaluation->entered_by === $validatorId
-                && $evaluation->enteredBy?->isCenseur();
+                && ($evaluation->enteredBy?->isCenseur() || $evaluation->enteredBy?->isAdmin())
+                && $evaluation->enteredBy?->id === $validatorId;
 
-            if ($evaluation->status !== EvaluationStatus::InProgress && ! $censeurDraft) {
+            if ($evaluation->status !== EvaluationStatus::InProgress && ! $staffDraft) {
                 throw new \RuntimeException('Cette évaluation ne peut pas être validée dans son état actuel.');
             }
 

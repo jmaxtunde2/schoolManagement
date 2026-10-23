@@ -11,7 +11,7 @@ class StoreEvaluationRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return in_array($this->user()->role?->value, ['teacher', 'secretary', 'censeur'], true);
+        return in_array($this->user()->role?->value, ['teacher', 'secretary', 'censeur', 'admin'], true);
     }
 
     public function rules(): array
@@ -39,7 +39,7 @@ class StoreEvaluationRequest extends FormRequest
                 $validator->errors()->add('subject_id', "Vous n'êtes pas habilité à évaluer cette matière dans cette classe.");
             }
 
-            if (($this->user()->isSecretary() || $this->user()->isCenseur()) && $class && $subject) {
+            if (($this->user()->isSecretary() || $this->user()->isCenseur() || $this->user()->isAdmin()) && $class && $subject) {
                 $assignedTeachers = \App\Models\Teacher::withoutGlobalScopes()
                     ->where('school_id', $this->user()->school_id)
                     ->whereHas('user', fn ($query) => $query->where('is_active', true))

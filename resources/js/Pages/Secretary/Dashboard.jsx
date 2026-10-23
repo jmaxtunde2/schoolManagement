@@ -202,7 +202,7 @@ export default function Dashboard({
                                                     {' · '}
                                                     {evaluation.class_room.name}
                                                     {' · '}
-                                                    {evaluation.teacher?.user?.name ?? 'Saisie par le censeur'}
+                                                    {evaluation.teacher?.user?.name ?? 'Saisie par l’administration'}
                                                     {' · '}
                                                     {evaluation.evaluation_date}
                                                 </p>

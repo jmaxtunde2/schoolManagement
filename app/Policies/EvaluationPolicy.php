@@ -68,7 +68,7 @@ class EvaluationPolicy
             return $evaluation->teacher_id !== null && $evaluation->teacher_id === $user->teacher?->id;
         }
 
-        return $user->isSecretary() || $user->isCenseur();
+        return $user->isSecretary() || $user->isCenseur() || $user->isAdmin();
     }
 
     /**
@@ -81,9 +81,9 @@ class EvaluationPolicy
         User $user,
         Evaluation $evaluation
     ): bool {
-        // Le censeur enregistre en brouillon ou valide directement ;
+        // L'administration saisit en brouillon ou valide directement ;
         // la soumission appartient à l'enseignant.
-        if ($user->isCenseur()) {
+        if ($user->isCenseur() || $user->isAdmin()) {
             return false;
         }
 
@@ -137,6 +137,10 @@ class EvaluationPolicy
                     && (int) $evaluation->entered_by === (int) $user->id)
                 || ($evaluation->status === EvaluationStatus::InProgress
                     && $this->wasEnteredByTeacher($evaluation));
+        }
+
+        if ($user->isAdmin() && $evaluation->status === EvaluationStatus::Draft) {
+            return (int) $evaluation->entered_by === (int) $user->id;
         }
 
         return $evaluation->status === EvaluationStatus::InProgress;
