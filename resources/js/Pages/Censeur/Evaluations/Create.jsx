@@ -87,7 +87,7 @@ export default function CreateEvaluation({
     function submit(event) {
         event.preventDefault();
 
-        post(route(`${isAdmin ? 'admin' : 'censeur'}.evaluations.store`));
+        post(isAdmin ? '/admin/evaluations' : route('censeur.evaluations.store'));
     }
 
     if (classes.length === 0 || !classes.some((classRoom) => classRoom.subjects?.length)) {

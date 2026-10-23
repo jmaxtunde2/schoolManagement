@@ -79,6 +79,10 @@ export default function Grades({ evaluation, results }) {
             ? Math.round((gradedCount / total) * 100)
             : 0;
 
+    const gradeUpdateUrl = evaluation.route_prefix === 'admin'
+        ? `/admin/evaluations/${evaluation.id}/grades`
+        : route(`${evaluation.route_prefix}.evaluations.grades.update`, evaluation.id);
+
     /**
      * Met à jour une ligne de résultat.
      */
@@ -188,10 +192,7 @@ export default function Grades({ evaluation, results }) {
         }
 
         put(
-            route(
-                `${evaluation.route_prefix}.evaluations.grades.update`,
-                evaluation.id
-            ),
+            gradeUpdateUrl,
             {
                 preserveScroll: true,
             }
@@ -212,10 +213,7 @@ export default function Grades({ evaluation, results }) {
         // Étape 1 :
         // enregistrer les notes.
         put(
-            route(
-                `${evaluation.route_prefix}.evaluations.grades.update`,
-                evaluation.id
-            ),
+            gradeUpdateUrl,
             {
                 preserveScroll: true,
 
@@ -260,7 +258,7 @@ export default function Grades({ evaluation, results }) {
 
         setValidating(true);
         put(
-            route(`${evaluation.route_prefix}.evaluations.grades.update`, evaluation.id),
+            gradeUpdateUrl,
             {
                 preserveScroll: true,
                 onSuccess: () => {

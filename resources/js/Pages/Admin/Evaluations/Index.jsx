@@ -265,7 +265,7 @@ export default function EvaluationsIndex({
                             <div className="flex items-center gap-2">
                                 {(routePrefix === 'censeur' || routePrefix === 'admin') && (
                                     <Button
-                                        onClick={() => router.visit(route(`${routePrefix}.evaluations.create`))}
+                                        onClick={() => router.visit(`/${routePrefix}/evaluations/create`)}
                                     >
                                         <Plus className="h-4 w-4" />
                                         Ajouter une évaluation
