@@ -291,6 +291,7 @@ class EvaluationWorkflowTest extends TestCase
         ]);
         $admin = User::factory()->forSchool($this->school)->create(['role' => 'admin']);
 
+        $this->actingAs($admin)->get('/admin/evaluations/create')->assertOk();
         $this->actingAs($admin)->post('/admin/evaluations', $this->payload())
             ->assertRedirect()->assertSessionHasNoErrors();
 
