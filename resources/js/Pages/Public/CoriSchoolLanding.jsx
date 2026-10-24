@@ -340,6 +340,7 @@ function SectionHeading({
     title,
     description,
     centered = true,
+    optional = null,
 }) {
     return (
         <motion.div
@@ -361,9 +362,14 @@ function SectionHeading({
                 {title}
             </h2>
 
-            {description && (
+            {/* {description && (
                 <p className="mt-5 text-base leading-7 text-slate-600 sm:text-lg">
                     {description}
+                </p>
+            )} */}
+            {optional && (
+                <p className="mt-3 text-base leading-6 text-red-500 sm:text-lg">
+                    {optional}
                 </p>
             )}
         </motion.div>
@@ -1897,7 +1903,7 @@ function Workflow() {
 /* Pricing                                                                    */
 /* -------------------------------------------------------------------------- */
 
-function Pricing({ plans = [], smsNote }) {
+function Pricing({ plans = [], smsNote, optional }) {
     return (
         <section
             id="tarifs"
@@ -1908,6 +1914,7 @@ function Pricing({ plans = [], smsNote }) {
                     eyebrow="Tarification"
                     title="Choisissez l’offre adaptée à votre établissement."
                     description="Commencez avec les fonctionnalités dont vous avez besoin et évoluez lorsque votre école grandit."
+                    optional="Ces tarifs prennent en charge les notifications via whatsapp. Pour les notifications par SMS, un tarif différent s'applique."
                 />
 
                 {plans?.length > 0 ? (
@@ -2369,9 +2376,37 @@ export default function CoriSchoolLanding({
     smsNote = null,
     faq = [],
 }) {
+    const title = 'CoriSchool — Plateforme scolaire numérique | Logiciel de gestion scolaire tout-en-un';
+    const description =
+        "CoriSchool est une plateforme scolaire numérique tout-en-un : notes, présences, bulletins, paiements, emploi du temps, communication, préinscriptions et plus. Adaptée aux écoles africaines et à l'international.";
+    const url = typeof window !== 'undefined' ? window.location.href : 'https://corischool.com/';
+
     return (
         <>
-            <Head title="CoriSchool — Plateforme scolaire numérique" />
+            <Head title={title}>
+                <meta name="description" content={description} />
+                <meta
+                    name="keywords"
+                    content="logiciel gestion scolaire, logiciel école, gestion notes, bulletins scolaires, présences, scolarité en ligne, ERP scolaire, CoriSchool, gestion établissement scolaire, préinscription en ligne, paiements scolaires, emploi du temps"
+                />
+                <meta name="robots" content="index, follow" />
+                <meta property="og:type" content="website" />
+                <meta property="og:site_name" content="CoriSchool" />
+                <meta property="og:locale" content="fr_FR" />
+                <meta property="og:title" content={title} />
+                <meta property="og:description" content={description} />
+                <meta property="og:url" content={url} />
+                <meta property="og:image" content="/icons/icon-512.png" />
+                <meta property="og:image:width" content="512" />
+                <meta property="og:image:height" content="512" />
+                <meta property="og:image:alt" content="CoriSchool - Plateforme scolaire numérique tout-en-un" />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content={title} />
+                <meta name="twitter:description" content={description} />
+                <meta name="twitter:image" content="/icons/icon-512.png" />
+                <meta name="twitter:image:alt" content="CoriSchool - Plateforme scolaire numérique tout-en-un" />
+                <link rel="canonical" href={url} />
+            </Head>
 
             <div className="min-h-screen bg-white text-slate-950 selection:bg-emerald-100 selection:text-emerald-900">
                 <SiteHeader />

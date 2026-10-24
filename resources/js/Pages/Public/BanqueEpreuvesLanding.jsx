@@ -67,17 +67,30 @@ const steps = [
 export default function BanqueEpreuvesLanding() {
     return (
         <>
-            <Head title="Banque d'épreuves | CoriSchool">
+            <Head title="Banque d'épreuves | CoriSchool — Ressources pédagogiques classées par niveau et matière">
                 <meta
                     name="description"
-                    content="Retrouvez des épreuves et exercices classés par niveau et par matière, accessibles depuis une bibliothèque pédagogique centralisée CoriSchool."
+                    content="Retrouvez des épreuves, exercices, devoirs, examens blancs et corrigés classés par niveau et par matière. Bibliothèque pédagogique centralisée CoriSchool pour enseignants et établissements."
                 />
-                <meta property="og:title" content="Banque d'épreuves | CoriSchool" />
+                <meta
+                    name="keywords"
+                    content="banque d'épreuves, exercices scolaires, devoirs, examens, corrigés, ressources pédagogiques, sujets d'examen, CoriSchool"
+                />
+                <meta name="robots" content="index, follow" />
+                <meta property="og:type" content="website" />
+                <meta property="og:site_name" content="CoriSchool" />
+                <meta property="og:locale" content="fr_FR" />
+                <meta property="og:title" content="Banque d'épreuves | CoriSchool — Ressources pédagogiques classées par niveau et matière" />
                 <meta
                     property="og:description"
-                    content="Une bibliothèque pédagogique centralisée : épreuves, exercices et ressources classés par niveau et matière."
+                    content="Une bibliothèque pédagogique centralisée : épreuves, exercices, corrigés et ressources classés par niveau et matière."
                 />
-                <meta property="og:type" content="website" />
+                <meta property="og:image" content="/icons/icon-512.png" />
+                <meta property="og:image:alt" content="Banque d'épreuves CoriSchool" />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content="Banque d'épreuves | CoriSchool" />
+                <meta name="twitter:description" content="Épreuves, exercices et corrigés classés par niveau et matière sur CoriSchool." />
+                <meta name="twitter:image" content="/icons/icon-512.png" />
             </Head>
 
             <div className="min-h-screen bg-slate-50">

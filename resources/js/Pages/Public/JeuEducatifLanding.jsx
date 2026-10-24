@@ -14,13 +14,24 @@ const previews = [
 export default function JeuEducatifLanding() {
     return (
         <>
-            <Head title="Jeu éducatif | CoriSchool">
+            <Head title="Jeu éducatif | CoriSchool — Apprentissage ludique pour les élèves">
                 <meta
                     name="description"
-                    content="Les explorations ludiques CoriSchool : des défis interactifs pour réviser le programme en s'amusant."
+                    content="Des jeux éducatifs interactifs CoriSchool : défis, quiz et explorations ludiques pour réviser le programme scolaire en s'amusant."
                 />
-                <meta property="og:title" content="Jeu éducatif | CoriSchool" />
+                <meta name="keywords" content="jeu éducatif, quiz scolaire, apprentissage ludique, gamification école, exercices interactifs, CoriSchool" />
+                <meta name="robots" content="index, follow" />
                 <meta property="og:type" content="website" />
+                <meta property="og:site_name" content="CoriSchool" />
+                <meta property="og:locale" content="fr_FR" />
+                <meta property="og:title" content="Jeu éducatif | CoriSchool — Apprentissage ludique pour les élèves" />
+                <meta property="og:description" content="Des défis interactifs et jeux éducatifs pour renforcer les acquis et motiver les élèves." />
+                <meta property="og:image" content="/icons/icon-512.png" />
+                <meta property="og:image:alt" content="Jeu éducatif CoriSchool" />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content="Jeu éducatif | CoriSchool" />
+                <meta name="twitter:description" content="Apprentissage ludique et interactif pour les élèves avec CoriSchool." />
+                <meta name="twitter:image" content="/icons/icon-512.png" />
             </Head>
 
             <div className="min-h-screen bg-slate-50">

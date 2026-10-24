@@ -14,13 +14,24 @@ const previews = [
 export default function CompetitionsLanding() {
     return (
         <>
-            <Head title="Compétitions | CoriSchool">
+            <Head title="Compétitions scolaires | CoriSchool — Motiver et valoriser les élèves">
                 <meta
                     name="description"
-                    content="Les compétitions éducatives CoriSchool : des défis scolaires pour motiver les élèves et valoriser les progrès."
+                    content="Compétitions éducatives CoriSchool : défis entre élèves, classements, résultats et valorisation des progrès pour motiver toute l'école."
                 />
-                <meta property="og:title" content="Compétitions | CoriSchool" />
+                <meta name="keywords" content="compétitions scolaires, défis élèves, classement scolaire, concours école, gamification, CoriSchool" />
+                <meta name="robots" content="index, follow" />
                 <meta property="og:type" content="website" />
+                <meta property="og:site_name" content="CoriSchool" />
+                <meta property="og:locale" content="fr_FR" />
+                <meta property="og:title" content="Compétitions scolaires | CoriSchool — Motiver et valoriser les élèves" />
+                <meta property="og:description" content="Des défis scolaires sains entre élèves avec classements et valorisation des progrès." />
+                <meta property="og:image" content="/icons/icon-512.png" />
+                <meta property="og:image:alt" content="Compétitions scolaires CoriSchool" />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content="Compétitions scolaires | CoriSchool" />
+                <meta name="twitter:description" content="Motiver les élèves avec des compétitions éducatives et des classements sur CoriSchool." />
+                <meta name="twitter:image" content="/icons/icon-512.png" />
             </Head>
 
             <div className="min-h-screen bg-slate-50">
