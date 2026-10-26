@@ -3,16 +3,14 @@
 namespace App\Services\Communication;
 
 use App\Enums\CommunicationChannel;
-use App\Services\Sms\EsmsAfricaProvider;
-use App\Services\Sms\LogSmsProvider;
 use App\Services\Sms\MetaWhatsAppProvider;
 use App\Services\Sms\SmsProviderInterface;
 use App\Services\Sms\SmsResponse;
 
 /**
  * Transport concret branché sur les fournisseurs configurés dans le projet.
- * Réutilise l'intégration eSMS Africa existante pour le SMS et la Meta
- * WhatsApp Cloud API pour WhatsApp.
+ * Le SMS utilise le fournisseur actif (SMS_PROVIDER) et WhatsApp passe par
+ * la Meta WhatsApp Cloud API.
  */
 class ProviderCommunicationTransport implements CommunicationTransport
 {
@@ -27,9 +25,6 @@ class ProviderCommunicationTransport implements CommunicationTransport
 
     private function smsProvider(): SmsProviderInterface
     {
-        return match (config('services.sms.provider', 'log')) {
-            'esms_africa' => new EsmsAfricaProvider,
-            default => new LogSmsProvider,
-        };
+        return app(SmsProviderInterface::class);
     }
 }
