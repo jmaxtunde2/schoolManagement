@@ -1138,6 +1138,9 @@ Route::middleware([
                 'grades',
             ])->name('evaluations.grades');
 
+            Route::post('/evaluations/{evaluation}/grades/import', [Admin\EvaluationController::class, 'importGrades'])
+                ->name('evaluations.grades.import');
+
             Route::put('/evaluations/{evaluation}/grades', [StaffEvaluationController::class, 'updateGrades'])
                 ->name('evaluations.grades.update');
 
@@ -1341,6 +1344,10 @@ Route::middleware([
                 'grades',
             ])->name('evaluations.grades');
 
+            Route::post('/evaluations/{evaluation}/grades/import', [
+                StaffEvaluationController::class,
+                'importGrades',
+            ])->name('evaluations.grades.import');
 
             Route::put('/evaluations/{evaluation}/grades', [
                 StaffEvaluationController::class,
@@ -1998,12 +2005,17 @@ Route::middleware([
             ])->name('evaluations.store');
 
             Route::get('/evaluations/{evaluation}/grades', [
-                StaffEvaluationController::class,
+                Admin\EvaluationController::class,
                 'grades',
             ])->name('evaluations.grades');
 
+            Route::post('/evaluations/{evaluation}/grades/import', [
+                Admin\EvaluationController::class,
+                'importGrades',
+            ])->name('evaluations.grades.import');
+
             Route::put('/evaluations/{evaluation}/grades', [
-                StaffEvaluationController::class,
+                Admin\EvaluationController::class,
                 'updateGrades',
             ])->name('evaluations.grades.update');
 

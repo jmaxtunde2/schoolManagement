@@ -7,7 +7,7 @@ use App\Models\School;
 
 /**
  * Choisit le canal externe par ordre de priorité :
- * SMS → WhatsApp → Email, en fonction de la disponibilité (solde/budget)
+ * WhatsApp → SMS → Email, en fonction de la disponibilité (solde/budget)
  * et des coordonnées réellement disponibles pour le parent.
  */
 class NotificationChannelService
@@ -24,12 +24,12 @@ class NotificationChannelService
         $channels = [];
 
         if ($phone) {
-            if ($this->budget->smsAvailable($school)) {
-                $channels[] = CommunicationChannel::Sms;
-            }
-
             if ($this->budget->whatsappAvailable($school)) {
                 $channels[] = CommunicationChannel::Whatsapp;
+            }
+
+            if ($this->budget->smsAvailable($school)) {
+                $channels[] = CommunicationChannel::Sms;
             }
         }
 

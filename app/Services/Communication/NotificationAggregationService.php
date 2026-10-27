@@ -256,7 +256,7 @@ class NotificationAggregationService
                     'email' => $channel === CommunicationChannel::Email ? $email : null,
                     'message' => $built['message'],
                     'status' => NotificationStatus::Pending->value,
-                    'estimated_cost' => (int) ceil($cost),
+                    'estimated_cost' => $cost,
                     'cost_currency' => $currency,
                 ]
             );

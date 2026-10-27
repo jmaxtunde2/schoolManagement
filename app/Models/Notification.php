@@ -23,6 +23,7 @@ class Notification extends Model
     {
         return [
             'status' => NotificationStatus::class,
+            'estimated_cost' => 'decimal:6',
             'sent_at' => 'datetime',
             'delivered_at' => 'datetime',
         ];

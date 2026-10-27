@@ -3,20 +3,25 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Evaluations\CreateEvaluation;
+use App\Actions\Evaluations\SaveGrades;
 use App\Enums\EvaluationType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Evaluations\StoreEvaluationRequest;
+use App\Http\Requests\Evaluations\UpdateGradesRequest;
+use App\Imports\EvaluationResultsImport;
 use App\Models\AcademicPeriod;
 use App\Models\AcademicYear;
 use App\Models\ClassRoom;
 use App\Models\Evaluation;
 use App\Models\Subject;
 use App\Models\Teacher;
+use App\Http\Controllers\Staff\EvaluationController as StaffEvaluationController;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
+use Maatwebsite\Excel\Facades\Excel;
 
 class EvaluationController extends Controller
 {
@@ -93,6 +98,41 @@ class EvaluationController extends Controller
                 ->with('success', 'Évaluation créée en brouillon. Saisissez les notes puis validez-la, ou laissez-la en brouillon.');
         } catch (\RuntimeException $exception) {
             return back()->with('error', $exception->getMessage());
+        }
+    }
+
+    public function grades(Request $request, Evaluation $evaluation): Response
+    {
+        return app(StaffEvaluationController::class)->grades($request, $evaluation);
+    }
+
+    public function updateGrades(UpdateGradesRequest $request, Evaluation $evaluation, SaveGrades $action): RedirectResponse
+    {
+        Gate::authorize('update', $evaluation);
+
+        $action->handle(
+            $evaluation,
+            $request->validated('results'),
+            $request->user()->id
+        );
+
+        return back()->with('success', 'Notes enregistrées.');
+    }
+
+    public function importGrades(Request $request, Evaluation $evaluation): RedirectResponse
+    {
+        Gate::authorize('update', $evaluation);
+
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:5120'],
+        ]);
+
+        try {
+            Excel::import(new EvaluationResultsImport($evaluation, $request->user()->id), $request->file('file'));
+
+            return back()->with('success', 'Notes importées avec succès depuis le fichier Excel.');
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
         }
     }
 

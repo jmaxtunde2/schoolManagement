@@ -9,6 +9,7 @@ use App\Enums\EvaluationType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Evaluations\StoreEvaluationRequest;
 use App\Http\Requests\Evaluations\UpdateGradesRequest;
+use App\Imports\EvaluationResultsImport;
 use App\Models\AcademicPeriod;
 use App\Models\AcademicYear;
 use App\Models\Evaluation;
@@ -20,6 +21,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
+use Maatwebsite\Excel\Facades\Excel;
 use RuntimeException;
 
 class EvaluationController extends Controller
@@ -288,6 +290,11 @@ class EvaluationController extends Controller
                     'return_route' => $request->user()->isCenseur()
                             ? 'censeur.evaluations.return'
                             : 'admin.evaluations.return',
+
+                    'import_url' => $request->user()->isCenseur()
+                        ? route('censeur.evaluations.grades.import', $evaluation)
+                        : ($request->user()->isAdmin() ? route('admin.evaluations.grades.import', $evaluation) : route('teacher.evaluations.grades.import', $evaluation)),
+                    'route_prefix' => $request->user()->isCenseur() ? 'censeur' : ($request->user()->isAdmin() ? 'admin' : 'teacher'),
                 ],
 
                 'results' => $evaluation->results->map(
@@ -332,6 +339,23 @@ class EvaluationController extends Controller
             'success',
             'Notes enregistrées.'
         );
+    }
+
+    public function importGrades(Request $request, Evaluation $evaluation): RedirectResponse
+    {
+        Gate::authorize('update', $evaluation);
+
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:5120'],
+        ]);
+
+        try {
+            Excel::import(new EvaluationResultsImport($evaluation, $request->user()->id), $request->file('file'));
+
+            return back()->with('success', 'Notes importées avec succès depuis le fichier Excel.');
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     /*

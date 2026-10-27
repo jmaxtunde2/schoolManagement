@@ -37,6 +37,8 @@ const empty = {
 export default function GuardiansIndex({
     guardians,
     students,
+    classes = [],
+    filters = {},
 }) {
     const role = usePage().props.auth.user.role;
     const isCenseur = role === 'censeur';
@@ -48,6 +50,7 @@ export default function GuardiansIndex({
     const [deleting, setDeleting] = useState(false);
     const [studentSearch, setStudentSearch] = useState('');
     const [search, setSearch] = useState('');
+    const [classFilter, setClassFilter] = useState(filters?.class_id || '');
 
     const {
         data,
@@ -76,13 +79,23 @@ export default function GuardiansIndex({
     }, [students, studentSearch]);
 
     const filteredGuardians = useMemo(() => {
+        let list = guardians;
+
+        if (classFilter) {
+            list = list.filter((guardian) =>
+                (guardian.students ?? []).some(
+                    (student) => String(student.class_id) === String(classFilter)
+                )
+            );
+        }
+
         const term = search.trim().toLowerCase();
 
         if (!term) {
-            return guardians;
+            return list;
         }
 
-        return guardians.filter((guardian) => {
+        return list.filter((guardian) => {
             const studentsText = (guardian.students ?? [])
                 .map((student) =>
                     `${student.first_name} ${student.last_name}`
@@ -100,7 +113,7 @@ export default function GuardiansIndex({
                     String(value).toLowerCase().includes(term)
                 );
         });
-    }, [guardians, search]);
+    }, [guardians, search, classFilter]);
 
     const parentsWithStudents = guardians.filter(
         (guardian) =>
@@ -296,15 +309,29 @@ export default function GuardiansIndex({
 
                 <Card.Body className="p-0">
                     <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="relative w-full sm:max-w-md">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                            <div className="relative w-full sm:max-w-md">
+                                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
-                            <Input
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Rechercher un parent, téléphone, email ou élève..."
-                                className="pl-10"
-                            />
+                                <Input
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Rechercher un parent, téléphone, email ou élève..."
+                                    className="pl-10"
+                                />
+                            </div>
+                            <select
+                                value={classFilter}
+                                onChange={(e) => setClassFilter(e.target.value)}
+                                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                            >
+                                <option value="">Toutes les classes</option>
+                                {(classes || []).map((classe) => (
+                                    <option key={classe.id} value={classe.id}>
+                                        {classe.name}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
                         {search && (

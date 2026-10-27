@@ -16,9 +16,10 @@ Artisan::command('inspire', function () {
 // Annonces parents programmées : mises en file dès que leur date est atteinte.
 Schedule::command(DispatchScheduledAnnouncements::class)->everyMinute()->withoutOverlapping();
 
-// Notifications parentales consolidées : une fois par jour, à l'heure configurée.
+// Notifications parentales consolidées : une fois par semaine, le vendredi à 17h00.
 Schedule::command(NotifyValidatedEvaluations::class)
-    ->dailyAt(config('communication.daily_hour', '17:00'))
+    ->weeklyOn(5, '17:00')
+    ->timezone(config('app.timezone', 'UTC'))
     ->withoutOverlapping();
 
 // Solde SMS fournisseur : contrôle nocturne et bascule des canaux.

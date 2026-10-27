@@ -21,7 +21,7 @@ use Illuminate\Queue\SerializesModels;
 use Throwable;
 
 /**
- * Envoie une notification externe (SMS → WhatsApp → Email).
+ * Envoie une notification externe (WhatsApp → SMS → Email).
  *
  * La bascule est automatique : si le canal prioritaire n'est pas disponible
  * ou échoue, le suivant est tenté. Le coût n'est débité qu'après succès.
@@ -66,7 +66,7 @@ class SendCommunicationJob implements ShouldQueue
         $phone = $notification->phone ?: $guardian?->phone;
         $email = $notification->email ?: $guardian?->email;
 
-        $candidates = $this->channelOrder($notification, $channels, $school, $phone, $email);
+        $candidates = $channels->candidates($school, $phone, $email);
 
         foreach ($candidates as $channel) {
             if (! $this->channelReady($channel, $school, $phone, $email, $budget)) {
@@ -82,7 +82,7 @@ class SendCommunicationJob implements ShouldQueue
             $notification->increment('attempts');
             $notification->recordStatus(NotificationStatus::Queued);
 
-            $response = $transport->send($channel, $recipient, $notification->message);
+            $response = $transport->send($channel, $school, $recipient, $notification->message);
             $provider = $this->providerName($channel);
 
             if ($response->success) {
@@ -96,7 +96,7 @@ class SendCommunicationJob implements ShouldQueue
                     'external_id' => $response->externalId,
                     'sent_at' => now(),
                     'error' => null,
-                    'estimated_cost' => (int) ceil($cost),
+                    'estimated_cost' => $cost,
                     'cost_currency' => $currency,
                 ])->save();
 
@@ -111,36 +111,6 @@ class SendCommunicationJob implements ShouldQueue
             $notification->forceFill(['provider' => $provider, 'error' => $response->error])->save();
             $notification->recordStatus(NotificationStatus::Failed, $response->error);
         }
-    }
-
-    /**
-     * Ordre d'essai : le canal prévu d'abord, puis la cascade SMS → WhatsApp → Email.
-     *
-     * @return array<int, CommunicationChannel>
-     */
-    private function channelOrder(
-        Notification $notification,
-        NotificationChannelService $channels,
-        School $school,
-        ?string $phone,
-        ?string $email,
-    ): array {
-        $values = array_merge(
-            [(string) $notification->channel],
-            array_map(fn (CommunicationChannel $channel) => $channel->value, $channels->candidates($school, $phone, $email))
-        );
-
-        $ordered = [];
-
-        foreach (array_unique($values) as $value) {
-            $channel = CommunicationChannel::tryFrom($value);
-
-            if ($channel && $channel !== CommunicationChannel::InApp) {
-                $ordered[] = $channel;
-            }
-        }
-
-        return $ordered;
     }
 
     private function channelReady(
@@ -181,7 +151,7 @@ class SendCommunicationJob implements ShouldQueue
         }
 
         $batch->forceFill([
-            'cost' => (int) ($batch->cost ?? 0) + (int) ceil($cost),
+            'cost' => (float) ($batch->cost ?? 0) + $cost,
             'currency' => $currency,
             'status' => NotificationStatus::Sent,
         ])->save();

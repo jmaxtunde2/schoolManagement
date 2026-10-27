@@ -404,7 +404,7 @@ class TimetableTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Parent/Timetable')
                 ->has('student')
-                ->where('student.name', 'Chantal Ahouandjinou')
+                ->where('student.name', 'Ahouandjinou Chantal')
                 ->where('student.class_name', '6ème A')
                 ->has('slots', 1)
                 ->where('slots.0.day_label', 'Vendredi')

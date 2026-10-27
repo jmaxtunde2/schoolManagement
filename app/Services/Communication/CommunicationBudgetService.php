@@ -35,7 +35,10 @@ class CommunicationBudgetService
     {
         $settings = $this->settingsFor($school);
 
-        return $settings->whatsapp_enabled && $settings->whatsappRemaining() > 0;
+        return $settings->whatsapp_enabled
+            && $settings->whatsappRemaining() > 0
+            && filled(config('services.whatsapp.token'))
+            && filled(config('services.whatsapp.phone_number_id'));
     }
 
     public function emailAvailable(School $school): bool

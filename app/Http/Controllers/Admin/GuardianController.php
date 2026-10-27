@@ -24,17 +24,34 @@ class GuardianController extends Controller
             ? ClassRoom::primary()->pluck('id')
             : null;
 
+        $classId = $request->input('class_id');
+
+        $guardians = ParentGuardian::with(['students:id,first_name,last_name,class_id', 'students.classRoom:id,name'])
+            ->when($primaryClassIds !== null, fn ($q) => $q->whereHas(
+                'students',
+                fn ($s) => $s->whereIn('class_id', $primaryClassIds),
+            ))
+            ->when($classId, function ($q) use ($classId) {
+                $q->whereHas('students', fn ($s) => $s->where('class_id', $classId));
+            })
+            ->latest()->latest('id')->get();
+
+        $students = Student::query()
+            ->with('classRoom:id,name')
+            ->when($primaryClassIds !== null, fn ($q) => $q->whereIn('class_id', $primaryClassIds))
+            ->orderBy('last_name')
+            ->get(['id', 'first_name', 'last_name', 'class_id']);
+
+        $classes = ClassRoom::query()
+            ->when($primaryClassIds !== null, fn ($q) => $q->whereIn('id', $primaryClassIds))
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return Inertia::render('Admin/Guardians/Index', [
-            'guardians' => ParentGuardian::with('students:id,first_name,last_name')
-                ->when($primaryClassIds !== null, fn ($q) => $q->whereHas(
-                    'students',
-                    fn ($s) => $s->whereIn('class_id', $primaryClassIds),
-                ))
-                ->latest()->latest('id')->get(),
-            'students' => Student::query()
-                ->when($primaryClassIds !== null, fn ($q) => $q->whereIn('class_id', $primaryClassIds))
-                ->orderBy('last_name')
-                ->get(['id', 'first_name', 'last_name']),
+            'guardians' => $guardians,
+            'students' => $students,
+            'classes' => $classes,
+            'filters' => $request->only('class_id'),
         ]);
     }
 

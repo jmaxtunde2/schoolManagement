@@ -90,7 +90,9 @@ class CommunicationController extends Controller
                 'status_label' => $notification->status?->label(),
                 'provider' => $notification->provider,
                 'error' => $notification->error,
-                'cost' => $notification->estimated_cost,
+                'cost' => $notification->estimated_cost === null
+                    ? null
+                    : (float) $notification->estimated_cost,
                 'currency' => $notification->cost_currency,
                 'created_at' => $notification->created_at?->format('d/m/Y H:i'),
             ]),

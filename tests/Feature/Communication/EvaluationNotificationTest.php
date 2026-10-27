@@ -26,6 +26,8 @@ use App\Services\Communication\CommunicationTransport;
 use App\Services\Communication\NotificationAggregationService;
 use App\Services\Communication\NotificationChannelService;
 use App\Services\Communication\NotificationMessageBuilder;
+use App\Services\Communication\ProviderCommunicationTransport;
+use App\Services\Mail\SchoolMailService;
 use App\Services\Sms\SmsResponse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -48,6 +50,11 @@ class EvaluationNotificationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        config([
+            'services.whatsapp.token' => 'fake-whatsapp-token',
+            'services.whatsapp.phone_number_id' => 'fake-phone-number-id',
+        ]);
 
         $this->school = School::factory()->create(['name' => 'École Test']);
         $this->year = AcademicYear::factory()->create(['school_id' => $this->school->id, 'is_current' => true]);
@@ -195,7 +202,7 @@ class EvaluationNotificationTest extends TestCase
         $this->assertStringContainsString('sont disponibles', $built['message']);
     }
 
-    public function test_job_sends_sms_and_consumes_balance(): void
+    public function test_job_sends_whatsapp_first_and_consumes_whatsapp_budget(): void
     {
         Queue::fake();
 
@@ -209,15 +216,18 @@ class EvaluationNotificationTest extends TestCase
         $this->runJob($notification->id, $transport);
 
         $notification->refresh();
-        $this->assertSame(CommunicationChannel::Sms, CommunicationChannel::from($notification->channel));
+        $this->assertSame(CommunicationChannel::Whatsapp, CommunicationChannel::from($notification->channel));
+        $this->assertSame(CommunicationChannel::Whatsapp, $transport->sent[0]['channel']);
         $this->assertSame(NotificationStatus::Sent, $notification->status);
-        $this->assertSame(25, $notification->estimated_cost);
+        $this->assertEqualsWithDelta(0.02, (float) $notification->estimated_cost, 0.000001);
+        $this->assertEqualsWithDelta(0.02, (float) $notification->batch->cost, 0.000001);
 
         $settings = SchoolCommunicationSetting::withoutGlobalScopes()->firstOrFail();
-        $this->assertSame(2975, (int) $settings->sms_balance);
+        $this->assertGreaterThan(0, (float) $settings->whatsapp_consumed);
+        $this->assertSame(3000, (int) $settings->sms_balance);
     }
 
-    public function test_job_falls_back_to_whatsapp_when_sms_fails(): void
+    public function test_job_falls_back_to_sms_when_whatsapp_fails(): void
     {
         Queue::fake();
 
@@ -226,19 +236,46 @@ class EvaluationNotificationTest extends TestCase
         app(NotificationAggregationService::class)->aggregate();
 
         $notification = Notification::firstOrFail();
-        $transport = new FakeCommunicationTransport(failChannels: [CommunicationChannel::Sms]);
+        $transport = new FakeCommunicationTransport(failChannels: [CommunicationChannel::Whatsapp]);
 
         $this->runJob($notification->id, $transport);
 
         $notification->refresh();
-        $this->assertSame(CommunicationChannel::Whatsapp, CommunicationChannel::from($notification->channel));
+        $this->assertSame(CommunicationChannel::Sms, CommunicationChannel::from($notification->channel));
+        $this->assertSame(CommunicationChannel::Sms, $transport->sent[0]['channel']);
         $this->assertSame(NotificationStatus::Sent, $notification->status);
+        $this->assertEqualsWithDelta(25, (float) $notification->estimated_cost, 0.000001);
+        $this->assertEqualsWithDelta(25, (float) $notification->batch->cost, 0.000001);
 
         $settings = SchoolCommunicationSetting::withoutGlobalScopes()->firstOrFail();
-        $this->assertGreaterThan(0, (float) $settings->whatsapp_consumed);
+        $this->assertSame(2975, (int) $settings->sms_balance);
+        $this->assertSame(0.0, (float) $settings->whatsapp_consumed);
     }
 
-    public function test_job_falls_back_to_email_when_sms_disabled(): void
+    public function test_job_falls_back_to_email_when_whatsapp_and_sms_fail(): void
+    {
+        Queue::fake();
+
+        $student = $this->studentWithGuardian('+22890000001', 'parent@example.com');
+        $this->validatedEvaluation($student);
+        app(NotificationAggregationService::class)->aggregate();
+
+        $notification = Notification::firstOrFail();
+        $transport = new FakeCommunicationTransport(failChannels: [
+            CommunicationChannel::Whatsapp,
+            CommunicationChannel::Sms,
+        ]);
+
+        $this->runJob($notification->id, $transport);
+
+        $notification->refresh();
+        $this->assertSame(CommunicationChannel::Email, CommunicationChannel::from($notification->channel));
+        $this->assertSame(CommunicationChannel::Email, $transport->sent[0]['channel']);
+        $this->assertSame(NotificationStatus::Sent, $notification->status);
+        $this->assertSame('parent@example.com', $notification->email);
+    }
+
+    public function test_job_falls_back_to_email_when_phone_channels_disabled(): void
     {
         Queue::fake();
 
@@ -282,6 +319,44 @@ class EvaluationNotificationTest extends TestCase
         );
     }
 
+    public function test_whatsapp_is_skipped_when_not_configured(): void
+    {
+        Queue::fake();
+
+        config([
+            'services.whatsapp.token' => null,
+            'services.whatsapp.phone_number_id' => null,
+        ]);
+
+        $student = $this->studentWithGuardian('+22890000001', null);
+        $this->validatedEvaluation($student);
+        app(NotificationAggregationService::class)->aggregate();
+
+        $this->assertSame(
+            CommunicationChannel::Sms,
+            CommunicationChannel::from(Notification::firstOrFail()->channel)
+        );
+    }
+
+    public function test_email_transport_uses_the_school_mail_service(): void
+    {
+        $this->mock(SchoolMailService::class, function ($mock) {
+            $mock->shouldReceive('send')
+                ->once()
+                ->withArgs(fn (School $school, string $to) => $school->is($this->school)
+                    && $to === 'parent@example.com');
+        });
+
+        $response = app(ProviderCommunicationTransport::class)->send(
+            CommunicationChannel::Email,
+            $this->school,
+            'parent@example.com',
+            'Nouvelles notes disponibles'
+        );
+
+        $this->assertTrue($response->success);
+    }
+
     public function test_command_runs_successfully(): void
     {
         Queue::fake();
@@ -315,8 +390,12 @@ class FakeCommunicationTransport implements CommunicationTransport
      */
     public function __construct(private array $failChannels = []) {}
 
-    public function send(CommunicationChannel $channel, string $recipient, string $message): SmsResponse
-    {
+    public function send(
+        CommunicationChannel $channel,
+        School $school,
+        string $recipient,
+        string $message
+    ): SmsResponse {
         if (in_array($channel, $this->failChannels, true)) {
             return SmsResponse::failure('Échec simulé pour '.$channel->value);
         }

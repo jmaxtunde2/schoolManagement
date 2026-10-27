@@ -131,7 +131,7 @@ export default function Communication({ settings }) {
                             </div>
 
                             <label className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3">
-                                <span className="text-sm font-medium text-slate-700">Activer WhatsApp (repli SMS)</span>
+                                <span className="text-sm font-medium text-slate-700">Activer WhatsApp (prioritaire sur le SMS)</span>
                                 <input
                                     type="checkbox"
                                     checked={data.whatsapp_enabled}

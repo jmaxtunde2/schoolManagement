@@ -41,6 +41,10 @@ class NotificationMessageBuilder
             return ['message' => $this->detailed($schoolName, $studentName, $entries), 'detailed' => true];
         }
 
+        if ($channel === CommunicationChannel::Whatsapp) {
+            return ['message' => $this->detailed($schoolName, $studentName, $entries), 'detailed' => true];
+        }
+
         $detailed = $this->detailed($schoolName, $studentName, $entries);
         $limit = (int) config('communication.sms_max_length', 160);
 

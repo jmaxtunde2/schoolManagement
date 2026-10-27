@@ -35,7 +35,7 @@ class NotificationBatch extends Model
             'notification_date' => 'date',
             'status' => NotificationStatus::class,
             'recipient_count' => 'integer',
-            'cost' => 'integer',
+            'cost' => 'decimal:6',
         ];
     }
 

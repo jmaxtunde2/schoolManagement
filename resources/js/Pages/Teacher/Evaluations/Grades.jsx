@@ -11,6 +11,7 @@ import {
     Lock,
     RotateCcw,
     Save,
+    Upload,
     Users,
 } from 'lucide-react';
 
@@ -78,10 +79,15 @@ export default function Grades({ evaluation, results }) {
         total > 0
             ? Math.round((gradedCount / total) * 100)
             : 0;
+    const [importFile, setImportFile] = useState(null);
+    const [importing, setImporting] = useState(false);
 
     const gradeUpdateUrl = evaluation.route_prefix === 'admin'
         ? `/admin/evaluations/${evaluation.id}/grades`
         : route(`${evaluation.route_prefix}.evaluations.grades.update`, evaluation.id);
+    const importUrl = evaluation.route_prefix === 'admin'
+        ? `/admin/evaluations/${evaluation.id}/grades/import`
+        : route(`${evaluation.route_prefix}.evaluations.grades.import`, evaluation.id);
 
     /**
      * Met à jour une ligne de résultat.
@@ -197,6 +203,24 @@ export default function Grades({ evaluation, results }) {
                 preserveScroll: true,
             }
         );
+    }
+
+    function handleImport(e) {
+        e.preventDefault();
+        if (!importFile || importing || disabled) {
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', importFile);
+        setImporting(true);
+        router.post(importUrl, formData, {
+            forceFormData: true,
+            preserveScroll: true,
+            onFinish: () => {
+                setImporting(false);
+                setImportFile(null);
+            },
+        });
     }
 
     /**
@@ -641,18 +665,65 @@ export default function Grades({ evaluation, results }) {
                                                         ? ''
                                                         : (row.score ?? '')
                                                 }
-                                                onChange={(e) =>
+                                                onChange={(e) => {
                                                     updateScore(
                                                         index,
                                                         e.target.value
-                                                    )
-                                                }
-                                                onKeyDown={(e) =>
-                                                    handleKeyDown(
-                                                        e,
-                                                        index
-                                                    )
-                                                }
+                                                    );
+                                                }}
+                                                onBlur={(e) => {
+                                                    if (disabled || row.is_absent) {
+                                                        return;
+                                                    }
+                                                    const value = e.target.value.trim();
+                                                    if (value === '') {
+                                                        return;
+                                                    }
+                                                    const score = Number(value.replace(',', '.'));
+                                                    if (
+                                                        !Number.isFinite(score) ||
+                                                        score < 0 ||
+                                                        score > maxScore
+                                                    ) {
+                                                        return;
+                                                    }
+                                                    if (inputRefs.current[index + 1]) {
+                                                        setTimeout(() => {
+                                                            inputRefs.current[index + 1]?.focus();
+                                                        }, 50);
+                                                    }
+                                                }}
+                                                onInput={(e) => {
+                                                    if (disabled || row.is_absent) {
+                                                        return;
+                                                    }
+                                                    const value = e.target.value.trim();
+                                                    if (value === '') {
+                                                        return;
+                                                    }
+                                                    if (value.includes('.') || value.includes(',')) {
+                                                        return;
+                                                    }
+                                                    const score = Number(value.replace(',', '.'));
+                                                    if (
+                                                        !Number.isFinite(score) ||
+                                                        score < 0 ||
+                                                        score > maxScore
+                                                    ) {
+                                                        return;
+                                                    }
+                                                    if (String(score).length >= 1 && score > maxScore / 10 && inputRefs.current[index + 1]) {
+                                                        setTimeout(() => {
+                                                            inputRefs.current[index + 1]?.focus();
+                                                        }, 30);
+                                                    }
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    handleKeyDown(e, index);
+                                                    if (e.key === 'Tab') {
+                                                        return;
+                                                    }
+                                                }}
                                                 placeholder="—"
                                                 aria-invalid={hasError}
                                                 aria-describedby={
@@ -719,7 +790,25 @@ export default function Grades({ evaluation, results }) {
                             </span>
                         </div>
 
-                        <div className="flex flex-col gap-2 sm:flex-row">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                            <form onSubmit={handleImport} className="flex items-center gap-2">
+                                <input
+                                    type="file"
+                                    accept=".xlsx,.xls,.csv"
+                                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                                    disabled={disabled || importing}
+                                    className="text-xs"
+                                />
+                                <Button
+                                    type="submit"
+                                    variant="secondary"
+                                    disabled={disabled || importing || !importFile || hasScoreErrors}
+                                    loading={importing}
+                                >
+                                    <Upload className="h-4 w-4" />
+                                    Importer Excel
+                                </Button>
+                            </form>
                             <Button
                                 variant="secondary"
                                 onClick={saveDraft}

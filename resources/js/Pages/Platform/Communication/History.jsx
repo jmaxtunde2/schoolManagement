@@ -19,11 +19,13 @@ const statusTones = {
 };
 
 function formatCost(cost, currency) {
-    if (!cost) {
+    const value = Number(cost);
+
+    if (!Number.isFinite(value) || value === 0) {
         return '—';
     }
 
-    return `${cost} ${currency ?? ''}`.trim();
+    return `${value.toLocaleString('fr-FR', { maximumFractionDigits: 6 })} ${currency ?? ''}`.trim();
 }
 
 export default function CommunicationHistory({ notifications, schools, channels, statuses, filters }) {
