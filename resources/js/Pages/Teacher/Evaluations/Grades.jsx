@@ -5,6 +5,7 @@ import {
     CalendarDays,
     CheckCircle2,
     ClipboardCheck,
+    Download,
     FileText,
     GraduationCap,
     Hash,
@@ -791,24 +792,44 @@ export default function Grades({ evaluation, results }) {
                         </div>
 
                         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                            <form onSubmit={handleImport} className="flex items-center gap-2">
-                                <input
-                                    type="file"
-                                    accept=".xlsx,.xls,.csv"
-                                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                                    disabled={disabled || importing}
-                                    className="text-xs"
-                                />
-                                <Button
-                                    type="submit"
-                                    variant="secondary"
-                                    disabled={disabled || importing || !importFile || hasScoreErrors}
-                                    loading={importing}
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <a
+                                    href="/note_export_template.xlsx"
+                                    download
+                                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
                                 >
-                                    <Upload className="h-4 w-4" />
-                                    Importer Excel
-                                </Button>
-                            </form>
+                                    <Download className="h-4 w-4" />
+                                    Télécharger le modèle Excel
+                                </a>
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <a
+                                    href="/note_export_template.xlsx"
+                                    download
+                                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Télécharger le modèle Excel
+                                </a>
+                                <form onSubmit={handleImport} className="flex items-center gap-2">
+                                    <input
+                                        type="file"
+                                        accept=".xlsx,.xls,.csv"
+                                        onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                                        disabled={disabled || importing}
+                                        className="text-xs"
+                                    />
+                                    <Button
+                                        type="submit"
+                                        variant="secondary"
+                                        disabled={disabled || importing || !importFile || hasScoreErrors}
+                                        loading={importing}
+                                    >
+                                        <Upload className="h-4 w-4" />
+                                        Importer Excel
+                                    </Button>
+                                </form>
+                            </div>
+                            </div>
                             <Button
                                 variant="secondary"
                                 onClick={saveDraft}

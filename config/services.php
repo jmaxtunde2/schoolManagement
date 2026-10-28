@@ -71,12 +71,13 @@ return [
     | https://developers.facebook.com/docs/whatsapp/cloud-api
     */
     'whatsapp' => [
-        'token' => env('WHATSAPP_TOKEN') ?: env('META_WHATSAPP_TOKEN'),
-        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID') ?: env('META_WHATSAPP_PHONE_NUMBER_ID'),
-        'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com'),
-        'api_version' => env('WHATSAPP_API_VERSION', 'v21.0'),
-        'business_account_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID') ?: env('META_WHATSAPP_BUSINESS_ACCOUNT_ID'),
-        'verify_token' => env('WHATSAPP_VERIFY_TOKEN') ?: env('META_WHATSAPP_VERIFY_TOKEN'),
-    ],
+    'enabled' => env('WHATSAPP_ENABLED', false),
+    'token' => env('WHATSAPP_ACCESS_TOKEN'),
+    'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+    'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com'),
+    'graph_version' => env('WHATSAPP_GRAPH_VERSION', 'v21.0'),
+    'business_account_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID'),
+    'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
+],
 
 ];
