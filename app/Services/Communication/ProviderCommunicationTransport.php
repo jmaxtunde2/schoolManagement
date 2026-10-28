@@ -7,7 +7,7 @@ use App\Models\School;
 use App\Services\Mail\SchoolMailService;
 use App\Services\Sms\SmsProviderInterface;
 use App\Services\Sms\SmsResponse;
-use App\Services\Sms\WhatsAppProvider;
+use App\Services\Sms\WhatsAppProvider as SmsWhatsAppProvider;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -22,11 +22,12 @@ class ProviderCommunicationTransport implements CommunicationTransport
         CommunicationChannel $channel,
         School $school,
         string $recipient,
-        string $message
+        string $message,
+        ?array $metadata = null
     ): SmsResponse {
         return match ($channel) {
             CommunicationChannel::Sms => $this->smsProvider()->send($recipient, $message),
-            CommunicationChannel::Whatsapp => (new WhatsAppProvider)->send($recipient, $message),
+            CommunicationChannel::Whatsapp => (new SmsWhatsAppProvider)->send($recipient, $message, $metadata),
             CommunicationChannel::Email => $this->sendEmail($school, $recipient, $message),
             default => SmsResponse::failure('Canal externe non pris en charge.'),
         };

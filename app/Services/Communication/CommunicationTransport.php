@@ -16,6 +16,7 @@ interface CommunicationTransport
         CommunicationChannel $channel,
         School $school,
         string $recipient,
-        string $message
+        string $message,
+        ?array $metadata = null
     ): SmsResponse;
 }

@@ -8,4 +8,9 @@ class WhatsAppProvider extends MetaWhatsAppProvider
     {
         return 'whatsapp';
     }
+
+    public function send(string $phone, string $message, ?array $metadata = null): SmsResponse
+    {
+        return parent::send($phone, $message, $metadata);
+    }
 }

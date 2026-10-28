@@ -255,6 +255,24 @@ class NotificationAggregationService
                     'phone' => $channel === CommunicationChannel::Email ? null : $guardian->phone,
                     'email' => $channel === CommunicationChannel::Email ? $email : null,
                     'message' => $built['message'],
+                    'metadata' => $channel === CommunicationChannel::Whatsapp ? [
+                        'whatsapp' => [
+                            'template' => 'corischool_evaluation',
+                            'language' => 'fr',
+                            'body_parameters' => [
+                                $school->name,
+                                $guardian->name,
+                                $student->full_name,
+                                implode(', ', array_values(array_unique(array_column($entries, 'title')))),
+                                implode("\n", array_map(fn (array $entry) => sprintf(
+                                    '%s : %s',
+                                    $entry['subject'],
+                                    $entry['absent'] ? 'Absent' : rtrim(rtrim(number_format((float) $entry['score'], 2, '.', ''), '0'), '.').'/'.rtrim(rtrim(number_format((float) $entry['max'], 2, '.', ''), '0'), '.')
+                                ), $entries)),
+                            ],
+                            'url_parameter' => $school->slug,
+                        ],
+                    ] : null,
                     'status' => NotificationStatus::Pending->value,
                     'estimated_cost' => $cost,
                     'cost_currency' => $currency,

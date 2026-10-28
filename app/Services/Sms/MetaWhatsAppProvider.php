@@ -13,15 +13,10 @@ use Illuminate\Support\Facades\Http;
  * Note : l'API exige des numéros au format international E.164
  * (ex. +22890000001). Les numéros nationaux sont normalisés avec l'indicatif
  * configuré (services.sms.country_code, 228 par défaut).
- *
- * Note Meta : une conversation initiée par l'établissement peut nécessiter un
- * modèle de message approuvé si le destinataire ne répond pas dans la fenêtre
- * de 24 h. L'envoi ci-dessous utilise le type « text » (valable pendant une
- * session). Pour un envoi hors session, basculer sur un template.
  */
 class MetaWhatsAppProvider implements SmsProviderInterface, SupportsDocuments
 {
-    public function send(string $phone, string $message): SmsResponse
+    public function send(string $phone, string $message, ?array $metadata = null): SmsResponse
     {
         $token = config('services.whatsapp.token');
         $phoneNumberId = config('services.whatsapp.phone_number_id');
@@ -41,18 +36,19 @@ class MetaWhatsAppProvider implements SmsProviderInterface, SupportsDocuments
         }
 
         $base = rtrim(config('services.whatsapp.api_url', 'https://graph.facebook.com'), '/');
-        $version = config('services.whatsapp.api_version', 'v21.0');
+        $version = config('services.whatsapp.graph_version') ?? config('services.whatsapp.api_version') ?? 'v21.0';
         $url = "{$base}/{$version}/{$phoneNumberId}/messages";
+
+        $payload = $this->buildPayload($to, $message, $metadata);
+
+        if ($metadata !== null) {
+            $payload['metadata'] = $metadata;
+        }
 
         $response = Http::withToken($token)
             ->acceptJson()
             ->asJson()
-            ->post($url, [
-                'messaging_product' => 'whatsapp',
-                'to' => $to,
-                'type' => 'text',
-                'text' => ['body' => $message],
-            ]);
+            ->post($url, $payload);
 
         if ($response->successful()) {
             $data = $response->json();
@@ -106,7 +102,7 @@ class MetaWhatsAppProvider implements SmsProviderInterface, SupportsDocuments
         }
 
         $base = rtrim(config('services.whatsapp.api_url', 'https://graph.facebook.com'), '/');
-        $version = config('services.whatsapp.api_version', 'v21.0');
+        $version = config('services.whatsapp.graph_version') ?? config('services.whatsapp.api_version') ?? 'v21.0';
         $url = "{$base}/{$version}/{$phoneNumberId}/messages";
 
         $response = Http::withToken($token)
@@ -131,6 +127,60 @@ class MetaWhatsAppProvider implements SmsProviderInterface, SupportsDocuments
         return SmsResponse::failure(
             'WhatsApp HTTP '.$response->status().': '.$error
         );
+    }
+
+    private function buildPayload(string $to, string $message, ?array $metadata): array
+    {
+        $whatsappMeta = $metadata['whatsapp'] ?? null;
+
+        if (is_array($whatsappMeta) && ! empty($whatsappMeta['template'])) {
+            $template = [
+                'name' => $whatsappMeta['template'],
+                'language' => [
+                    'code' => $whatsappMeta['language'] ?? 'fr',
+                ],
+            ];
+
+            $components = [];
+
+            if (! empty($whatsappMeta['body_parameters']) && is_array($whatsappMeta['body_parameters'])) {
+                $components[] = [
+                    'type' => 'body',
+                    'parameters' => array_map(function ($param) {
+                        return ['type' => 'text', 'text' => (string) $param];
+                    }, $whatsappMeta['body_parameters']),
+                ];
+            }
+
+            if (! empty($whatsappMeta['url_parameter'])) {
+                $components[] = [
+                    'type' => 'button',
+                    'sub_type' => 'url',
+                    'index' => '0',
+                    'parameters' => [
+                        ['type' => 'text', 'text' => (string) $whatsappMeta['url_parameter']],
+                    ],
+                ];
+            }
+
+            if (! empty($components)) {
+                $template['components'] = $components;
+            }
+
+            return [
+                'messaging_product' => 'whatsapp',
+                'to' => $to,
+                'type' => 'template',
+                'template' => $template,
+            ];
+        }
+
+        return [
+            'messaging_product' => 'whatsapp',
+            'to' => $to,
+            'type' => 'text',
+            'text' => ['body' => $message],
+        ];
     }
 
     public function name(): string

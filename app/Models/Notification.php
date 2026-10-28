@@ -16,13 +16,14 @@ class Notification extends Model
 
     protected $fillable = [
         'evaluation_id', 'notification_batch_id', 'notification_type', 'student_id', 'parent_id', 'channel', 'phone', 'email', 'message', 'provider',
-        'status', 'idempotency_key', 'external_id', 'error', 'attempts', 'estimated_cost', 'cost_currency', 'sent_at', 'delivered_at',
+        'status', 'idempotency_key', 'external_id', 'error', 'metadata', 'attempts', 'estimated_cost', 'cost_currency', 'sent_at', 'delivered_at',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => NotificationStatus::class,
+            'metadata' => 'array',
             'estimated_cost' => 'decimal:6',
             'sent_at' => 'datetime',
             'delivered_at' => 'datetime',

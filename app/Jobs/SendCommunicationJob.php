@@ -82,7 +82,7 @@ class SendCommunicationJob implements ShouldQueue
             $notification->increment('attempts');
             $notification->recordStatus(NotificationStatus::Queued);
 
-            $response = $transport->send($channel, $school, $recipient, $notification->message);
+            $response = $transport->send($channel, $school, $recipient, $notification->message, $notification->metadata);
             $provider = $this->providerName($channel);
 
             if ($response->success) {

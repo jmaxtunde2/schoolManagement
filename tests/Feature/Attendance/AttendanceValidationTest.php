@@ -7,6 +7,7 @@ use App\Enums\AttendanceValidationStatus;
 use App\Models\AcademicYear;
 use App\Models\AttendanceRecord;
 use App\Models\ClassRoom;
+use App\Models\Notification;
 use App\Models\ParentGuardian;
 use App\Models\School;
 use App\Models\Student;
@@ -278,5 +279,56 @@ class AttendanceValidationTest extends TestCase
         $fresh = $record->fresh();
         $this->assertSame(AttendanceValidationStatus::Validated, $fresh->validation_status);
         $this->assertSame($admin->id, $fresh->validated_by);
+    }
+
+    public function test_absence_and_lateness_create_template_notifications_with_ordered_parameters(): void
+    {
+        config([
+            'services.whatsapp.lateness_template_language' => 'fr',
+            'services.whatsapp.token' => 'fake-token',
+            'services.whatsapp.phone_number_id' => '123456',
+        ]);
+        $absent = $this->student('Ama');
+        $late = $this->student('Kojo');
+        $absentUser = $this->guardianFor($absent);
+        $lateUser = $this->guardianFor($late);
+        ParentGuardian::where('user_id', $absentUser->id)->update(['name' => 'Parent Ama', 'phone' => '+22890000001']);
+        ParentGuardian::where('user_id', $lateUser->id)->update(['name' => 'Parent Kojo', 'phone' => '+22890000002']);
+        $date = now()->toDateString();
+
+        $this->actingAsVerified($this->teacher->user)->post('/teacher/attendance', [
+            'class_room_id' => $this->classRoom->id,
+            'attendance_date' => $date,
+            'records' => [
+                ['student_id' => $absent->id, 'status' => 'absent'],
+                ['student_id' => $late->id, 'status' => 'late', 'delay_minutes' => 10],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $records = AttendanceRecord::withoutGlobalScopes()->whereIn('student_id', [$absent->id, $late->id])->get();
+        foreach ($records as $record) {
+            $record->forceFill(['recorded_at' => now()->setTime(8, 15)])->save();
+        }
+        $director = User::factory()->forSchool($this->school)->create(['role' => 'director']);
+        $this->actingAsVerified($director)->post('/director/attendance/validate', [
+            'record_ids' => $records->pluck('id')->all(),
+        ])->assertSessionHasNoErrors();
+
+        $absenceNotification = Notification::where('notification_type', 'absence')->firstOrFail();
+        $this->assertSame('corischool_absence', data_get($absenceNotification->metadata, 'whatsapp.template'));
+        $this->assertSame([
+            $this->school->name, 'Parent Ama', $absent->full_name,
+            now()->isoFormat('dddd D MMMM YYYY'),
+        ], data_get($absenceNotification->metadata, 'whatsapp.body_parameters'));
+        $this->assertSame($this->school->slug, data_get($absenceNotification->metadata, 'whatsapp.url_parameter'));
+
+        $latenessNotification = Notification::where('notification_type', 'lateness')->firstOrFail();
+        $this->assertSame('template_retard', data_get($latenessNotification->metadata, 'whatsapp.template'));
+        $this->assertSame([
+            $this->school->name, 'Parent Kojo', $late->full_name,
+            now()->isoFormat('dddd D MMMM YYYY'), '08:15',
+        ], data_get($latenessNotification->metadata, 'whatsapp.body_parameters'));
+        $this->assertSame('fr', data_get($latenessNotification->metadata, 'whatsapp.language'));
+        $this->assertSame($this->school->slug, data_get($latenessNotification->metadata, 'whatsapp.url_parameter'));
     }
 }

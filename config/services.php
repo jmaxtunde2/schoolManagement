@@ -76,6 +76,7 @@ return [
     'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
     'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com'),
     'graph_version' => env('WHATSAPP_GRAPH_VERSION', 'v21.0'),
+    'lateness_template_language' => env('WHATSAPP_LATENESS_TEMPLATE_LANGUAGE', 'fr'),
     'business_account_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID'),
     'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
 ],

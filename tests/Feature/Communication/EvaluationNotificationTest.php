@@ -378,11 +378,96 @@ class EvaluationNotificationTest extends TestCase
             app(NotificationChannelService::class),
         );
     }
+
+    public function test_send_communication_job_passes_notification_metadata_to_transport(): void
+    {
+        Queue::fake();
+
+        $student = $this->studentWithGuardian('+22890000001', null);
+        $this->validatedEvaluation($student);
+
+        app(NotificationAggregationService::class)->aggregate();
+
+        $notification = Notification::firstOrFail();
+        $notification->forceFill(['metadata' => ['source' => 'evaluation', 'batch_id' => $notification->notification_batch_id]])->save();
+
+        $transport = new FakeCommunicationTransport;
+
+        $this->runJob($notification->id, $transport);
+
+        $this->assertCount(1, $transport->sent);
+        $this->assertSame(['source' => 'evaluation', 'batch_id' => $notification->notification_batch_id], $transport->sent[0]['metadata']);
+    }
+
+    public function test_whatsapp_template_payload_from_metadata(): void
+    {
+        \Illuminate\Support\Facades\Http::fake([
+            'graph.facebook.com/*' => \Illuminate\Support\Facades\Http::response([
+                'messages' => [['id' => 'wamid.test']],
+            ], 200),
+        ]);
+
+        config([
+            'services.whatsapp.token' => 'test-token',
+            'services.whatsapp.phone_number_id' => '123456',
+            'services.whatsapp.api_url' => 'https://graph.facebook.com',
+            'services.whatsapp.graph_version' => 'v21.0',
+        ]);
+
+        $provider = new \App\Services\Sms\MetaWhatsAppProvider();
+        $metadata = [
+            'whatsapp' => [
+                'template' => 'notes_disponibles',
+                'language' => 'fr',
+                'body_parameters' => ['Amadou', 'Maths'],
+                'url_parameter' => 'abc123',
+            ],
+        ];
+
+        $response = $provider->send('+22890000001', 'ignored', $metadata);
+
+        $this->assertTrue($response->success);
+
+        \Illuminate\Support\Facades\Http::assertSent(function ($request) {
+            $data = $request->data();
+
+            return $data['type'] === 'template'
+                && $data['template']['name'] === 'notes_disponibles'
+                && $data['template']['language']['code'] === 'fr'
+                && isset($data['template']['components'][0])
+                && $data['template']['components'][0]['type'] === 'body'
+                && $data['template']['components'][1]['type'] === 'button'
+                && $data['template']['components'][1]['sub_type'] === 'url'
+                && $data['template']['components'][1]['parameters'][0]['text'] === 'abc123';
+        });
+    }
+
+    public function test_validated_evaluation_uses_corischool_template_parameters_in_meta_order(): void
+    {
+        Queue::fake();
+        $student = $this->studentWithGuardian('+22890000001', null);
+        $this->validatedEvaluation($student);
+
+        app(NotificationAggregationService::class)->aggregate();
+
+        $notification = Notification::firstOrFail();
+        $this->assertSame('whatsapp', $notification->channel);
+        $this->assertSame('corischool_evaluation', data_get($notification->metadata, 'whatsapp.template'));
+        $this->assertSame('fr', data_get($notification->metadata, 'whatsapp.language'));
+        $this->assertSame([
+            $this->school->name,
+            ParentGuardian::firstOrFail()->name,
+            $student->full_name,
+            Evaluation::firstOrFail()->title,
+            "Mathématiques : 15/20",
+        ], data_get($notification->metadata, 'whatsapp.body_parameters'));
+        $this->assertSame($this->school->slug, data_get($notification->metadata, 'whatsapp.url_parameter'));
+    }
 }
 
 class FakeCommunicationTransport implements CommunicationTransport
 {
-    /** @var array<int, array{channel: CommunicationChannel, recipient: string, message: string}> */
+    /** @var array<int, array{channel: CommunicationChannel, recipient: string, message: string, metadata: ?array}> */
     public array $sent = [];
 
     /**
@@ -394,13 +479,14 @@ class FakeCommunicationTransport implements CommunicationTransport
         CommunicationChannel $channel,
         School $school,
         string $recipient,
-        string $message
+        string $message,
+        ?array $metadata = null
     ): SmsResponse {
         if (in_array($channel, $this->failChannels, true)) {
             return SmsResponse::failure('Échec simulé pour '.$channel->value);
         }
 
-        $this->sent[] = ['channel' => $channel, 'recipient' => $recipient, 'message' => $message];
+        $this->sent[] = ['channel' => $channel, 'recipient' => $recipient, 'message' => $message, 'metadata' => $metadata];
 
         return SmsResponse::success('fake_'.count($this->sent));
     }
