@@ -463,6 +463,28 @@ class EvaluationNotificationTest extends TestCase
         ], data_get($notification->metadata, 'whatsapp.body_parameters'));
         $this->assertSame($this->school->slug, data_get($notification->metadata, 'whatsapp.url_parameter'));
     }
+
+    public function test_whatsapp_evaluation_marks_are_single_line_and_other_channels_keep_their_format(): void
+    {
+        $builder = app(NotificationMessageBuilder::class);
+        $entries = [
+            ['subject' => 'Mathématiques', 'title' => 'Devoir', 'score' => 15, 'max' => 20, 'absent' => false],
+            ['subject' => "Français\n", 'title' => 'Devoir', 'score' => 14, 'max' => 20, 'absent' => false],
+            ['subject' => "Anglais\t  avancé", 'title' => 'Devoir', 'score' => 16, 'max' => 20, 'absent' => false],
+        ];
+
+        $whatsappMarks = $builder->whatsappMarks($entries);
+
+        $this->assertSame('Mathématiques : 15/20, Français : 14/20, Anglais avancé : 16/20', $whatsappMarks);
+        $this->assertDoesNotMatchRegularExpression('/[\n\r\t]/', $whatsappMarks);
+        $this->assertStringContainsString("\nFrançais", $builder->inAppMessage('École', 'Élève', $entries));
+        $this->assertStringContainsString("Français\n", $builder->externalMessage(
+            CommunicationChannel::Email,
+            'École',
+            'Élève',
+            $entries,
+        )['message']);
+    }
 }
 
 class FakeCommunicationTransport implements CommunicationTransport

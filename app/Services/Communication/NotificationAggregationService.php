@@ -264,11 +264,7 @@ class NotificationAggregationService
                                 $guardian->name,
                                 $student->full_name,
                                 implode(', ', array_values(array_unique(array_column($entries, 'title')))),
-                                implode("\n", array_map(fn (array $entry) => sprintf(
-                                    '%s : %s',
-                                    $entry['subject'],
-                                    $entry['absent'] ? 'Absent' : rtrim(rtrim(number_format((float) $entry['score'], 2, '.', ''), '0'), '.').'/'.rtrim(rtrim(number_format((float) $entry['max'], 2, '.', ''), '0'), '.')
-                                ), $entries)),
+                                $this->messages->whatsappMarks($entries),
                             ],
                             'url_parameter' => $school->slug,
                         ],

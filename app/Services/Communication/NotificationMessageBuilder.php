@@ -28,6 +28,24 @@ class NotificationMessageBuilder
     }
 
     /**
+     * Build the evaluation marks parameter for Meta's WhatsApp template.
+     * Keep it on one line and collapse whitespace that Meta rejects.
+     *
+     * @param  array<int, array{subject: string, title: string, score: ?float, max: float, absent: bool}>  $entries
+     */
+    public function whatsappMarks(array $entries): string
+    {
+        $notes = array_map(function (array $entry): string {
+            $subject = preg_replace('/[\r\n\t ]+/u', ' ', $entry['subject']) ?? $entry['subject'];
+            $note = sprintf('%s : %s', trim($subject), $this->formatScore($entry));
+
+            return trim(preg_replace('/[\r\n\t ]+/u', ' ', $note) ?? $note);
+        }, $entries);
+
+        return implode(', ', $notes);
+    }
+
+    /**
      * @param  array<int, array{subject: string, title: string, score: ?float, max: float, absent: bool}>  $entries
      * @return array{message: string, detailed: bool}
      */
