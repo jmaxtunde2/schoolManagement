@@ -7,6 +7,7 @@ use App\Enums\Role;
 use App\Models\ClassRoom;
 use App\Models\Preinscription;
 use App\Models\School;
+use App\Models\SchoolSetting;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -64,6 +65,27 @@ class PreinscriptionTest extends TestCase
                 ->component('Public/Preinscription')
                 ->where('school.name', 'Groupe Scolaire Ketry')
                 ->has('levels', 2)
+                ->etc()
+            );
+    }
+
+    public function test_the_public_form_exposes_up_to_three_phone_numbers(): void
+    {
+        SchoolSetting::withoutGlobalScopes()->create([
+            'school_id' => $this->school->id,
+            'school_name' => $this->school->name,
+            'phone' => '+229 97 00 00 00',
+            'phone_secondary' => '+229 97 00 00 01',
+            'phone_tertiary' => '+229 97 00 00 02',
+        ]);
+
+        $this->get(route('public.school.preinscription', $this->school->slug))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Public/Preinscription')
+                ->where('school.phone', '+229 97 00 00 00')
+                ->where('school.phone_secondary', '+229 97 00 00 01')
+                ->where('school.phone_tertiary', '+229 97 00 00 02')
                 ->etc()
             );
     }

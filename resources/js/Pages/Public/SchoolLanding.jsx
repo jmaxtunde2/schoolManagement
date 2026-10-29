@@ -169,6 +169,10 @@ export default function SchoolLanding({
     const phoneNumbers = [school.phone, school.phone_secondary, school.phone_tertiary]
         .filter((value) => typeof value === 'string' && value.trim() !== '');
     const phoneHref = (value) => value.replace(/[^+\d]/g, '');
+    const descriptionIsLong = (school.description?.length ?? 0) > 300;
+    const descriptionPreview = descriptionIsLong
+        ? `${school.description.slice(0, 300).trimEnd()}…`
+        : school.description;
 
     const primary = school.primary_color || '#059669';
     const secondary = school.secondary_color || '#2563EB';
@@ -469,13 +473,12 @@ export default function SchoolLanding({
                             {school.description && (
                                 <motion.div variants={fadeUp} className="mt-4 max-w-2xl">
                                     <p className="text-base leading-7 text-white/80 sm:text-lg">
-                                        {descriptionExpanded ||
-                                        school.description.length <= 300
+                                        {descriptionExpanded
                                             ? school.description
-                                            : `${school.description.slice(0, 300).trimEnd()}…`}
+                                            : descriptionPreview}
                                     </p>
 
-                                    {school.description.length > 300 && (
+                                    {descriptionIsLong && (
                                         <button
                                             type="button"
                                             onClick={() =>
@@ -1121,7 +1124,7 @@ export default function SchoolLanding({
                             )}
                             <span className="font-bold">{school.name}</span>
                         </a>
-                        {school.description && <p className="mt-4 max-w-sm text-sm leading-6 text-white/65">{school.description}</p>}
+                        {school.description && <p className="mt-4 max-w-sm text-sm leading-6 text-white/65">{descriptionPreview}</p>}
                     </div>
                     <div>
                         <h2 className="text-sm font-semibold">Navigation</h2>

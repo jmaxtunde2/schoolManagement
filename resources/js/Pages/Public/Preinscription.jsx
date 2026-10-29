@@ -31,6 +31,8 @@ export default function Preinscription({ school, levels = [], submitUrl }) {
 
     const primary = school.primary_color || '#059669';
     const secondary = school.secondary_color || '#2563EB';
+    const phoneNumbers = [school.phone, school.phone_secondary, school.phone_tertiary]
+        .filter((value) => typeof value === 'string' && value.trim() !== '');
 
     const { data, setData, post, processing, errors, reset, progress } = useForm({
         first_name: '',
@@ -297,16 +299,18 @@ export default function Preinscription({ school, levels = [], submitUrl }) {
                                 </ol>
                             </div>
 
-                            {(school.phone || school.email || school.address) && (
+                            {(phoneNumbers.length > 0 || school.email || school.address) && (
                                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                                     <h2 className="text-sm font-semibold text-slate-950">Besoin d’aide ?</h2>
                                     <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                                        {school.phone && (
-                                            <li className="flex items-center gap-2">
+                                        {phoneNumbers.map((phone, index) => (
+                                            <li key={`${phone}-${index}`} className="flex items-center gap-2">
                                                 <Phone className="h-4 w-4 text-slate-400" />
-                                                {school.phone}
+                                                <a href={`tel:${phone.replace(/[^+\d]/g, '')}`} className="transition hover:text-slate-900">
+                                                    {phone}
+                                                </a>
                                             </li>
-                                        )}
+                                        ))}
                                         {school.email && (
                                             <li className="flex items-center gap-2">
                                                 <CalendarDays className="h-4 w-4 text-slate-400" />

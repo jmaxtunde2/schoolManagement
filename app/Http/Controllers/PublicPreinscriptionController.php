@@ -49,6 +49,8 @@ class PublicPreinscriptionController extends Controller
                 'secondary_color' => $setting?->secondary_color ?: $branding['secondary_color'],
                 'accent_color' => $setting?->accent_color ?: $branding['accent_color'],
                 'phone' => $setting?->phone,
+                'phone_secondary' => $setting?->phone_secondary,
+                'phone_tertiary' => $setting?->phone_tertiary,
                 'email' => $setting?->email,
                 'address' => $setting?->address,
                 'city' => $setting?->city,
