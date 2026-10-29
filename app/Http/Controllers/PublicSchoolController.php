@@ -10,6 +10,7 @@ use App\Models\SchoolSetting;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Services\Tenancy\TenantResolver;
+use App\Support\PublicSiteResults;
 use App\Support\SchoolBranding;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -286,6 +287,19 @@ class PublicSchoolController extends Controller
             ->take(5)
             ->values();
 
+        $results = collect(PublicSiteResults::normalize(
+            $publicSite['results'] ?? [],
+            $publicSite['results_headline'] ?? null,
+            $publicSite['results_note'] ?? null,
+        ))
+            ->map(fn ($result) => [
+                'title' => Str::limit(strip_tags($result['title']), 160, ''),
+                'note' => $result['note']
+                    ? Str::limit(strip_tags($result['note']), 160, '')
+                    : null,
+            ])
+            ->values();
+
         $tuitionFees = collect($publicSite['tuition_fees'] ?? [])
             ->filter(fn ($fee) => is_array($fee) && filled($fee['label'] ?? null))
             ->map(fn ($fee) => [
@@ -459,6 +473,7 @@ class PublicSchoolController extends Controller
                 'results_note' => is_string($publicSite['results_note'] ?? null)
                     ? Str::limit(strip_tags($publicSite['results_note']), 160, '')
                     : null,
+                'results' => $results,
                 'values' => $values,
                 'logo_url' => $logoUrl,
                 'hero_image_url' => $heroImageUrl,

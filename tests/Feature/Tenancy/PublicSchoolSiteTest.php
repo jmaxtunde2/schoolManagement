@@ -352,6 +352,41 @@ class PublicSchoolSiteTest extends TestCase
         $this->assertSame($admin->school_id, $schoolA->id);
     }
 
+    public function test_school_admin_can_save_multiple_palmares(): void
+    {
+        $school = School::factory()->create(['name' => 'École Palmarès']);
+        $admin = $this->verifiedAdmin($school);
+
+        $this->put('/admin/settings/public-site', [
+            'results' => [
+                ['title' => '92 % de réussite au BAC', 'note' => 'Session 2025'],
+                ['title' => '3 mentions très bien', 'note' => 'Session 2024'],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $settings = SchoolSetting::withoutGlobalScopes()
+            ->where('school_id', $school->id)
+            ->firstOrFail();
+
+        $this->assertSame([
+            ['title' => '92 % de réussite au BAC', 'note' => 'Session 2025'],
+            ['title' => '3 mentions très bien', 'note' => 'Session 2024'],
+        ], data_get($settings->options, 'public_site.results'));
+
+        $this->get('/admin/settings/public-site')
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Settings/PublicSite')
+                ->has('publicSite.results', 2)
+                ->where('publicSite.results.0.title', '92 % de réussite au BAC'));
+
+        $this->get(route('public.school.slug', $school->slug).'?preview=1')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Public/SchoolLanding')
+                ->has('school.results', 2)
+                ->where('school.results.1.note', 'Session 2024'));
+    }
+
     public function test_public_site_exposes_tuition_curriculum_and_calendar(): void
     {
         $school = School::factory()->create(['name' => 'École Complète']);

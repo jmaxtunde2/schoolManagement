@@ -43,8 +43,10 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
             ...(publicSite.features ?? []),
             { title: '', description: '' },
         ].slice(0, 6),
-        results_headline: publicSite.results_headline ?? '',
-        results_note: publicSite.results_note ?? '',
+        results: [
+            ...(publicSite.results ?? []),
+            { title: '', note: '' },
+        ].slice(0, 6),
         tuition_currency: publicSite.tuition_currency ?? '',
         tuition_note: publicSite.tuition_note ?? '',
         tuition_fees: [
@@ -104,6 +106,7 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
             _method: 'put',
             values: data.values.filter((value) => value.trim()),
             features: data.features.filter((feature) => feature.title.trim()),
+            results: data.results.filter((result) => result.title.trim()),
             tuition_fees: data.tuition_fees.filter((fee) =>
                 (fee.label ?? '').trim()
             ),
@@ -816,49 +819,101 @@ export default function PublicSite({ school, publicSite, testimonials, gallery }
                         <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-slate-200">
                             <Card.Header
                                 title="Palmarès & résultats (facultatif)"
-                                description="Met en avant une réussite marquante, affichée sur le site public."
+                                description="Ajoutez jusqu'à six réussites marquantes, affichées sur le site public."
                             />
 
                             <Card.Body className="space-y-4">
-                                <Field label="Titre du résultat" optional>
-                                    <Input
-                                        id="results_headline"
-                                        value={contentForm.data.results_headline}
-                                        maxLength={160}
-                                        onChange={(event) =>
-                                            contentForm.setData(
-                                                'results_headline',
-                                                event.target.value,
-                                            )
-                                        }
-                                        placeholder="92 % de réussite aux examens nationaux"
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <SectionHeading
+                                        icon={Star}
+                                        title="Palmarès de l'établissement"
+                                        description="Chaque ligne est présentée comme une réussite sur le site public."
                                     />
-                                    {contentForm.errors.results_headline && (
-                                        <ErrorMessage>
-                                            {contentForm.errors.results_headline}
-                                        </ErrorMessage>
-                                    )}
-                                </Field>
 
-                                <Field label="Précision" optional>
-                                    <Input
-                                        id="results_note"
-                                        value={contentForm.data.results_note}
-                                        maxLength={160}
-                                        onChange={(event) =>
-                                            contentForm.setData(
-                                                'results_note',
-                                                event.target.value,
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="sm"
+                                        disabled={
+                                            contentForm.data.results.length >= 6
+                                        }
+                                        onClick={() =>
+                                            addRow(
+                                                'results',
+                                                { title: '', note: '' },
+                                                6,
                                             )
                                         }
-                                        placeholder="Session 2025"
-                                    />
-                                    {contentForm.errors.results_note && (
-                                        <ErrorMessage>
-                                            {contentForm.errors.results_note}
-                                        </ErrorMessage>
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Ajouter
+                                    </Button>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {contentForm.data.results.map(
+                                        (result, index) => (
+                                            <div
+                                                key={index}
+                                                className="group rounded-2xl border border-slate-200 bg-slate-50/50 p-4 transition hover:border-emerald-200 hover:bg-white"
+                                            >
+                                                <div className="flex gap-3">
+                                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-xs font-bold text-white shadow-sm">
+                                                        {index + 1}
+                                                    </span>
+
+                                                    <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2">
+                                                        <Input
+                                                            value={result.title}
+                                                            maxLength={160}
+                                                            onChange={(event) =>
+                                                                updateRow(
+                                                                    'results',
+                                                                    index,
+                                                                    'title',
+                                                                    event.target
+                                                                        .value,
+                                                                )
+                                                            }
+                                                            placeholder="92 % de réussite aux examens"
+                                                        />
+
+                                                        <Input
+                                                            value={result.note}
+                                                            maxLength={160}
+                                                            onChange={(event) =>
+                                                                updateRow(
+                                                                    'results',
+                                                                    index,
+                                                                    'note',
+                                                                    event.target
+                                                                        .value,
+                                                                )
+                                                            }
+                                                            placeholder="Session 2025"
+                                                        />
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            removeRow(
+                                                                'results',
+                                                                index,
+                                                            )
+                                                        }
+                                                        className="flex h-9 w-9 shrink-0 items-center justify-center self-start rounded-xl text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                                                        aria-label="Retirer ce palmarès"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ),
                                     )}
-                                </Field>
+                                </div>
+
+                                {fieldErrors('results')}
                             </Card.Body>
                         </Card>
 

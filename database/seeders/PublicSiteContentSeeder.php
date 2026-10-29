@@ -42,8 +42,10 @@ class PublicSiteContentSeeder extends Seeder
                 ['title' => 'Orientation et insertion', 'description' => 'Conseil en orientation, stages en entreprise et réseau d\'anciens élèves actif.'],
                 ['title' => 'Cadre sécurisé et verdoyant', 'description' => 'Infrastructures modernes, espaces verts, restauration équilibrée et transport scolaire.'],
             ],
-            'results_headline' => '95 % de réussite au BEPC et 92 % au BAC toutes séries confondues (session 2024)',
-            'results_note' => 'Résultats officiels Ministère de l\'Enseignement Secondaire',
+            'results' => [
+                ['title' => '92 % de réussite au BAC', 'note' => 'Session 2024 — toutes séries confondues'],
+                ['title' => '95 % de réussite au BEPC', 'note' => 'Résultats officiels du Ministère de l\'Enseignement Secondaire'],
+            ],
             'tuition_currency' => 'FCFA',
             'tuition_note' => 'Paiement en trois tranches possible (septembre, janvier, avril). Réduction de 10 % pour le 2ème enfant, 15 % pour le 3ème et suivants.',
             'tuition_fees' => [

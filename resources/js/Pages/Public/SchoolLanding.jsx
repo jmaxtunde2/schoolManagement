@@ -635,7 +635,7 @@ export default function SchoolLanding({
                     </div>
                 </section>
 
-                {school.results_headline && (
+                {school.results?.length > 0 && (
                     <section className="scroll-mt-24 bg-white py-12 sm:py-14">
                         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
                             <motion.div
@@ -643,16 +643,36 @@ export default function SchoolLanding({
                                 initial="hidden"
                                 whileInView="visible"
                                 viewport={revealViewport}
-                                className="flex flex-col items-center gap-3 rounded-3xl border px-6 py-10 text-center sm:px-12"
-                                style={{ borderColor: withAlpha(primary, 0.2), background: `linear-gradient(135deg, ${withAlpha(primary, 0.08)}, ${withAlpha(accent, 0.08)})` }}
+                                className="text-center"
                             >
                                 <SectionEyebrow color={accent}>Palmarès &amp; résultats</SectionEyebrow>
-                                <p className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">
-                                    {school.results_headline}
-                                </p>
-                                {school.results_note && (
-                                    <p className="text-sm font-medium text-slate-500">{school.results_note}</p>
-                                )}
+                            </motion.div>
+
+                            <motion.div
+                                variants={stagger}
+                                initial="hidden"
+                                whileInView="visible"
+                                viewport={revealViewport}
+                                className={`mx-auto mt-6 grid gap-4 ${school.results.length === 1 ? 'max-w-2xl' : 'sm:grid-cols-2 lg:grid-cols-3'}`}
+                            >
+                                {school.results.map((result, index) => (
+                                    <motion.div
+                                        key={`${result.title}-${index}`}
+                                        variants={fadeUp}
+                                        className="rounded-3xl border px-6 py-8 text-center"
+                                        style={{
+                                            borderColor: withAlpha(primary, 0.2),
+                                            background: `linear-gradient(135deg, ${withAlpha(primary, 0.08)}, ${withAlpha(accent, 0.08)})`,
+                                        }}
+                                    >
+                                        <p className="text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">
+                                            {result.title}
+                                        </p>
+                                        {result.note && (
+                                            <p className="mt-2 text-sm font-medium text-slate-500">{result.note}</p>
+                                        )}
+                                    </motion.div>
+                                ))}
                             </motion.div>
                         </div>
                     </section>

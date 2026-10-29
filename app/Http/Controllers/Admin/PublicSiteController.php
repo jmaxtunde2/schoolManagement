@@ -8,6 +8,7 @@ use App\Http\Requests\Settings\UpdatePublicSiteSettingsRequest;
 use App\Models\SchoolPublicGalleryItem;
 use App\Models\SchoolPublicTestimonial;
 use App\Services\AuditService;
+use App\Support\PublicSiteResults;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -52,6 +53,11 @@ class PublicSiteController extends Controller
                 'vision' => $publicSite['vision'] ?? '',
                 'values' => $publicSite['values'] ?? [],
                 'features' => $publicSite['features'] ?? [],
+                'results' => PublicSiteResults::normalize(
+                    $publicSite['results'] ?? [],
+                    $publicSite['results_headline'] ?? null,
+                    $publicSite['results_note'] ?? null,
+                ),
                 'results_headline' => $publicSite['results_headline'] ?? '',
                 'results_note' => $publicSite['results_note'] ?? '',
                 'tuition_currency' => $publicSite['tuition_currency'] ?? '',

@@ -4,6 +4,7 @@ namespace App\Actions\Settings;
 
 use App\Models\School;
 use App\Models\SchoolSetting;
+use App\Support\PublicSiteResults;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -31,6 +32,11 @@ class UpdatePublicSiteSettings
                 $data['features'] ?? [],
                 fn ($feature) => trim((string) ($feature['title'] ?? '')) !== ''
             )),
+            'results' => PublicSiteResults::normalize(
+                $data['results'] ?? [],
+                $data['results_headline'] ?? null,
+                $data['results_note'] ?? null,
+            ),
             'results_headline' => filled($data['results_headline'] ?? null)
                 ? trim((string) $data['results_headline'])
                 : null,
@@ -66,6 +72,10 @@ class UpdatePublicSiteSettings
         $options['public_site'] = $publicSite;
         $setting->options = $options;
         $setting->save();
+
+        // La relation a pu être mémorisée par l'autorisation : on la recharge
+        // pour que la requête suivante voie immédiatement les nouvelles options.
+        $school->unsetRelation('settings');
 
         $slug = $data['slug'] ?? null;
         if (is_string($slug) && $slug !== '' && $slug !== $school->slug) {
