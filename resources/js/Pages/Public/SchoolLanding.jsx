@@ -166,7 +166,9 @@ export default function SchoolLanding({
     );
 
     const address = [school.address, school.city, school.country].filter(Boolean).join(', ');
-    const phoneHref = school.phone?.replace(/[^+\d]/g, '');
+    const phoneNumbers = [school.phone, school.phone_secondary, school.phone_tertiary]
+        .filter((value) => typeof value === 'string' && value.trim() !== '');
+    const phoneHref = (value) => value.replace(/[^+\d]/g, '');
 
     const primary = school.primary_color || '#059669';
     const secondary = school.secondary_color || '#2563EB';
@@ -1034,7 +1036,17 @@ export default function SchoolLanding({
                                     color={primary}
                                 />
                             )}
-                            {school.phone && <ContactItem variants={fadeUp} icon={Phone} label="Téléphone" value={school.phone} href={`tel:${phoneHref}`} color={primary} />}
+                            {phoneNumbers.map((phone, index) => (
+                                <ContactItem
+                                    key={`${phone}-${index}`}
+                                    variants={fadeUp}
+                                    icon={Phone}
+                                    label={index === 0 ? 'Téléphone' : `Téléphone ${index + 1}`}
+                                    value={phone}
+                                    href={`tel:${phoneHref(phone)}`}
+                                    color={primary}
+                                />
+                            ))}
                             {school.email && <ContactItem variants={fadeUp} icon={Mail} label="Email" value={school.email} href={`mailto:${school.email}`} color={primary} />}
                             {school.website && <ContactItem variants={fadeUp} icon={ArrowRight} label="Site web" value={school.website} href={school.website} external color={primary} />}
                             {school.custom_domain_url && (
@@ -1048,7 +1060,7 @@ export default function SchoolLanding({
                                     color={primary}
                                 />
                             )}
-                            {!address && !school.phone && !school.email && !school.website && !school.custom_domain_url && (
+                            {!address && phoneNumbers.length === 0 && !school.email && !school.website && !school.custom_domain_url && (
                                 <p className="text-sm text-slate-500">Les coordonnées de l’établissement seront bientôt disponibles.</p>
                             )}
                         </motion.div>
@@ -1123,7 +1135,15 @@ export default function SchoolLanding({
                         <h2 className="text-sm font-semibold">Coordonnées</h2>
                         <div className="mt-4 space-y-2 text-sm text-white/65">
                             {address && <p>{address}</p>}
-                            {school.phone && <a href={`tel:${phoneHref}`} className="block transition hover:text-white">{school.phone}</a>}
+                            {phoneNumbers.map((phone, index) => (
+                                <a
+                                    key={`${phone}-${index}`}
+                                    href={`tel:${phoneHref(phone)}`}
+                                    className="block transition hover:text-white"
+                                >
+                                    {phone}
+                                </a>
+                            ))}
                             {school.email && <a href={`mailto:${school.email}`} className="block transition hover:text-white">{school.email}</a>}
                         </div>
                     </div>

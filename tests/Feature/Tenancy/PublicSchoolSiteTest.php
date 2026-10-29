@@ -192,6 +192,26 @@ class PublicSchoolSiteTest extends TestCase
         $this->get('/ecole/slug-inexistant')->assertNotFound();
     }
 
+    public function test_public_site_exposes_up_to_three_phone_numbers(): void
+    {
+        $school = School::factory()->create(['name' => 'École Téléphones']);
+        SchoolSetting::withoutGlobalScopes()->create([
+            'school_id' => $school->id,
+            'school_name' => $school->name,
+            'phone' => '+229 97 00 00 00',
+            'phone_secondary' => '+229 97 00 00 01',
+            'phone_tertiary' => '+229 97 00 00 02',
+        ]);
+
+        $this->get(route('public.school.slug', $school->slug))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Public/SchoolLanding')
+                ->where('school.phone', '+229 97 00 00 00')
+                ->where('school.phone_secondary', '+229 97 00 00 01')
+                ->where('school.phone_tertiary', '+229 97 00 00 02'));
+    }
+
     public function test_authenticated_user_can_preview_a_public_school_site(): void
     {
         $school = School::factory()->create(['name' => 'École Aperçu']);

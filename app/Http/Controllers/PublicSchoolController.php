@@ -484,6 +484,8 @@ class PublicSchoolController extends Controller
                 'city' => $setting?->city,
                 'country' => $setting?->country,
                 'phone' => $setting?->phone,
+                'phone_secondary' => $setting?->phone_secondary,
+                'phone_tertiary' => $setting?->phone_tertiary,
                 'email' => $setting?->email,
                 'website' => $website,
                 'custom_domain_url' => $customDomainUrl,
