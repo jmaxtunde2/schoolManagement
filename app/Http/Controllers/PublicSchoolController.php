@@ -202,7 +202,7 @@ class PublicSchoolController extends Controller
                 'primary_color' => $setting?->primary_color ?: '#059669',
                 'secondary_color' => $setting?->secondary_color ?: '#2563EB',
                 'accent_color' => $setting?->accent_color ?: '#D97706',
-                'founded_year' => $setting?->founded_year,
+                'founded_date' => $setting?->founded_date?->toDateString(),
                 'students_count' => $school->students_count,
                 'teachers_count' => $school->teachers_count,
                 'classes_count' => $school->class_rooms_count,
@@ -368,7 +368,8 @@ class PublicSchoolController extends Controller
             ])
             ->values();
 
-        $foundedYear = $setting?->founded_year;
+        $foundedDate = $setting?->founded_date;
+        $foundedYear = $foundedDate?->year;
         $stats = [
             'students' => Student::withoutGlobalScopes()
                 ->where('school_id', $school->id)
@@ -432,7 +433,7 @@ class PublicSchoolController extends Controller
             'image' => $heroImageUrl,
             'description' => $metaDescription,
             'slogan' => $setting?->slogan,
-            'foundingDate' => $foundedYear ? (string) $foundedYear : null,
+            'foundingDate' => $foundedDate?->toDateString(),
             'address' => count($postalAddress) > 1 ? $postalAddress : null,
             'telephone' => $setting?->phone,
             'email' => $setting?->email,
@@ -471,7 +472,7 @@ class PublicSchoolController extends Controller
                 'email' => $setting?->email,
                 'website' => $website,
                 'custom_domain_url' => $customDomainUrl,
-                'founded_year' => $foundedYear,
+                'founded_date' => $foundedDate?->toDateString(),
                 'meta_title' => $metaTitle,
                 'meta_description' => $metaDescription,
                 'canonical_url' => $canonicalUrl,

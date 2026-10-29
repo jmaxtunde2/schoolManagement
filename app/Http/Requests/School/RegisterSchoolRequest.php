@@ -40,7 +40,7 @@ class RegisterSchoolRequest extends FormRequest
             'school_name' => ['required', 'string', 'max:255'],
             'short_name' => ['nullable', 'string', 'max:50'],
             'school_type' => ['nullable', Rule::in(array_keys(SchoolSetting::SCHOOL_TYPES))],
-            'founded_year' => ['nullable', 'integer', 'between:1900,'.now()->year],
+            'founded_date' => ['nullable', 'date', 'after_or_equal:1900-01-01', 'before_or_equal:today'],
 
             // Coordonnées
             'address' => ['required', 'string', 'max:255'],
@@ -78,7 +78,7 @@ class RegisterSchoolRequest extends FormRequest
             'school_name' => "nom de l'établissement",
             'short_name' => 'sigle',
             'school_type' => "type d'établissement",
-            'founded_year' => 'année de création',
+            'founded_date' => 'date de création',
             'address' => 'adresse',
             'city' => 'ville',
             'department' => 'département',

@@ -28,6 +28,7 @@ import Badge from '@/Components/UI/Badge';
 import Pagination from '@/Components/UI/Pagination';
 import EmptyState from '@/Components/UI/EmptyState';
 import { Skeleton } from '@/Components/UI/Skeleton';
+import { formatLongDate } from '@/Utils/date';
 
 const translations = {
     fr: {
@@ -63,7 +64,7 @@ const translations = {
         students: 'élèves',
         teachers: 'enseignants',
         classes: 'classes',
-        founded: 'Fondée en',
+        founded: 'Fondée le',
         viewSchool: 'Voir l\'école',
         bilingual: 'Bilingue (FR/EN)',
         bilingualDesc: 'Écoles enseignant en français et en anglais',
@@ -429,12 +430,12 @@ function SchoolCard({ school, locale, t }) {
                     </div>
                 </div>
 
-                {school.founded_year && (
+                {school.founded_date && (
                     <div className="flex items-center gap-1.5 text-xs text-slate-500">
                         <span className="h-3 w-3 rounded-full bg-emerald-100 flex items-center justify-center">
                             <GraduationCap className="h-2.5 w-2.5 text-emerald-600" />
                         </span>
-                        <span>{t.founded} {school.founded_year}</span>
+                        <span>{t.founded} {formatLongDate(school.founded_date)}</span>
                     </div>
                 )}
 

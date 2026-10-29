@@ -31,7 +31,7 @@ class SchoolSeeder extends Seeder
                     'slogan' => 'Savoir, discipline, réussite',
                     'description' => "Établissement d'enseignement secondaire général.",
                     'school_type' => 'lycee',
-                    'founded_year' => 1998,
+                    'founded_date' => '1998-01-01',
                     'address' => 'Rue 123, Quartier Haie Vive',
                     'city' => 'Cotonou',
                     'country' => 'Bénin',

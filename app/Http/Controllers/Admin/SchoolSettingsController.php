@@ -32,13 +32,14 @@ class SchoolSettingsController extends Controller
                 'slogan' => $setting->slogan,
                 'description' => $setting->description,
                 'school_type' => $setting->school_type,
-                'founded_year' => $setting->founded_year,
+                'founded_date' => $setting->founded_date?->format('Y-m-d'),
                 'address' => $setting->address,
                 'city' => $setting->city,
                 'department' => $setting->department,
                 'country' => $setting->country,
                 'phone' => $setting->phone,
                 'phone_secondary' => $setting->phone_secondary,
+                'phone_tertiary' => $setting->phone_tertiary,
                 'email' => $setting->email,
                 'website' => $setting->website,
                 'contact_name' => $setting->contact_name,
@@ -52,7 +53,6 @@ class SchoolSettingsController extends Controller
                 ->map(fn ($label, $value) => ['value' => $value, 'label' => $label])
                 ->values(),
             'departments' => SchoolSetting::BENIN_DEPARTMENTS,
-            'foundedYearOptions' => SchoolSetting::foundedYearOptions(),
         ]);
     }
 

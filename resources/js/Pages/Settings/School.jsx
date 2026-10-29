@@ -45,7 +45,6 @@ export default function SchoolSettings({
     defaults,
     schoolTypes,
     departments,
-    foundedYearOptions,
 }) {
     const [tab, setTab] = useState('general');
 
@@ -62,7 +61,7 @@ export default function SchoolSettings({
         slogan: settings.slogan ?? '',
         description: settings.description ?? '',
         school_type: settings.school_type ?? '',
-        founded_year: settings.founded_year ?? '',
+        founded_date: settings.founded_date ?? '',
         address: settings.address ?? '',
         city: settings.city ?? '',
         department: settings.department ?? '',
@@ -70,6 +69,8 @@ export default function SchoolSettings({
         phone: settings.phone ?? '',
         phone_secondary:
             settings.phone_secondary ?? '',
+        phone_tertiary:
+            settings.phone_tertiary ?? '',
         email: settings.email ?? '',
         website: settings.website ?? '',
         contact_name:
@@ -206,7 +207,6 @@ export default function SchoolSettings({
                                             schoolTypes
                                         }
                                         departments={departments}
-                                        foundedYearOptions={foundedYearOptions}
                                     />
                                 )}
 
@@ -429,7 +429,6 @@ function GeneralTab({
     errors,
     schoolTypes,
     departments,
-    foundedYearOptions,
 }) {
     return (
         <div className="space-y-6">
@@ -552,26 +551,25 @@ function GeneralTab({
             >
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <Field
-                        label="Année de création"
-                        error={errors.founded_year}
-                        hint="Année de fondation de l'établissement."
+                        label="Date de création"
+                        error={errors.founded_date}
+                        hint="Date de fondation de l'établissement."
                     >
-                        <Select
-                            value={data.founded_year}
+                        <Input
+                            type="date"
+                            max={
+                                new Date()
+                                    .toISOString()
+                                    .split('T')[0]
+                            }
+                            value={data.founded_date}
                             onChange={(e) =>
                                 setData(
-                                    'founded_year',
+                                    'founded_date',
                                     e.target.value
                                 )
                             }
-                        >
-                            <option value="">— Sélectionner —</option>
-                            {foundedYearOptions.map((year) => (
-                                <option key={year} value={year}>
-                                    {year} {year === new Date().getFullYear() ? '(année en cours)' : ''}
-                                </option>
-                            ))}
-                        </Select>
+                        />
                     </Field>
 
                     <Field
@@ -672,7 +670,7 @@ function ContactTab({
                 description="Coordonnées téléphoniques utilisées par l'établissement."
                 tone="emerald"
             >
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <Field
                         label="Téléphone principal"
                         error={errors.phone}
@@ -702,6 +700,26 @@ function ContactTab({
                             onChange={(e) =>
                                 setData(
                                     'phone_secondary',
+                                    e.target.value
+                                )
+                            }
+                            placeholder="+229..."
+                        />
+                    </Field>
+
+                    <Field
+                        label="Téléphone tertiaire"
+                        error={
+                            errors.phone_tertiary
+                        }
+                    >
+                        <Input
+                            value={
+                                data.phone_tertiary
+                            }
+                            onChange={(e) =>
+                                setData(
+                                    'phone_tertiary',
                                     e.target.value
                                 )
                             }

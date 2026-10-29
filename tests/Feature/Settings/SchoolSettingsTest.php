@@ -87,6 +87,31 @@ class SchoolSettingsTest extends TestCase
         $this->assertSame('#123ABC', $setting->primary_color); // normalisé en majuscules
     }
 
+    public function test_admin_can_save_a_full_founding_date_and_three_phone_numbers(): void
+    {
+        $this->actingAs($this->admin)
+            ->post('/admin/settings', $this->payload([
+                'founded_date' => '1996-11-11',
+                'phone' => '+229 97 00 00 00',
+                'phone_secondary' => '+229 97 00 00 01',
+                'phone_tertiary' => '+229 97 00 00 02',
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $setting = $this->settingOf($this->school);
+
+        $this->assertSame('1996-11-11', $setting->founded_date->format('Y-m-d'));
+        $this->assertSame('+229 97 00 00 01', $setting->phone_secondary);
+        $this->assertSame('+229 97 00 00 02', $setting->phone_tertiary);
+    }
+
+    public function test_founding_date_cannot_be_in_the_future(): void
+    {
+        $this->actingAs($this->admin)
+            ->post('/admin/settings', $this->payload(['founded_date' => '2999-01-01']))
+            ->assertSessionHasErrors('founded_date');
+    }
+
     public function test_updated_branding_is_reflected_in_shared_props(): void
     {
         $this->actingAs($this->admin)->get('/admin/dashboard'); // remplit le cache avec les valeurs par défaut

@@ -28,6 +28,8 @@ import {
     X,
 } from 'lucide-react';
 
+import { formatLongDate } from '@/Utils/date';
+
 const fallbackHero =
     'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=2200&q=85';
 
@@ -565,9 +567,9 @@ export default function SchoolLanding({
                             <motion.h2 variants={fadeUp} className="mt-4 max-w-xl text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl">
                                 {school.name}, un établissement tourné vers l’avenir de chaque élève.
                             </motion.h2>
-                            {school.founded_year && (
+                            {school.founded_date && (
                                 <motion.p variants={fadeUp} className="mt-6 inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600">
-                                    <Clock3 className="h-4 w-4" style={{ color: primary }} /> Établi en {school.founded_year}
+                                    <Clock3 className="h-4 w-4" style={{ color: primary }} /> École créée le {formatLongDate(school.founded_date)}
                                 </motion.p>
                             )}
                         </motion.div>

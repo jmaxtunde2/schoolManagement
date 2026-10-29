@@ -39,25 +39,15 @@ class SchoolSetting extends Model
     // fillable pour tout modèle qui l'utilise (voir initializeBelongsToSchool()). La vraie
     // barrière de sécurité est UpdateSchoolSettingsRequest, jamais alimenté par le client.
     protected $fillable = [
-        'school_name', 'short_name', 'slogan', 'description', 'school_type', 'founded_year',
-        'address', 'city', 'department', 'country', 'phone', 'phone_secondary', 'email', 'website', 'contact_name',
+        'school_name', 'short_name', 'slogan', 'description', 'school_type', 'founded_date',
+        'address', 'city', 'department', 'country', 'phone', 'phone_secondary', 'phone_tertiary', 'email', 'website', 'contact_name',
         'logo_path', 'primary_color', 'secondary_color', 'accent_color', 'options', 'languages', 'programs', 'quartier',
         'timezone',
     ];
 
     protected function casts(): array
     {
-        return ['options' => 'array', 'founded_year' => 'integer', 'languages' => 'array', 'programs' => 'array'];
-    }
-
-    public static function foundedYearOptions(): array
-    {
-        $currentYear = now()->year;
-        $years = [];
-        for ($year = $currentYear + 10; $year >= $currentYear - 5; $year--) {
-            $years[] = $year;
-        }
-        return $years;
+        return ['options' => 'array', 'founded_date' => 'date', 'languages' => 'array', 'programs' => 'array'];
     }
 
     public function getLogoUrlAttribute(): ?string
