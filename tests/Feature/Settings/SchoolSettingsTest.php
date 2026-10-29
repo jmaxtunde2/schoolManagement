@@ -169,14 +169,14 @@ class SchoolSettingsTest extends TestCase
             ->assertSessionHasErrors('school_name');
     }
 
-    public function test_description_is_limited_to_320_characters(): void
+    public function test_description_is_limited_to_1000_characters(): void
     {
         $this->actingAs($this->admin)
-            ->post('/admin/settings', $this->payload(['description' => str_repeat('a', 321)]))
+            ->post('/admin/settings', $this->payload(['description' => str_repeat('a', 1001)]))
             ->assertSessionHasErrors('description');
 
         $this->actingAs($this->admin)
-            ->post('/admin/settings', $this->payload(['description' => str_repeat('a', 320)]))
+            ->post('/admin/settings', $this->payload(['description' => str_repeat('a', 1000)]))
             ->assertSessionHasNoErrors();
     }
 

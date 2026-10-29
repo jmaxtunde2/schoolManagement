@@ -92,6 +92,7 @@ export default function SchoolLanding({
     const [menuOpen, setMenuOpen] = useState(false);
     const [lightboxItem, setLightboxItem] = useState(null);
     const [openCurriculum, setOpenCurriculum] = useState(0);
+    const [descriptionExpanded, setDescriptionExpanded] = useState(false);
     const reduceMotion = useReducedMotion();
 
     const tuitionFees = useMemo(
@@ -464,9 +465,38 @@ export default function SchoolLanding({
                                 </motion.p>
                             )}
                             {school.description && (
-                                <motion.p variants={fadeUp} className="mt-4 max-w-2xl text-base leading-7 text-white/80 sm:text-lg">
-                                    {school.description}
-                                </motion.p>
+                                <motion.div variants={fadeUp} className="mt-4 max-w-2xl">
+                                    <p className="text-base leading-7 text-white/80 sm:text-lg">
+                                        {descriptionExpanded ||
+                                        school.description.length <= 300
+                                            ? school.description
+                                            : `${school.description.slice(0, 300).trimEnd()}…`}
+                                    </p>
+
+                                    {school.description.length > 300 && (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setDescriptionExpanded(
+                                                    (expanded) => !expanded
+                                                )
+                                            }
+                                            className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-white underline decoration-white/40 underline-offset-4 transition hover:decoration-white"
+                                            aria-expanded={descriptionExpanded}
+                                        >
+                                            {descriptionExpanded
+                                                ? 'Lire moins'
+                                                : 'Lire plus'}
+                                            <ChevronDown
+                                                className={`h-4 w-4 transition-transform ${
+                                                    descriptionExpanded
+                                                        ? 'rotate-180'
+                                                        : ''
+                                                }`}
+                                            />
+                                        </button>
+                                    )}
+                                </motion.div>
                             )}
                             <motion.div variants={fadeUp} className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                                 {preinscription_url && (

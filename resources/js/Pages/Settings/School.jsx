@@ -526,7 +526,7 @@ function GeneralTab({
                 <Field
                     label="Description"
                     error={errors.description}
-                    hint={`${(data.description ?? '').length}/320 caractères — ce texte s'affiche sur votre page publique.`}
+                    hint={`${(data.description ?? '').length}/1000 caractères — le hero public affiche les 300 premiers caractères avec un lien « Lire plus ».`}
                 >
                     <Textarea
                         value={data.description}
@@ -538,7 +538,7 @@ function GeneralTab({
                         }
                         placeholder="Présentez brièvement l'établissement..."
                         rows={5}
-                        maxLength={320}
+                        maxLength={1000}
                     />
                 </Field>
             </Section>
