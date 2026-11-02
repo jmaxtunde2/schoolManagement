@@ -1,5 +1,10 @@
 <?php
 
+$envList = static fn (string $key): array => array_values(array_filter(array_map(
+    'trim',
+    explode(',', (string) env($key, ''))
+), fn (string $value) => $value !== ''));
+
 return [
 
     /*
@@ -71,14 +76,45 @@ return [
     | https://developers.facebook.com/docs/whatsapp/cloud-api
     */
     'whatsapp' => [
-    'enabled' => env('WHATSAPP_ENABLED', false),
-    'token' => env('WHATSAPP_ACCESS_TOKEN'),
-    'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
-    'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com'),
-    'graph_version' => env('WHATSAPP_GRAPH_VERSION', 'v21.0'),
-    'lateness_template_language' => env('WHATSAPP_LATENESS_TEMPLATE_LANGUAGE', 'fr'),
-    'business_account_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID'),
-    'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
-],
+        'provider' => env('WHATSAPP_PROVIDER', 'meta'),
+        'enabled' => env('WHATSAPP_ENABLED', false),
+        'token' => env('WHATSAPP_ACCESS_TOKEN', env('WHATSAPP_TOKEN')),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com'),
+        'graph_version' => env('WHATSAPP_GRAPH_VERSION', env('WHATSAPP_API_VERSION', 'v21.0')),
+        'lateness_template_language' => env('WHATSAPP_LATENESS_TEMPLATE_LANGUAGE', 'fr'),
+        'business_account_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID'),
+        'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
+
+        'wati' => [
+            'enabled' => env('WATI_ENABLED', false),
+            'api_url' => env('WATI_API_URL', 'https://live-mt-server.wati.io'),
+            'api_key' => env('WATI_API_KEY'),
+            'channel_number' => env('WATI_CHANNEL_NUMBER'),
+            'webhook_secret' => env('WATI_WEBHOOK_SECRET'),
+            'timeout' => (int) env('WATI_TIMEOUT', 15),
+            'template_cache_ttl' => (int) env('WATI_TEMPLATE_CACHE_TTL', 300),
+            'templates' => [
+                'corischool_evaluation' => [
+                    'name' => env('WATI_EVALUATION_TEMPLATE', 'wati_corischool_evaluation'),
+                    'language' => env('WATI_EVALUATION_TEMPLATE_LANGUAGE', 'fr'),
+                    'body_parameter_names' => $envList('WATI_EVALUATION_BODY_PARAMETERS'),
+                    'url_parameter_name' => env('WATI_EVALUATION_URL_PARAMETER'),
+                ],
+                'corischool_absence' => [
+                    'name' => env('WATI_ABSENCE_TEMPLATE', 'corischool_absence'),
+                    'language' => env('WATI_ABSENCE_TEMPLATE_LANGUAGE', 'fr'),
+                    'body_parameter_names' => $envList('WATI_ABSENCE_BODY_PARAMETERS'),
+                    'url_parameter_name' => env('WATI_ABSENCE_URL_PARAMETER'),
+                ],
+                'template_retard' => [
+                    'name' => env('WATI_LATENESS_TEMPLATE', 'template_retard'),
+                    'language' => env('WATI_LATENESS_TEMPLATE_LANGUAGE', 'fr'),
+                    'body_parameter_names' => $envList('WATI_LATENESS_BODY_PARAMETERS'),
+                    'url_parameter_name' => env('WATI_LATENESS_URL_PARAMETER'),
+                ],
+            ],
+        ],
+    ],
 
 ];

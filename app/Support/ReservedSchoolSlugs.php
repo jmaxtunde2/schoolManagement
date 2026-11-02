@@ -34,6 +34,7 @@ class ReservedSchoolSlugs
         'build',
         'api',
         'sanctum',
+        'sms',
         'livewire',
         'robots.txt',
         'sitemap.xml',

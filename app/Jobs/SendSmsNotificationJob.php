@@ -4,6 +4,8 @@ namespace App\Jobs;
 
 use App\Enums\NotificationStatus;
 use App\Models\Notification;
+use App\Services\Communication\NotificationMessageBuilder;
+use App\Services\Communication\SmsAccessTokenService;
 use App\Services\Sms\SmsManager;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -23,8 +25,14 @@ class SendSmsNotificationJob implements ShouldQueue
 
     public function __construct(public int $notificationId) {}
 
-    public function handle(SmsManager $sms): void
-    {
+    public function handle(
+        SmsManager $sms,
+        ?SmsAccessTokenService $smsAccessTokens = null,
+        ?NotificationMessageBuilder $messages = null,
+    ): void {
+        $smsAccessTokens ??= app(SmsAccessTokenService::class);
+        $messages ??= app(NotificationMessageBuilder::class);
+
         $notification = Notification::withoutGlobalScopes()->find($this->notificationId);
 
         if (! $notification || ! in_array($notification->channel, ['sms', 'whatsapp'], true) || $notification->status === NotificationStatus::Sent || $notification->status === NotificationStatus::Delivered) {
@@ -34,8 +42,17 @@ class SendSmsNotificationJob implements ShouldQueue
         $notification->increment('attempts');
         $notification->recordStatus(NotificationStatus::Queued);
 
+        $message = $notification->message;
+
+        // Seul le SMS d'une évaluation est remplacé par un lien temporaire.
+        // WhatsApp conserve strictement son contenu et son template.
+        if ($notification->channel === 'sms' && $notification->evaluation_id !== null) {
+            $issued = $smsAccessTokens->issueForNotification($notification);
+            $message = $messages->smsAccessMessage($issued['url']);
+        }
+
         $provider = $sms->provider();
-        $response = $provider->send($notification->phone, $notification->message);
+        $response = $provider->send($notification->phone, $message);
 
         if ($response->success) {
             $notification->forceFill([

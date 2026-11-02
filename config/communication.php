@@ -69,4 +69,31 @@ return [
         'email' => 'XOF',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Accès SMS sécurisé à une évaluation
+    |--------------------------------------------------------------------------
+    |
+    | Les SMS ne contiennent plus le détail des notes : ils pointent vers une
+    | page publique temporaire, contextualisée côté serveur par un token.
+    | La durée de vie et le nombre d'utilisations sont configurables pour
+    | pouvoir révoquer ou faire expirer un lien sans redéploiement.
+    |
+    */
+
+    'sms_access' => [
+        'ttl_hours' => (int) env('SMS_ACCESS_TTL_HOURS', 72),
+        'token_length' => (int) env('SMS_ACCESS_TOKEN_LENGTH', 32),
+        'max_uses' => (int) env('SMS_ACCESS_MAX_USES', 25),
+
+        // Domaine public utilisé dans le SMS (ex. domaine court dédié).
+        // Doit être une URL HTTPS complète en production.
+        'url' => rtrim((string) env('SMS_ACCESS_URL', env('APP_URL', 'https://corischool.com')), '/'),
+
+        'message' => env(
+            'SMS_ACCESS_MESSAGE',
+            'CoriSchool : une nouvelle évaluation de votre enfant est disponible. Voir les notes :'
+        ),
+    ],
+
 ];

@@ -6,6 +6,7 @@ use App\Enums\CommunicationChannel;
 use App\Enums\EvaluationNotificationStatus;
 use App\Enums\NotificationStatus;
 use App\Enums\Role;
+use App\Jobs\ProcessWatiWebhookJob;
 use App\Jobs\SendCommunicationJob;
 use App\Models\AcademicYear;
 use App\Models\ClassRoom;
@@ -30,6 +31,7 @@ use App\Services\Communication\ProviderCommunicationTransport;
 use App\Services\Mail\SchoolMailService;
 use App\Services\Sms\SmsResponse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -52,6 +54,7 @@ class EvaluationNotificationTest extends TestCase
         parent::setUp();
 
         config([
+            'services.whatsapp.provider' => 'meta',
             'services.whatsapp.token' => 'fake-whatsapp-token',
             'services.whatsapp.phone_number_id' => 'fake-phone-number-id',
         ]);
@@ -368,6 +371,131 @@ class EvaluationNotificationTest extends TestCase
             ->assertSuccessful();
 
         $this->assertSame(1, NotificationBatch::count());
+    }
+
+    public function test_wati_evaluation_notification_sends_the_school_slug_and_webhook_marks_it_delivered(): void
+    {
+        Queue::fake();
+
+        config([
+            'services.whatsapp.provider' => 'wati',
+            'services.whatsapp.wati.enabled' => true,
+            'services.whatsapp.wati.api_key' => 'fake-wati-key',
+            'services.whatsapp.wati.api_url' => 'https://wati.test',
+            'services.whatsapp.wati.channel_number' => '22969422974',
+            'services.whatsapp.wati.template_cache_ttl' => 0,
+            'services.whatsapp.wati.templates.corischool_evaluation.body_parameter_names' => [
+                'school_name',
+                'parent_name',
+                'student_name',
+                'evaluation_titles',
+                'marks',
+            ],
+            'services.whatsapp.wati.templates.corischool_evaluation.url_parameter_name' => 'school_slug',
+        ]);
+
+        Http::fake(function ($request) {
+            if (! str_ends_with($request->url(), '/api/ext/v3/messageTemplates/send')) {
+                return Http::response([], 404);
+            }
+
+            $recipient = $request->data()['recipients'][0] ?? [];
+
+            return Http::response([
+                'success' => true,
+                'broadcast_id' => 'broadcast-eval-1',
+                'recipients' => [[
+                    'local_message_id' => $recipient['local_message_id'] ?? null,
+                    'phone_number' => $recipient['phone_number'] ?? null,
+                    'errors' => [],
+                ]],
+            ], 200);
+        });
+
+        $student = $this->studentWithGuardian('+22890000001', null);
+        $this->validatedEvaluation($student);
+        app(NotificationAggregationService::class)->aggregate();
+
+        $notification = Notification::firstOrFail();
+
+        $this->assertSame(CommunicationChannel::Whatsapp, CommunicationChannel::from($notification->channel));
+
+        $this->runJob($notification->id, app(ProviderCommunicationTransport::class));
+
+        $notification->refresh();
+
+        $this->assertSame(NotificationStatus::Sent, $notification->status);
+        $this->assertSame('wati', $notification->provider);
+        $this->assertNotNull($notification->external_id);
+
+        Http::assertSent(function ($request) use ($notification) {
+            if (! str_ends_with($request->url(), '/api/ext/v3/messageTemplates/send')) {
+                return false;
+            }
+
+            $data = $request->data();
+            $params = collect($data['recipients'][0]['custom_params'] ?? [])->pluck('value', 'name')->all();
+
+            return $data['template_name'] === 'wati_corischool_evaluation'
+                && $data['recipients'][0]['local_message_id'] === $notification->external_id
+                && ($params['school_slug'] ?? null) === $this->school->slug;
+        });
+
+        (new ProcessWatiWebhookJob([
+            'eventType' => 'sentMessageDELIVERED_v2',
+            'statusString' => 'Delivered',
+            'localMessageId' => $notification->external_id,
+            'whatsappMessageId' => 'wamid.evaluation',
+        ]))->handle();
+
+        $notification->refresh();
+
+        $this->assertSame(NotificationStatus::Delivered, $notification->status);
+        $this->assertNotNull($notification->delivered_at);
+    }
+
+    public function test_wati_failure_falls_back_to_sms(): void
+    {
+        Queue::fake();
+
+        config([
+            'services.whatsapp.provider' => 'wati',
+            'services.whatsapp.wati.enabled' => true,
+            'services.whatsapp.wati.api_key' => 'fake-wati-key',
+            'services.whatsapp.wati.api_url' => 'https://wati.test',
+            'services.whatsapp.wati.channel_number' => '22969422974',
+            'services.whatsapp.wati.template_cache_ttl' => 0,
+            'services.whatsapp.wati.templates.corischool_evaluation.body_parameter_names' => [
+                'school_name',
+                'parent_name',
+                'student_name',
+                'evaluation_titles',
+                'marks',
+            ],
+            'services.whatsapp.wati.templates.corischool_evaluation.url_parameter_name' => 'school_slug',
+            'services.sms.provider' => 'log',
+        ]);
+
+        Http::fake([
+            'https://wati.test/*' => Http::response(['success' => false, 'error' => 'WATI indisponible'], 500),
+        ]);
+
+        $student = $this->studentWithGuardian('+22890000001', null);
+        $this->validatedEvaluation($student);
+        app(NotificationAggregationService::class)->aggregate();
+
+        $notification = Notification::firstOrFail();
+
+        $this->runJob($notification->id, app(ProviderCommunicationTransport::class));
+
+        $notification->refresh();
+
+        $this->assertSame(CommunicationChannel::Sms, CommunicationChannel::from($notification->channel));
+        $this->assertSame(NotificationStatus::Sent, $notification->status);
+        $this->assertSame('log', $notification->provider);
+        $this->assertTrue($notification->logs()
+            ->where('message', 'like', 'WATI HTTP 500%')
+            ->exists());
     }
 
     private function runJob(int $notificationId, CommunicationTransport $transport): void

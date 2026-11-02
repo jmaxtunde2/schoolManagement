@@ -73,6 +73,16 @@ class NotificationMessageBuilder
         return ['message' => $this->alert($schoolName, $studentName), 'detailed' => false];
     }
 
+    public function smsAccessMessage(string $accessUrl): string
+    {
+        $prefix = trim((string) config(
+            'communication.sms_access.message',
+            'CoriSchool : une nouvelle évaluation de votre enfant est disponible. Voir les notes :'
+        ));
+
+        return $prefix.' '.$accessUrl;
+    }
+
     /**
      * @param  array<int, array{subject: string, title: string, score: ?float, max: float, absent: bool}>  $entries
      */

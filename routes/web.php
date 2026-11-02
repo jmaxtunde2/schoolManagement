@@ -35,6 +35,7 @@ use App\Http\Controllers\PublicSchoolController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\SmsAccessController;
 use App\Http\Controllers\Staff\AttendanceController;
 use App\Http\Controllers\Staff\EvaluationController as StaffEvaluationController;
 use App\Http\Controllers\Staff\ManagementDashboardController;
@@ -2212,6 +2213,21 @@ Route::middleware([
             ])->name('show');
         });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Accès SMS sécurisé à une évaluation
+|--------------------------------------------------------------------------
+|
+| Lien public reçu par SMS. Le token est le seul paramètre accepté : le
+| parent, l'élève, l'école et l'évaluation sont déterminés côté serveur.
+| Le parcours WhatsApp du mini-site n'utilise jamais cette route.
+|
+*/
+
+Route::get('/sms/access/{token}', SmsAccessController::class)
+    ->middleware('throttle:60,1')
+    ->name('sms.access.show');
 
 /*
 |--------------------------------------------------------------------------

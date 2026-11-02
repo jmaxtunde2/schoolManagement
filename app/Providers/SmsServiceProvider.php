@@ -10,7 +10,7 @@ use App\Services\Sms\LogSmsProvider;
 use App\Services\Sms\MetaWhatsAppProvider;
 use App\Services\Sms\MultitexterProvider;
 use App\Services\Sms\SmsProviderInterface;
-use App\Services\Sms\WhatsAppProvider;
+use App\Services\Sms\WhatsAppProviderManager;
 use Illuminate\Support\ServiceProvider;
 
 class SmsServiceProvider extends ServiceProvider
@@ -22,7 +22,7 @@ class SmsServiceProvider extends ServiceProvider
             return match (config('services.sms.provider', 'multitexter')) {
                 'clicksend' => new ClickSendProvider,
                 'esms_africa' => new EsmsAfricaProvider,
-                'whatsapp' => new WhatsAppProvider,
+                'whatsapp' => app(WhatsAppProviderManager::class)->provider(),
                 'multitexter' => new MultitexterProvider,
                 'log' => new LogSmsProvider,
                 default => new MultitexterProvider,

@@ -11,6 +11,7 @@ use App\Services\Sms\SmsManager;
 use App\Services\Sms\SmsProviderInterface;
 use App\Services\Sms\SmsResponse;
 use App\Services\Sms\SupportsDocuments;
+use App\Services\Sms\WhatsAppProviderManager;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -37,7 +38,8 @@ class SendAnnouncementRecipientJob implements ShouldQueue
     public function handle(
         SmsManager $sms,
         SchoolMailService $mail,
-        AnnouncementService $service
+        AnnouncementService $service,
+        WhatsAppProviderManager $whatsapp,
     ): void {
         $recipient = AnnouncementRecipient::withoutGlobalScopes()
             ->with(['announcement.school', 'guardian:id,name'])
@@ -54,7 +56,7 @@ class SendAnnouncementRecipientJob implements ShouldQueue
             if ($recipient->channel === 'email') {
                 $this->sendEmail($recipient, $mail);
             } else {
-                $this->sendPhone($recipient, $sms);
+                $this->sendPhone($recipient, $sms, $whatsapp);
             }
         } catch (Throwable $e) {
             $recipient->forceFill(['error' => $e->getMessage()])->save();
@@ -72,9 +74,14 @@ class SendAnnouncementRecipientJob implements ShouldQueue
         }
     }
 
-    private function sendPhone(AnnouncementRecipient $recipient, SmsManager $sms): void
-    {
-        $provider = $sms->provider();
+    private function sendPhone(
+        AnnouncementRecipient $recipient,
+        SmsManager $sms,
+        WhatsAppProviderManager $whatsapp,
+    ): void {
+        $provider = $recipient->channel === 'whatsapp'
+            ? $whatsapp->provider()
+            : $sms->provider();
         $announcement = $recipient->announcement;
 
         // WhatsApp accepte une pièce jointe via un lien public ; sinon on

@@ -5,6 +5,7 @@ namespace App\Services\Communication;
 use App\Enums\CommunicationChannel;
 use App\Models\School;
 use App\Models\SchoolCommunicationSetting;
+use App\Services\Sms\WhatsAppProviderManager;
 
 /**
  * Disponibilité des canaux et comptabilisation des coûts de communication.
@@ -15,7 +16,8 @@ use App\Models\SchoolCommunicationSetting;
 class CommunicationBudgetService
 {
     public function __construct(
-        private readonly CommunicationSettingsService $settings
+        private readonly CommunicationSettingsService $settings,
+        private readonly WhatsAppProviderManager $whatsapp,
     ) {}
 
     public function settingsFor(School $school): SchoolCommunicationSetting
@@ -37,8 +39,7 @@ class CommunicationBudgetService
 
         return $settings->whatsapp_enabled
             && $settings->whatsappRemaining() > 0
-            && filled(config('services.whatsapp.token'))
-            && filled(config('services.whatsapp.phone_number_id'));
+            && $this->whatsapp->configured();
     }
 
     public function emailAvailable(School $school): bool

@@ -13,6 +13,9 @@ use App\Models\School;
 use App\Services\Communication\CommunicationBudgetService;
 use App\Services\Communication\CommunicationTransport;
 use App\Services\Communication\NotificationChannelService;
+use App\Services\Communication\NotificationMessageBuilder;
+use App\Services\Communication\SmsAccessTokenService;
+use App\Services\Sms\WhatsAppProviderManager;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -40,7 +43,12 @@ class SendCommunicationJob implements ShouldQueue
         CommunicationTransport $transport,
         CommunicationBudgetService $budget,
         NotificationChannelService $channels,
+        ?SmsAccessTokenService $smsAccessTokens = null,
+        ?NotificationMessageBuilder $messages = null,
     ): void {
+        $smsAccessTokens ??= app(SmsAccessTokenService::class);
+        $messages ??= app(NotificationMessageBuilder::class);
+
         $notification = Notification::withoutGlobalScopes()->find($this->notificationId);
 
         if (! $notification) {
@@ -82,7 +90,14 @@ class SendCommunicationJob implements ShouldQueue
             $notification->increment('attempts');
             $notification->recordStatus(NotificationStatus::Queued);
 
-            $response = $transport->send($channel, $school, $recipient, $notification->message, $notification->metadata);
+            $message = $this->messageForChannel(
+                $notification,
+                $channel,
+                $smsAccessTokens,
+                $messages
+            );
+
+            $response = $transport->send($channel, $school, $recipient, $message, $notification->metadata);
             $provider = $this->providerName($channel);
 
             if ($response->success) {
@@ -113,6 +128,29 @@ class SendCommunicationJob implements ShouldQueue
         }
     }
 
+    /**
+     * Seul le SMS d'une évaluation reçoit un lien temporaire. Les SMS
+     * d'absence/retard et tous les messages WhatsApp/email gardent leur
+     * contenu existant. Le token en clair n'est jamais écrit en base.
+     */
+    private function messageForChannel(
+        Notification $notification,
+        CommunicationChannel $channel,
+        SmsAccessTokenService $smsAccessTokens,
+        NotificationMessageBuilder $messages,
+    ): string {
+        $isEvaluationNotification = $notification->evaluation_id !== null
+            || $notification->notification_batch_id !== null;
+
+        if ($channel !== CommunicationChannel::Sms || ! $isEvaluationNotification) {
+            return $notification->message;
+        }
+
+        $issued = $smsAccessTokens->issueForNotification($notification);
+
+        return $messages->smsAccessMessage($issued['url']);
+    }
+
     private function channelReady(
         CommunicationChannel $channel,
         School $school,
@@ -132,7 +170,7 @@ class SendCommunicationJob implements ShouldQueue
     {
         return match ($channel) {
             CommunicationChannel::Sms => (string) config('services.sms.provider', 'log'),
-            CommunicationChannel::Whatsapp => 'whatsapp',
+            CommunicationChannel::Whatsapp => app(WhatsAppProviderManager::class)->name(),
             CommunicationChannel::Email => 'mail',
             default => 'internal',
         };

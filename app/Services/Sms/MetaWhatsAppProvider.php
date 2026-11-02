@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Http;
  * (ex. +22890000001). Les numéros nationaux sont normalisés avec l'indicatif
  * configuré (services.sms.country_code, 228 par défaut).
  */
-class MetaWhatsAppProvider implements SmsProviderInterface, SupportsDocuments
+class MetaWhatsAppProvider implements WhatsAppProviderInterface, SupportsDocuments
 {
     public function send(string $phone, string $message, ?array $metadata = null): SmsResponse
     {
