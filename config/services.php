@@ -96,7 +96,7 @@ return [
             'template_cache_ttl' => (int) env('WATI_TEMPLATE_CACHE_TTL', 300),
             'templates' => [
                 'corischool_evaluation' => [
-                    'name' => env('WATI_EVALUATION_TEMPLATE', 'corischool_evaluation_watifr'),
+                    'name' => env('WATI_EVALUATION_TEMPLATE', 'evaluation_wati_fr'),
                     'language' => env('WATI_EVALUATION_TEMPLATE_LANGUAGE', 'fr'),
                     'body_parameter_names' => $envList('WATI_EVALUATION_BODY_PARAMETERS'),
                     'url_parameter_name' => env('WATI_EVALUATION_URL_PARAMETER'),

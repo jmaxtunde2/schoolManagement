@@ -385,13 +385,13 @@ class EvaluationNotificationTest extends TestCase
             'services.whatsapp.wati.channel_number' => '22969422974',
             'services.whatsapp.wati.template_cache_ttl' => 0,
             'services.whatsapp.wati.templates.corischool_evaluation.body_parameter_names' => [
-                'school_name',
-                'parent_name',
-                'student_name',
-                'evaluation_titles',
-                'marks',
+                '1',
+                '2',
+                '3',
+                '4',
+                '5',
             ],
-            'services.whatsapp.wati.templates.corischool_evaluation.url_parameter_name' => 'school_slug',
+            'services.whatsapp.wati.templates.corischool_evaluation.url_parameter_name' => '6',
         ]);
 
         Http::fake(function ($request) {
@@ -436,9 +436,10 @@ class EvaluationNotificationTest extends TestCase
             $data = $request->data();
             $params = collect($data['recipients'][0]['custom_params'] ?? [])->pluck('value', 'name')->all();
 
-            return $data['template_name'] === 'corischool_evaluation_watifr'
+            return $data['template_name'] === 'evaluation_wati_fr'
                 && $data['recipients'][0]['local_message_id'] === $notification->external_id
-                && ($params['school_slug'] ?? null) === $this->school->slug;
+                && ($params['1'] ?? null) === $this->school->name
+                && ($params['6'] ?? null) === $this->school->slug;
         });
 
         (new ProcessWatiWebhookJob([
@@ -466,13 +467,13 @@ class EvaluationNotificationTest extends TestCase
             'services.whatsapp.wati.channel_number' => '22969422974',
             'services.whatsapp.wati.template_cache_ttl' => 0,
             'services.whatsapp.wati.templates.corischool_evaluation.body_parameter_names' => [
-                'school_name',
-                'parent_name',
-                'student_name',
-                'evaluation_titles',
-                'marks',
+                '1',
+                '2',
+                '3',
+                '4',
+                '5',
             ],
-            'services.whatsapp.wati.templates.corischool_evaluation.url_parameter_name' => 'school_slug',
+            'services.whatsapp.wati.templates.corischool_evaluation.url_parameter_name' => '6',
             'services.sms.provider' => 'log',
         ]);
 
