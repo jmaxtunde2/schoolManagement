@@ -33,7 +33,7 @@ class WatiWhatsAppTest extends TestCase
             'services.whatsapp.wati.webhook_secret' => 'test-wati-webhook-secret',
             'services.whatsapp.wati.timeout' => 5,
             'services.whatsapp.wati.template_cache_ttl' => 0,
-            'services.whatsapp.wati.templates.corischool_evaluation.name' => 'wati_corischool_evaluation',
+            'services.whatsapp.wati.templates.corischool_evaluation.name' => 'corischool_evaluation_watifr',
             'services.whatsapp.wati.templates.corischool_evaluation.language' => 'fr',
             'services.whatsapp.wati.templates.corischool_evaluation.body_parameter_names' => [
                 'school_name',
@@ -123,7 +123,7 @@ class WatiWhatsAppTest extends TestCase
 
             return $request->url() === 'https://wati.test/api/ext/v3/messageTemplates/send'
                 && $request->hasHeader('Authorization', 'Bearer fake-wati-key')
-                && $data['template_name'] === 'wati_corischool_evaluation'
+                && $data['template_name'] === 'corischool_evaluation_watifr'
                 && $data['channel'] === '22969422974'
                 && $data['recipients'][0]['phone_number'] === '22890000001'
                 && $data['recipients'][0]['local_message_id'] === $response->externalId
@@ -150,7 +150,7 @@ class WatiWhatsAppTest extends TestCase
             if (str_contains($request->url(), '/messageTemplates') && $request->method() === 'GET') {
                 return Http::response([
                     'templates' => [[
-                        'name' => 'wati_corischool_evaluation',
+                        'name' => 'corischool_evaluation_watifr',
                         'custom_params' => [
                             ['name' => 'school_name', 'value' => 'School'],
                             ['name' => 'parent_name', 'value' => 'Parent'],

@@ -436,7 +436,7 @@ class EvaluationNotificationTest extends TestCase
             $data = $request->data();
             $params = collect($data['recipients'][0]['custom_params'] ?? [])->pluck('value', 'name')->all();
 
-            return $data['template_name'] === 'wati_corischool_evaluation'
+            return $data['template_name'] === 'corischool_evaluation_watifr'
                 && $data['recipients'][0]['local_message_id'] === $notification->external_id
                 && ($params['school_slug'] ?? null) === $this->school->slug;
         });
