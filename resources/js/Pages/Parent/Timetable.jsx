@@ -2,6 +2,8 @@ import { Head, router } from '@inertiajs/react';
 import { CalendarDays, GraduationCap, Hash, Users } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ParentAccessLayout from '@/Layouts/ParentAccessLayout';
+import { parentRoute } from '@/Utils/parentSpace';
 import Card from '@/Components/UI/Card';
 import WeekGrid, {
     AcademicYearSelect,
@@ -13,10 +15,12 @@ export default function Timetable({
     days = [],
     academicYears = [],
     selectedAcademicYearId,
+    space = 'parent',
 }) {
+    const Layout = space === 'parent-access' ? ParentAccessLayout : AuthenticatedLayout;
     function selectYear(value) {
         router.get(
-            route('parent.children.timetable', student.id),
+            parentRoute(space, 'children.timetable', student.id),
             { academic_year_id: value },
             {
                 preserveState: true,
@@ -28,7 +32,7 @@ export default function Timetable({
     }
 
     return (
-        <AuthenticatedLayout title="Emploi du temps">
+        <Layout title="Emploi du temps">
             <Head title={`Emploi du temps — ${student.name ?? ''}`} />
 
             <div className="space-y-6">
@@ -111,6 +115,6 @@ export default function Timetable({
                     </Card.Body>
                 </Card>
             </div>
-        </AuthenticatedLayout>
+        </Layout>
     );
 }

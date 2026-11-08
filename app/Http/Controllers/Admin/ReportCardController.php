@@ -11,6 +11,7 @@ use App\Models\ReportCard;
 use App\Models\School;
 use App\Services\Academic\ReportCardPdfService;
 use App\Services\AuditService;
+use App\Services\ParentAccess\ParentAccessContext;
 use App\Support\SchoolBranding;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,6 +23,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportCardController extends Controller
 {
+    public function __construct(private readonly ParentAccessContext $context) {}
+
     public function index(Request $request): Response
     {
         Gate::authorize('viewAny', ReportCard::class);
@@ -90,12 +93,19 @@ class ReportCardController extends Controller
 
     public function show(Request $request, ReportCard $reportCard): Response
     {
-        Gate::authorize('view', $reportCard);
+        $isParentAccess = $this->context->isParentAccess($request);
+
+        if ($isParentAccess) {
+            $this->authorizeParentAccessReportCard($request, $reportCard);
+        } else {
+            Gate::authorize('view', $reportCard);
+        }
+
         $reportCard->load(['items.subject', 'student.classRoom', 'classRoom', 'academicYear', 'period']);
 
-        return Inertia::render('Admin/Academic/ReportCards/Show', [
-            'reportCard' => $this->serialize($reportCard),
-            'routePrefix' => $request->routeIs('director.*')
+        $routePrefix = $isParentAccess
+            ? 'parent-access'
+            : ($request->routeIs('director.*')
                 ? 'director'
                 : ($request->routeIs('parent.*')
                     ? 'parent'
@@ -103,10 +113,20 @@ class ReportCardController extends Controller
                         ? 'censeur'
                         : ($request->routeIs('teacher.*')
                             ? 'teacher'
-                            : ($request->routeIs('secretary.*') ? 'secretary' : 'admin')))),
-            'canEditComments' => Gate::allows('updateComments', $reportCard),
-            'canPublish' => Gate::allows('publish', $reportCard),
-            'canRegenerate' => Gate::allows('regenerate', $reportCard),
+                            : ($request->routeIs('secretary.*') ? 'secretary' : 'admin')))));
+
+        return Inertia::render('Admin/Academic/ReportCards/Show', [
+            'reportCard' => $this->serialize($reportCard),
+            'routePrefix' => $routePrefix,
+            'space' => $isParentAccess ? 'parent-access' : null,
+            'backUrl' => $isParentAccess
+                ? route('parent-access.children.report-cards', $reportCard->student_id)
+                : ($request->routeIs('parent.*')
+                    ? route('parent.children.report-cards', $reportCard->student_id)
+                    : null),
+            'canEditComments' => ! $isParentAccess && Gate::allows('updateComments', $reportCard),
+            'canPublish' => ! $isParentAccess && Gate::allows('publish', $reportCard),
+            'canRegenerate' => ! $isParentAccess && Gate::allows('regenerate', $reportCard),
             'fee' => $reportCard->feeStatus(),
         ]);
     }
@@ -187,8 +207,12 @@ class ReportCardController extends Controller
 
     public function download(Request $request, ReportCard $reportCard, ReportCardPdfService $pdf, AuditService $audit): StreamedResponse|RedirectResponse
     {
-        Gate::authorize('view', $reportCard);
-        abort_unless($reportCard->status->value === 'published' || ! $request->user()->isParent(), 403);
+        if ($this->context->isParentAccess($request)) {
+            $this->authorizeParentAccessReportCard($request, $reportCard);
+        } else {
+            Gate::authorize('view', $reportCard);
+            abort_unless($reportCard->status->value === 'published' || ! $request->user()->isParent(), 403);
+        }
 
         if (! $reportCard->hasSettledFees()) {
             return back()->with('error', 'Frais de scolarité non soldés : le bulletin ne peut pas être téléchargé.');
@@ -216,6 +240,19 @@ class ReportCardController extends Controller
         }, 'bulletin-'.$reportCard->student_id.'-v'.$reportCard->version.'.pdf', [
             'Content-Type' => 'application/pdf',
         ]);
+    }
+
+    private function authorizeParentAccessReportCard(Request $request, ReportCard $reportCard): void
+    {
+        $parent = $this->context->parent($request);
+        $school = $this->context->school($request);
+
+        abort_unless(
+            (int) $reportCard->school_id === (int) $school->id
+            && $reportCard->status->value === 'published'
+            && $parent->students()->whereKey($reportCard->student_id)->exists(),
+            403
+        );
     }
 
     private function serialize(ReportCard $reportCard): array

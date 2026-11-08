@@ -81,6 +81,27 @@ class WatiWhatsAppTest extends TestCase
         );
     }
 
+    public function test_wati_text_message_strips_the_benin_01_prefix(): void
+    {
+        $this->configureWati();
+
+        Http::fake([
+            'https://wati.test/api/ext/v3/conversations/messages/text' => Http::response([
+                'message' => [
+                    'id' => 'wati-message-benin',
+                    'local_message_id' => 'local-text-benin',
+                    'status' => 'sent',
+                ],
+            ], 200),
+        ]);
+
+        $response = (new WatiWhatsAppProvider)->send('+229 01 69 42 29 76', 'Bonjour depuis WATI');
+
+        $this->assertTrue($response->success);
+
+        Http::assertSent(fn (HttpRequest $request) => $request['target'] === '22969422974:22969422976');
+    }
+
     public function test_wati_template_uses_named_body_and_url_parameters(): void
     {
         $this->configureWati();

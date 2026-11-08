@@ -8,6 +8,7 @@ use App\Models\ParentGuardian;
 use App\Models\ParentMessage;
 use App\Models\User;
 use App\Models\UserNotification;
+use App\Services\ParentAccess\ParentAccessContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -20,11 +21,14 @@ use Inertia\Response;
  */
 class MessageController extends Controller
 {
+    public function __construct(private readonly ParentAccessContext $context) {}
+
     public function index(Request $request): Response
     {
         $parent = $this->parent($request);
 
         $messages = ParentMessage::query()
+            ->where('school_id', $parent->school_id)
             ->where('parent_id', $parent->id)
             ->with('student:id,first_name,last_name')
             ->latest()
@@ -43,6 +47,7 @@ class MessageController extends Controller
         return Inertia::render('Parent/Messages/Index', [
             'messages' => $messages,
             'students' => $this->children($parent),
+            'space' => $this->context->space($request),
         ]);
     }
 
@@ -63,6 +68,7 @@ class MessageController extends Controller
         }
 
         $message = ParentMessage::create([
+            'school_id' => $this->context->school($request)->id,
             'parent_id' => $parent->id,
             'student_id' => $studentId,
             'subject' => $data['subject'],
@@ -101,7 +107,7 @@ class MessageController extends Controller
 
     private function parent(Request $request): ParentGuardian
     {
-        return $request->user()->parentGuardian()->firstOrFail();
+        return $this->context->parent($request);
     }
 
     /** @return Collection<int, array<string, mixed>> */

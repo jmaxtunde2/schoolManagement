@@ -236,6 +236,12 @@ export default function SchoolShow({ school, admins, license, latestPayments }) 
                                         Gérer l'emploi du temps
                                     </Button>
                                 </Link>
+                                <Link href={route('platform.schools.parents.access.index', school.id)}>
+                                    <Button variant="outline" className="gap-2">
+                                        <Users className="h-4 w-4" strokeWidth={2} />
+                                        Gérer les accès parents
+                                    </Button>
+                                </Link>
                             </div>
                         </Card.Body>
                     </Card>

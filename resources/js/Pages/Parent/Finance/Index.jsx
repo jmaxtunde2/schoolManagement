@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ParentAccessLayout from '@/Layouts/ParentAccessLayout';
+import { parentRoute } from '@/Utils/parentSpace';
 import Badge from '@/Components/UI/Badge';
 import Button from '@/Components/UI/Button';
 import Card from '@/Components/UI/Card';
@@ -24,7 +26,8 @@ function money(value) {
     return `${Number(value ?? 0).toLocaleString('fr-FR')} FCFA`;
 }
 
-export default function Finance({ children = [], academicYears = [], methods = [], filters = {}, totals = {}, payments = [] }) {
+export default function Finance({ children = [], academicYears = [], methods = [], filters = {}, totals = {}, payments = [], space = 'parent' }) {
+    const Layout = space === 'parent-access' ? ParentAccessLayout : AuthenticatedLayout;
     const [form, setForm] = useState({
         student_id: filters.student_id ?? '',
         academic_year_id: filters.academic_year_id ?? '',
@@ -37,23 +40,23 @@ export default function Finance({ children = [], academicYears = [], methods = [
     function apply(next) {
         setForm(next);
         const params = Object.fromEntries(Object.entries(next).filter(([, value]) => value !== '' && value !== null));
-        router.get(route('parent.finance.index'), params, { preserveState: true, replace: true });
+        router.get(parentRoute(space, 'finance.index'), params, { preserveState: true, replace: true });
     }
 
     function reset() {
         setForm({ student_id: '', academic_year_id: '', status: '', method: '' });
-        router.get(route('parent.finance.index'), {}, { preserveState: true, replace: true });
+        router.get(parentRoute(space, 'finance.index'), {}, { preserveState: true, replace: true });
     }
 
-    const statementUrl = `${route('parent.finance.statement')}${new URLSearchParams(query).toString() ? `?${new URLSearchParams(query)}` : ''}`;
+    const statementUrl = `${parentRoute(space, 'finance.statement')}${new URLSearchParams(query).toString() ? `?${new URLSearchParams(query)}` : ''}`;
 
     return (
-        <AuthenticatedLayout title="Ma scolarité">
+        <Layout title="Ma scolarité">
             <Head title="Ma scolarité" />
 
             <div className="mx-auto max-w-6xl space-y-6">
                 <Link
-                    href={route('parent.dashboard')}
+                    href={parentRoute(space, 'dashboard')}
                     className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-teal-700"
                 >
                     <ArrowLeft className="h-4 w-4" /> Retour à mon espace
@@ -189,7 +192,7 @@ export default function Finance({ children = [], academicYears = [], methods = [
                                                     <td className="whitespace-nowrap px-6 py-4 text-right font-bold text-slate-800">{money(payment.amount)}</td>
                                                     <td className="px-6 py-4 text-right">
                                                         <a
-                                                            href={route('parent.finance.receipt', payment.id)}
+                                                            href={parentRoute(space, 'finance.receipt', payment.id)}
                                                             className="inline-flex items-center gap-1.5 font-semibold text-teal-700 hover:text-teal-800"
                                                         >
                                                             <FileText className="h-4 w-4" /> PDF
@@ -221,7 +224,7 @@ export default function Finance({ children = [], academicYears = [], methods = [
                                                 </div>
                                             </div>
                                             <a
-                                                href={route('parent.finance.receipt', payment.id)}
+                                                href={parentRoute(space, 'finance.receipt', payment.id)}
                                                 className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-teal-700 hover:text-teal-800"
                                             >
                                                 <FileText className="h-4 w-4" /> Télécharger le reçu
@@ -234,7 +237,7 @@ export default function Finance({ children = [], academicYears = [], methods = [
                     </Card.Body>
                 </Card>
             </div>
-        </AuthenticatedLayout>
+        </Layout>
     );
 }
 

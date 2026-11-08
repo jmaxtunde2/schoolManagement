@@ -47,7 +47,7 @@ return [
     ],
 
     'sms' => [
-        'provider' => env('SMS_PROVIDER', 'multitexter'),
+        'provider' => env('SMS_PROVIDER', 'emc'),
         'api_url' => env('SMS_API_URL', 'https://sms.esmsafrica.io'),
         'token' => env('ESMS_TOKEN', env('SMS_API_KEY')),
         'api_secret' => env('SMS_API_SECRET'),
@@ -62,6 +62,16 @@ return [
             'api_key' => env('CLICKSEND_API_KEY'),
             'sender' => env('CLICKSEND_SENDER_ID'),
             'api_url' => env('CLICKSEND_API_URL', 'https://rest.clicksend.com/v3'),
+        ],
+        'emc' => [
+            'enabled' => filter_var(env('EMC_SMS_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+            'api_url' => env('EMC_SMS_API_URL', 'https://api.e-mc.co/v3'),
+            'api_key' => env('EMC_SMS_API_KEY'),
+            'username' => env('EMC_SMS_USERNAME'),
+            'password' => env('EMC_SMS_PASSWORD'),
+            'sender' => env('EMC_SMS_SENDER', 'CoriSchool'),
+            'timeout' => (int) env('EMC_SMS_TIMEOUT', 15),
+            'country_code' => env('EMC_SMS_COUNTRY_CODE', '229'),
         ],
         // Endpoint facultatif de consultation du solde fournisseur. Si absent,
         // le solde local (school_communication_settings.sms_balance) fait foi.
@@ -83,6 +93,7 @@ return [
         'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com'),
         'graph_version' => env('WHATSAPP_GRAPH_VERSION', env('WHATSAPP_API_VERSION', 'v21.0')),
         'lateness_template_language' => env('WHATSAPP_LATENESS_TEMPLATE_LANGUAGE', 'fr'),
+        'parent_access_template_language' => env('WHATSAPP_PARENT_ACCESS_TEMPLATE_LANGUAGE', 'fr'),
         'business_account_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID'),
         'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
 
@@ -112,6 +123,18 @@ return [
                     'language' => env('WATI_LATENESS_TEMPLATE_LANGUAGE', 'fr'),
                     'body_parameter_names' => $envList('WATI_LATENESS_BODY_PARAMETERS'),
                     'url_parameter_name' => env('WATI_LATENESS_URL_PARAMETER'),
+                ],
+                'verification_code_parent' => [
+                    'name' => env('WATI_PARENT_ACCESS_CODE_TEMPLATE', 'verification_code_parent'),
+                    'language' => env('WATI_PARENT_ACCESS_CODE_TEMPLATE_LANGUAGE', 'fr'),
+                    'body_parameter_names' => $envList('WATI_PARENT_ACCESS_CODE_BODY_PARAMETERS'),
+                    'url_parameter_name' => env('WATI_PARENT_ACCESS_CODE_URL_PARAMETER'),
+                ],
+                'espace_parent' => [
+                    'name' => env('WATI_PARENT_ACCESS_SPACE_TEMPLATE', 'espace_parent'),
+                    'language' => env('WATI_PARENT_ACCESS_SPACE_TEMPLATE_LANGUAGE', 'fr'),
+                    'body_parameter_names' => $envList('WATI_PARENT_ACCESS_SPACE_BODY_PARAMETERS'),
+                    'url_parameter_name' => env('WATI_PARENT_ACCESS_SPACE_URL_PARAMETER'),
                 ],
             ],
         ],

@@ -11,12 +11,15 @@ import {
 } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ParentAccessLayout from '@/Layouts/ParentAccessLayout';
+import { parentRoute } from '@/Utils/parentSpace';
 import Badge from '@/Components/UI/Badge';
 import Card from '@/Components/UI/Card';
 
-export default function Child({ student, results = [] }) {
+export default function Child({ student, results = [], space = 'parent' }) {
+    const Layout = space === 'parent-access' ? ParentAccessLayout : AuthenticatedLayout;
     return (
-        <AuthenticatedLayout title={student.name}>
+        <Layout title={student.name}>
             <Head title={student.name} />
 
             <div className="mx-auto max-w-6xl space-y-6">
@@ -61,10 +64,7 @@ export default function Child({ student, results = [] }) {
                     {/* Quick actions */}
                     <div className="grid grid-cols-2 gap-2 sm:flex">
                         <Link
-                            href={route(
-                                'parent.children.attendance',
-                                student.id
-                            )}
+                            href={parentRoute(space, 'children.attendance', student.id)}
                             className="group inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-700"
                         >
                             <CalendarDays className="h-4 w-4" />
@@ -73,10 +73,7 @@ export default function Child({ student, results = [] }) {
                         </Link>
 
                         <Link
-                            href={route(
-                                'parent.children.timetable',
-                                student.id
-                            )}
+                            href={parentRoute(space, 'children.timetable', student.id)}
                             className="group inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
                         >
                             <CalendarRange className="h-4 w-4" />
@@ -85,10 +82,7 @@ export default function Child({ student, results = [] }) {
                         </Link>
 
                         <Link
-                            href={route(
-                                'parent.children.report-cards',
-                                student.id
-                            )}
+                            href={parentRoute(space, 'children.report-cards', student.id)}
                             className="group inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
                         >
                             <Award className="h-4 w-4" />
@@ -312,7 +306,7 @@ export default function Child({ student, results = [] }) {
                     </Card.Body>
                 </Card>
             </div>
-        </AuthenticatedLayout>
+        </Layout>
     );
 }
 

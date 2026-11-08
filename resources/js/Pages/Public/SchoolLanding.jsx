@@ -343,7 +343,7 @@ export default function SchoolLanding({
                         )}
                     </nav>
                     <div className="hidden xl:block">
-                        <ParentLink color={primary} />
+                        <ParentLink color={primary} schoolSlug={school?.slug} />
                     </div>
                     {preinscription_url && (
                         <div className="hidden xl:block">
@@ -404,7 +404,7 @@ export default function SchoolLanding({
                                     )
                                 )}
                                 <div className="px-3 py-2 sm:col-span-2">
-                                    <ParentLink color={primary} />
+                                    <ParentLink color={primary} schoolSlug={school?.slug} />
                                 </div>
                                 {preinscription_url && (
                                     <div className="px-3 py-2 sm:col-span-2">
@@ -534,7 +534,7 @@ export default function SchoolLanding({
                                         <ExternalLink className="h-4 w-4" /> {link.label}
                                     </a>
                                 ))}
-                                <ParentLink color={withAlpha('#ffffff', 0.16)} light />
+                                <ParentLink color={withAlpha('#ffffff', 0.16)} light schoolSlug={school?.slug} />
                             </motion.div>
                         </div>
                     </motion.div>
@@ -1209,14 +1209,15 @@ export default function SchoolLanding({
 /* Sous-composants                                                            */
 /* -------------------------------------------------------------------------- */
 
-function ParentLink({ color, light = false }) {
+function ParentLink({ color, light = false, schoolSlug }) {
+    const href = schoolSlug ? route('parent-access.login.slug', { slug: schoolSlug }) : route('parent-access.login');
     return (
         <Link
-            href={route('login')}
+            href={href}
             className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:brightness-110 ${light ? 'border border-white/35 backdrop-blur' : 'shadow-sm'}`}
             style={{ backgroundColor: color }}
         >
-            <GraduationCap className="h-4 w-4" /> Espace parent
+            <GraduationCap className="h-4 w-4" /> ESPACE PARENT
         </Link>
     );
 }

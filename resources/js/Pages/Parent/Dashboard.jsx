@@ -13,8 +13,11 @@ import {
 } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ParentAccessLayout from '@/Layouts/ParentAccessLayout';
 import Badge from '@/Components/UI/Badge';
 import Card from '@/Components/UI/Card';
+import { parentRoute } from '@/Utils/parentSpace';
+import { usePage } from '@inertiajs/react';
 
 const feeTones = { paid: 'green', partial: 'amber', pending: 'red' };
 const feeLabels = { paid: 'Soldé', partial: 'Partiel', pending: 'En attente' };
@@ -23,9 +26,14 @@ function money(value) {
     return `${Number(value ?? 0).toLocaleString('fr-FR')} FCFA`;
 }
 
-export default function Dashboard({ parent, children = [], stats = {}, recentMessages = [] }) {
+export default function Dashboard({ parent, children = [], stats = {}, recentMessages = [], hasFinance = false, space = 'parent' }) {
+    const page = usePage();
+    const Layout = space === 'parent-access' ? ParentAccessLayout : AuthenticatedLayout;
+    const timetable = page.props.timetable;
+    const hasTimetable = timetable && timetable.slots && timetable.slots.length > 0;
+
     return (
-        <AuthenticatedLayout title="Espace parent">
+        <Layout title="Espace parent">
             <Head title="Espace parent" />
 
             <div className="mx-auto max-w-6xl space-y-6">
@@ -44,19 +52,19 @@ export default function Dashboard({ parent, children = [], stats = {}, recentMes
                             </h1>
                             <p className="mt-2 max-w-xl text-sm text-emerald-50/90">
                                 Suivez la scolarité de vos enfants : résultats, assiduité,
-                                bulletins et paiements — le tout au même endroit.
+                                bulletins{hasFinance ? ' et paiements' : ''} — le tout au même endroit.
                             </p>
                         </div>
 
                         <div className="flex flex-col gap-2 sm:flex-row">
-                            <Link
-                                href={route('parent.finance.index')}
+                            {hasFinance && <Link
+                                href={parentRoute(space, 'finance.index')}
                                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
                             >
                                 <Wallet className="h-4 w-4" /> Ma scolarité
-                            </Link>
+                            </Link>}
                             <Link
-                                href={route('parent.messages.index')}
+                                href={parentRoute(space, 'messages.index')}
                                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-50"
                             >
                                 <MessageSquarePlus className="h-4 w-4" /> Contacter l'école
@@ -65,14 +73,24 @@ export default function Dashboard({ parent, children = [], stats = {}, recentMes
                     </div>
                 </div>
 
+                {/* Timetable execution indicator */}
+                {hasTimetable && (
+                    <div className="mb-6">
+                        <Badge tone="emerald">
+                            <CalendarRange className="h-3.5 w-3.5 mr-2" /> En execution
+                        </Badge>
+                    </div>
+                )}
+
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <div className={`grid grid-cols-2 gap-4 ${hasFinance ? 'lg:grid-cols-4' : 'lg:grid-cols-1'}`}>
                     <StatTile
                         icon={GraduationCap}
                         label="Enfants inscrits"
                         value={stats.children ?? children.length}
                         tone="from-emerald-500 to-teal-600"
                     />
+                    {hasFinance && <>
                     <StatTile
                         icon={HandCoins}
                         label="Total dû"
@@ -91,6 +109,7 @@ export default function Dashboard({ parent, children = [], stats = {}, recentMes
                         value={money(stats.remaining)}
                         tone={stats.remaining > 0 ? 'from-amber-500 to-orange-600' : 'from-emerald-500 to-teal-600'}
                     />
+                    </>}
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-3">
@@ -144,14 +163,14 @@ export default function Dashboard({ parent, children = [], stats = {}, recentMes
 
                                         <div className="mt-auto flex flex-wrap gap-2 border-t border-slate-100 p-4">
                                             <Link
-                                                href={route('parent.children.show', child.id)}
+                                                href={parentRoute(space, 'children.show', child.id)}
                                                 className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
                                             >
-                                                Dossier <ArrowRight className="h-3.5 w-3.5" />
+                                                Ses Notes <ArrowRight className="h-3.5 w-3.5" />
                                             </Link>
-                                            <ChildLink href={route('parent.children.attendance', child.id)} icon={CalendarDays} label="Assiduité" />
-                                            <ChildLink href={route('parent.children.report-cards', child.id)} icon={Award} label="Bulletins" />
-                                            <ChildLink href={route('parent.children.timetable', child.id)} icon={CalendarRange} label="Emploi du temps" />
+                                            <ChildLink href={parentRoute(space, 'children.attendance', child.id)} icon={CalendarDays} label="Assiduité" />
+                                            <ChildLink href={parentRoute(space, 'children.report-cards', child.id)} icon={Award} label="Bulletins" />
+                                            <ChildLink href={parentRoute(space, 'children.timetable', child.id)} icon={CalendarRange} label="Emploi du temps" />
                                         </div>
                                     </Card>
                                 ))}
@@ -171,7 +190,7 @@ export default function Dashboard({ parent, children = [], stats = {}, recentMes
                                 description={`${stats.unread_messages ?? 0} réponse(s) non lue(s)`}
                                 actions={
                                     <Link
-                                        href={route('parent.messages.index')}
+                                        href={parentRoute(space, 'messages.index')}
                                         className="text-xs font-semibold text-teal-700 hover:text-teal-800"
                                     >
                                         Voir
@@ -186,7 +205,7 @@ export default function Dashboard({ parent, children = [], stats = {}, recentMes
                                             Aucun message envoyé pour l'instant.
                                         </p>
                                         <Link
-                                            href={route('parent.messages.index')}
+                                            href={parentRoute(space, 'messages.index')}
                                             className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-teal-700 hover:text-teal-800"
                                         >
                                             <MessageSquarePlus className="h-4 w-4" /> Écrire à l'établissement
@@ -215,7 +234,7 @@ export default function Dashboard({ parent, children = [], stats = {}, recentMes
                     </div>
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </Layout>
     );
 }
 

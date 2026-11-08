@@ -7,6 +7,7 @@ use App\Http\Middleware\EnsureTwoFactorVerified;
 use App\Http\Middleware\EnsureUserHasSchool;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RequireFreshTwoFactor;
+use App\Http\Middleware\EnsureParentAccessSession;
 use App\Http\Middleware\SecurityHeaders;
 use App\Support\ErrorPage;
 use Illuminate\Foundation\Application;
@@ -36,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             '2fa.configured' => EnsureTwoFactorConfigured::class,
             '2fa.verified' => EnsureTwoFactorVerified::class,
             '2fa.fresh' => RequireFreshTwoFactor::class,
+            'parent.access' => EnsureParentAccessSession::class,
         ]);
 
         $middleware->redirectGuestsTo(fn () => route('login'));

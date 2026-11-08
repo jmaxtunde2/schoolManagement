@@ -10,6 +10,7 @@ use App\Models\AttendanceRecord;
 use App\Models\ReportCard;
 use App\Models\Student;
 use App\Services\AuditService;
+use App\Services\ParentAccess\ParentAccessContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -18,13 +19,18 @@ use Inertia\Response;
 
 class ChildController extends Controller
 {
+    public function __construct(private readonly ParentAccessContext $context) {}
+
     private function child(Request $request, Student $student): Student
     {
         $student->load('classRoom');
 
+        $parent = $this->context->parent($request);
+        $school = $this->context->school($request);
+
         abort_unless(
-            (int) $student->school_id === (int) $request->user()->school_id
-            && $request->user()->parentGuardian?->students()->whereKey($student->id)->exists(),
+            (int) $student->school_id === (int) $school->id
+            && $parent->students()->whereKey($student->id)->exists(),
             403
         );
 
@@ -57,6 +63,7 @@ class ChildController extends Controller
                 'coefficient' => $result->evaluation->coefficient,
                 'date' => $result->evaluation->evaluation_date->format('d/m/Y'),
             ]),
+            'space' => $this->context->space($request),
         ]);
     }
 
@@ -64,7 +71,7 @@ class ChildController extends Controller
     {
         $student = $this->child($request, $student);
         $baseQuery = AttendanceRecord::withoutGlobalScopes()
-            ->where('school_id', $request->user()->school_id)
+            ->where('school_id', $this->context->school($request)->id)
             ->where('student_id', $student->id);
 
         $records = (clone $baseQuery)
@@ -103,6 +110,7 @@ class ChildController extends Controller
                 'delay_minutes' => (clone $baseQuery)->sum('delay_minutes'),
                 'permission' => (clone $baseQuery)->where('status', AttendanceStatus::Permission->value)->count(),
             ],
+            'space' => $this->context->space($request),
         ]);
     }
 
@@ -110,7 +118,7 @@ class ChildController extends Controller
     {
         $student = $this->child($request, $student);
         $reportCards = ReportCard::withoutGlobalScopes()
-            ->where('school_id', $request->user()->school_id)
+            ->where('school_id', $this->context->school($request)->id)
             ->where('student_id', $student->id)
             ->where('status', 'published')
             ->with(['academicYear:id,name', 'period:id,name', 'classRoom:id,name'])
@@ -138,6 +146,7 @@ class ChildController extends Controller
                 'matricule' => $student->matricule,
             ],
             'reportCards' => $reportCards,
+            'space' => $this->context->space($request),
         ]);
     }
 
@@ -146,12 +155,28 @@ class ChildController extends Controller
         AttendanceRecord $attendance,
         AuditService $audit
     ): RedirectResponse {
-        Gate::authorize('submitJustification', $attendance);
+        $parent = $this->context->parent($request);
+
+        if ($this->context->isParentAccess($request)) {
+            $school = $this->context->school($request);
+
+            abort_unless(
+                (int) $attendance->school_id === (int) $school->id
+                && $parent->students()->whereKey($attendance->student_id)->exists()
+                && $attendance->status === AttendanceStatus::Absent
+                && $attendance->justified_at === null
+                && ! $attendance->justifications()
+                    ->where('status', AttendanceJustificationStatus::Approved->value)
+                    ->exists(),
+                403
+            );
+        } else {
+            Gate::authorize('submitJustification', $attendance);
+        }
 
         $data = $request->validate([
             'reason' => ['required', 'string', 'max:2000'],
         ]);
-        $parent = $request->user()->parentGuardian;
 
         if ($attendance->justifications()
             ->where('parent_id', $parent->id)

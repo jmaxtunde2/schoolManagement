@@ -29,8 +29,8 @@ class StudentController extends Controller
                 $term = '%'.$request->string('search').'%';
                 $q->where(fn ($q) => $q->where('first_name', 'like', $term)->orWhere('last_name', 'like', $term)->orWhere('matricule', 'like', $term));
             })
-            ->latest()
-            ->latest('id')
+            ->orderBy('last_name')
+            ->orderBy('first_name')
             ->paginate(20)
             ->withQueryString();
 

@@ -2,6 +2,7 @@
 
 namespace App\Services\Sms;
 
+use App\Support\BeninPhoneNumber;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -539,8 +540,14 @@ class WatiWhatsAppProvider implements WhatsAppProviderInterface, SupportsDocumen
 
     private function toE164(string $phone): ?string
     {
-        $number = preg_replace('/[^0-9+]/', '', $phone);
         $countryCode = (string) config('services.sms.country_code', '228');
+        $assumeBenin = $countryCode === BeninPhoneNumber::COUNTRY_CODE;
+
+        if ($benin = BeninPhoneNumber::forWhatsApp($phone, $assumeBenin)) {
+            return $benin;
+        }
+
+        $number = preg_replace('/[^0-9+]/', '', $phone);
 
         if (str_starts_with($number, '+')) {
             $candidate = $number;
@@ -551,6 +558,8 @@ class WatiWhatsAppProvider implements WhatsAppProviderInterface, SupportsDocumen
         } else {
             $candidate = '+'.$countryCode.ltrim($number, '0');
         }
+
+        $candidate = BeninPhoneNumber::withoutNationalPrefix($candidate);
 
         if (preg_match('/^\+[1-9]\d{7,14}$/', $candidate) !== 1) {
             return null;

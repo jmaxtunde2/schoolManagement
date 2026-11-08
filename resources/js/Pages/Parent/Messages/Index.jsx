@@ -2,13 +2,16 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft, Mail, MessageSquarePlus, Send } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ParentAccessLayout from '@/Layouts/ParentAccessLayout';
+import { parentRoute } from '@/Utils/parentSpace';
 import Badge from '@/Components/UI/Badge';
 import Button from '@/Components/UI/Button';
 import Card from '@/Components/UI/Card';
 import Select from '@/Components/UI/Select';
 import Textarea from '@/Components/UI/Textarea';
 
-export default function Messages({ messages = [], students = [] }) {
+export default function Messages({ messages = [], students = [], space = 'parent' }) {
+    const Layout = space === 'parent-access' ? ParentAccessLayout : AuthenticatedLayout;
     const { data, setData, post, processing, errors, reset } = useForm({
         student_id: '',
         subject: '',
@@ -17,19 +20,19 @@ export default function Messages({ messages = [], students = [] }) {
 
     function submit(e) {
         e.preventDefault();
-        post(route('parent.messages.store'), {
+        post(parentRoute(space, 'messages.store'), {
             preserveScroll: true,
             onSuccess: () => reset(),
         });
     }
 
     return (
-        <AuthenticatedLayout title="Mes messages">
+        <Layout title="Mes messages">
             <Head title="Mes messages" />
 
             <div className="mx-auto max-w-5xl space-y-6">
                 <Link
-                    href={route('parent.dashboard')}
+                    href={parentRoute(space, 'dashboard')}
                     className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-teal-700"
                 >
                     <ArrowLeft className="h-4 w-4" /> Retour à mon espace
@@ -139,6 +142,6 @@ export default function Messages({ messages = [], students = [] }) {
                     )}
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </Layout>
     );
 }

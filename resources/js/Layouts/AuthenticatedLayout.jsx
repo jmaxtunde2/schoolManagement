@@ -52,6 +52,7 @@ const adminNav = [
             { href: 'admin.preinscriptions.index', label: 'Préinscriptions', icon: Inbox },
             { href: 'admin.students.at-risk', label: 'Élèves en difficulté', icon: Activity },
             { href: 'admin.guardians.index', label: 'Parents', icon: UserRound },
+            { href: 'admin.parents.access.index', label: 'Accès parents', icon: UserRound },
         ],
     },
     {
@@ -107,7 +108,7 @@ const censeurNav = [
         items: [
             { href: 'censeur.students.index', label: 'Élèves', icon: GraduationCap },
             { href: 'censeur.guardians.index', label: 'Parents', icon: UserRound },
-            
+            { href: 'censeur.parents.access.index', label: 'Accès parents', icon: UserRound },
         ],
     },
     {

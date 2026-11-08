@@ -3,6 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import { AlertTriangle, ArrowLeft, Download, FileCheck2, RefreshCw, Save } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ParentAccessLayout from '@/Layouts/ParentAccessLayout';
 import Badge from '@/Components/UI/Badge';
 import Button from '@/Components/UI/Button';
 import Card from '@/Components/UI/Card';
@@ -32,7 +33,8 @@ function formatEmitted(value) {
     return `${datePart} à ${timePart}`;
 }
 
-export default function ReportCardShow({ reportCard, routePrefix, canEditComments, canPublish, canRegenerate, fee }) {
+export default function ReportCardShow({ reportCard, routePrefix, canEditComments, canPublish, canRegenerate, fee, space = null, backUrl = null }) {
+    const Layout = space === 'parent-access' ? ParentAccessLayout : AuthenticatedLayout;
     const [confirmPublish, setConfirmPublish] = useState(false);
     const feeBlocked = Boolean(fee?.configured && !fee?.settled);
     const form = useForm({
@@ -74,10 +76,10 @@ export default function ReportCardShow({ reportCard, routePrefix, canEditComment
     }
 
     return (
-        <AuthenticatedLayout title="Bulletin scolaire">
+        <Layout title="Bulletin scolaire">
             <Head title={`Bulletin · ${snapshot.student.name}`} />
             <div className="mx-auto max-w-5xl space-y-6">
-                <Link href={route(`${routePrefix}.report-cards.index`)} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-emerald-700"><ArrowLeft className="h-4 w-4" />Retour aux bulletins</Link>
+                <Link href={backUrl ?? route(`${routePrefix}.report-cards.index`)} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-emerald-700"><ArrowLeft className="h-4 w-4" />Retour aux bulletins</Link>
                 <Card className="overflow-hidden">
                     <div className="flex flex-col justify-between gap-5 border-b border-slate-200 p-5 sm:flex-row sm:items-start sm:p-7">
                         <div className="flex items-start gap-4">
@@ -136,7 +138,7 @@ export default function ReportCardShow({ reportCard, routePrefix, canEditComment
                 </Card>
             </div>
             <ConfirmDialog show={confirmPublish} onClose={() => setConfirmPublish(false)} onConfirm={publish} title="Publier ce bulletin ?" description="La publication rendra ce bulletin officiel et accessible au parent. Toute correction ultérieure créera une nouvelle version." confirmLabel="Publier le bulletin" />
-        </AuthenticatedLayout>
+        </Layout>
     );
 }
 

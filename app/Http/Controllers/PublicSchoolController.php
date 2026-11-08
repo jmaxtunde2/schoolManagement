@@ -457,6 +457,7 @@ class PublicSchoolController extends Controller
 
         return Inertia::render('Public/SchoolLanding', [
             'school' => [
+                'slug' => $school->slug,
                 'name' => $name,
                 'short_name' => $setting?->short_name ?: $name,
                 'slogan' => $setting?->slogan,

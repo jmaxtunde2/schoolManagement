@@ -8,6 +8,7 @@ use App\Models\ContributionPayment;
 use App\Models\ParentGuardian;
 use App\Models\StudentContribution;
 use App\Services\Finance\PaymentDocumentService;
+use App\Services\ParentAccess\ParentAccessContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
@@ -20,16 +21,19 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class FinanceController extends Controller
 {
+    public function __construct(private readonly ParentAccessContext $context) {}
+
     public function index(Request $request): Response
     {
         $parent = $this->parent($request);
+        $school = $this->context->school($request);
         $filters = $this->filters($request);
 
         [$contributions, $payments, $totals] = $this->data($parent, $filters);
 
         return Inertia::render('Parent/Finance/Index', [
             'children' => $this->children($parent),
-            'academicYears' => $this->academicYears($contributions->pluck('academic_year_id')->unique()->all()),
+            'academicYears' => $this->academicYears($contributions->pluck('academic_year_id')->unique()->all(), $school->id),
             'methods' => collect(ContributionPayment::METHODS)
                 ->map(fn (string $label, string $value) => ['value' => $value, 'label' => $label])
                 ->values(),
@@ -48,6 +52,7 @@ class FinanceController extends Controller
                 'status' => $payment->contribution?->status,
                 'status_label' => $payment->contribution?->statusLabel(),
             ])->values(),
+            'space' => $this->context->space($request),
         ]);
     }
 
@@ -56,7 +61,7 @@ class FinanceController extends Controller
         $parent = $this->parent($request);
         [, $payments, $totals] = $this->data($parent, $this->filters($request));
 
-        $bytes = $documents->statement($request->user()->school, $parent, $payments, $totals);
+        $bytes = $documents->statement($this->context->school($request), $parent, $payments, $totals);
 
         return response()->streamDownload(function () use ($bytes): void {
             echo $bytes;
@@ -70,6 +75,7 @@ class FinanceController extends Controller
 
         $studentId = $payment->contribution?->student_id;
         $owns = $studentId !== null
+            && (int) $payment->school_id === (int) $this->context->school($request)->id
             && $parent->students()->where('students.id', $studentId)->exists();
 
         abort_unless($owns, 403);
@@ -83,7 +89,7 @@ class FinanceController extends Controller
 
     private function parent(Request $request): ParentGuardian
     {
-        return $request->user()->parentGuardian()->firstOrFail();
+        return $this->context->parent($request);
     }
 
     /** @return array{student_id: ?int, academic_year_id: ?int, status: ?string, method: ?string} */
@@ -109,6 +115,7 @@ class FinanceController extends Controller
         $studentIds = $parent->students()->pluck('students.id');
 
         $contributions = StudentContribution::query()
+            ->where('school_id', $parent->school_id)
             ->whereIn('student_id', $studentIds)
             ->when($filters['student_id'], fn ($query, $value) => $query->where('student_id', $value))
             ->when($filters['academic_year_id'], fn ($query, $value) => $query->where('academic_year_id', $value))
@@ -150,13 +157,14 @@ class FinanceController extends Controller
      * @param  array<int, int>  $ids
      * @return Collection<int, AcademicYear>
      */
-    private function academicYears(array $ids): Collection
+    private function academicYears(array $ids, int $schoolId): Collection
     {
         if ($ids === []) {
             return collect();
         }
 
         return AcademicYear::query()
+            ->where('school_id', $schoolId)
             ->whereIn('id', $ids)
             ->orderByDesc('is_current')
             ->orderByDesc('starts_on')

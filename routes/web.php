@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Admin\EmailSettingsController;
+use App\Http\Controllers\Admin\ParentAccessController;
 use App\Http\Controllers\Assistant\AssistantController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Censeur\EvaluationController;
+use App\Http\Controllers\Censeur\EvaluationValidationController;
 use App\Http\Controllers\Communication;
 use App\Http\Controllers\CoriSchoolLandingController;
 use App\Http\Controllers\DemoRequestController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\Parent\FinanceController;
 use App\Http\Controllers\Parent\MessageController;
 use App\Http\Controllers\Parent\NotificationSettingsController;
 use App\Http\Controllers\Parent\TimetableController;
+use App\Http\Controllers\ParentAccess\ParentAccessDashboardController;
 use App\Http\Controllers\Platform\AcademicPeriodController;
 use App\Http\Controllers\Platform\AcademicYearController;
 use App\Http\Controllers\Platform\AuditLogController;
@@ -481,6 +484,19 @@ Route::middleware([
             Route::post('/schools/{school}/academic-periods/{academicPeriod}/toggle', [AcademicPeriodController::class, 'toggle'])->name('schools.academic-periods.toggle');
 
             /*
+            | Accès parents (par école)
+            */
+
+            Route::get('/schools/{school}/parents/access', [ParentAccessController::class, 'index'])->name('schools.parents.access.index');
+            Route::post('/schools/{school}/parents/access/generate-all', [ParentAccessController::class, 'generateAll'])->name('schools.parents.access.generate-all');
+            Route::post('/schools/{school}/parents/access/{parent}/generate', [ParentAccessController::class, 'generate'])->name('schools.parents.access.generate');
+            Route::post('/schools/{school}/parents/access/{parent}/regenerate', [ParentAccessController::class, 'regenerate'])->name('schools.parents.access.regenerate');
+            Route::post('/schools/{school}/parents/access/code/{code}/revoke', [ParentAccessController::class, 'revokeCode'])->name('schools.parents.access.code.revoke');
+            Route::post('/schools/{school}/parents/access/session/{session}/revoke', [ParentAccessController::class, 'revokeSession'])->name('schools.parents.access.session.revoke');
+            Route::post('/schools/{school}/parents/access/{parent}/sessions/revoke-all', [ParentAccessController::class, 'revokeAllSessions'])->name('schools.parents.access.sessions.revoke-all');
+            Route::get('/schools/{school}/parents/access/{parent}/print', [ParentAccessController::class, 'print'])->name('schools.parents.access.print');
+
+            /*
             | Banque d'épreuves (banque centrale de la plateforme)
             */
 
@@ -654,6 +670,19 @@ Route::middleware([
                 Admin\CommunicationSettingsController::class,
                 'update',
             ])->name('settings.communication.update');
+
+            /*
+            | Parent Access Codes (Gestion des accès parents)
+            */
+
+            Route::get('/parents/access', [ParentAccessController::class, 'index'])->name('parents.access.index');
+            Route::post('/parents/access/generate-all', [ParentAccessController::class, 'generateAll'])->name('parents.access.generate-all');
+            Route::post('/parents/access/{parent}/generate', [ParentAccessController::class, 'generate'])->name('parents.access.generate');
+            Route::post('/parents/access/{parent}/regenerate', [ParentAccessController::class, 'regenerate'])->name('parents.access.regenerate');
+            Route::post('/parents/access/code/{code}/revoke', [ParentAccessController::class, 'revokeCode'])->name('parents.access.code.revoke');
+            Route::post('/parents/access/session/{session}/revoke', [ParentAccessController::class, 'revokeSession'])->name('parents.access.session.revoke');
+            Route::post('/parents/access/{parent}/sessions/revoke-all', [ParentAccessController::class, 'revokeAllSessions'])->name('parents.access.sessions.revoke-all');
+            Route::get('/parents/access/{parent}/print', [ParentAccessController::class, 'print'])->name('parents.access.print');
 
             /*
             | Billing
@@ -1356,7 +1385,7 @@ Route::middleware([
             ])->name('evaluations.grades.update');
 
             Route::post('/evaluations/{evaluation}/validate', [
-                App\Http\Controllers\Censeur\EvaluationValidationController::class,
+                EvaluationValidationController::class,
                 'store',
             ])
                 ->middleware('2fa.fresh:validate_evaluation')
@@ -1494,6 +1523,19 @@ Route::middleware([
                 Admin\GuardianController::class,
                 'index',
             ])->name('guardians.index');
+
+            /*
+            | Accès parents — codes et sessions
+            */
+
+            Route::get('/parents/access', [ParentAccessController::class, 'index'])->name('parents.access.index');
+            Route::post('/parents/access/generate-all', [ParentAccessController::class, 'generateAll'])->name('parents.access.generate-all');
+            Route::post('/parents/access/{parent}/generate', [ParentAccessController::class, 'generate'])->name('parents.access.generate');
+            Route::post('/parents/access/{parent}/regenerate', [ParentAccessController::class, 'regenerate'])->name('parents.access.regenerate');
+            Route::post('/parents/access/code/{code}/revoke', [ParentAccessController::class, 'revokeCode'])->name('parents.access.code.revoke');
+            Route::post('/parents/access/session/{session}/revoke', [ParentAccessController::class, 'revokeSession'])->name('parents.access.session.revoke');
+            Route::post('/parents/access/{parent}/sessions/revoke-all', [ParentAccessController::class, 'revokeAllSessions'])->name('parents.access.sessions.revoke-all');
+            Route::get('/parents/access/{parent}/print', [ParentAccessController::class, 'print'])->name('parents.access.print');
 
             Route::get('/students', [
                 Admin\StudentController::class,
@@ -2254,3 +2296,98 @@ Route::get('/{slug}', [
         )).')$)[a-z0-9][a-z0-9\-]*'
     )
     ->name('public.school.slug');
+
+/*
+|--------------------------------------------------------------------------
+| Parent Access Simplifié (par code unique)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['web'])->group(function () {
+    // Routes for school mini-sites via slug
+    Route::get('/{slug}/parent/login', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'create'])
+        ->name('parent-access.login.slug');
+    Route::post('/{slug}/parent/login', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('parent-access.login.slug.store');
+
+    // Also add routes accessible from school domain
+    Route::get('/parent/login', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'create'])
+        ->name('parent-access.login');
+    Route::post('/parent/login', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('parent-access.login.store');
+
+    // Alternative access code entry points
+    Route::get('/parent/access-code', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'create'])
+        ->name('parent-access.access-code');
+    Route::post('/parent/access-code', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('parent-access.access-code.store');
+    Route::get('/{slug}/parent/access-code', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'create'])
+        ->name('parent-access.access-code.slug');
+    Route::post('/{slug}/parent/access-code', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('parent-access.access-code.slug.store');
+});
+
+// Protected parent access routes
+Route::middleware(['web', 'parent.access'])->group(function () {
+    Route::get('/{slug}/parent-access/dashboard', App\Http\Controllers\Parent\DashboardController::class)
+        ->name('parent-access.dashboard.slug');
+    Route::get('/parent-access/dashboard', App\Http\Controllers\Parent\DashboardController::class)
+        ->name('parent-access.dashboard');
+
+    /*
+    | Enfants, assiduité, bulletins et emploi du temps
+    */
+
+    Route::get('/parent-access/children/{student}', [ChildController::class, 'show'])
+        ->name('parent-access.children.show');
+
+    Route::get('/parent-access/children/{student}/attendance', [ChildController::class, 'attendance'])
+        ->name('parent-access.children.attendance');
+
+    Route::get('/parent-access/children/{student}/report-cards', [ChildController::class, 'reportCards'])
+        ->name('parent-access.children.report-cards');
+
+    Route::get('/parent-access/children/{student}/timetable', TimetableController::class)
+        ->name('parent-access.children.timetable');
+
+    Route::post('/parent-access/attendance/{attendance}/justification', [ChildController::class, 'justify'])
+        ->name('parent-access.attendance.justify');
+
+    Route::get('/parent-access/report-cards/{reportCard}', [Admin\ReportCardController::class, 'show'])
+        ->name('parent-access.report-cards.show');
+
+    Route::get('/parent-access/report-cards/{reportCard}/pdf', [Admin\ReportCardController::class, 'download'])
+        ->name('parent-access.report-cards.pdf');
+
+    /*
+    | Scolarité — historique des paiements, relevé et reçus
+    */
+
+    Route::get('/parent-access/finance', [FinanceController::class, 'index'])
+        ->name('parent-access.finance.index');
+
+    Route::get('/parent-access/finance/statement', [FinanceController::class, 'statement'])
+        ->name('parent-access.finance.statement');
+
+    Route::get('/parent-access/finance/payments/{payment}/receipt', [FinanceController::class, 'receipt'])
+        ->name('parent-access.finance.receipt');
+
+    /*
+    | Messages adressés à l'établissement
+    */
+
+    Route::get('/parent-access/messages', [MessageController::class, 'index'])
+        ->name('parent-access.messages.index');
+
+    Route::post('/parent-access/messages', [MessageController::class, 'store'])
+        ->name('parent-access.messages.store');
+
+    Route::post('/{slug}/parent-access/logout', [ParentAccessDashboardController::class, 'logout'])
+        ->name('parent-access.logout.slug');
+    Route::post('/parent-access/logout', [ParentAccessDashboardController::class, 'logout'])
+        ->name('parent-access.logout');
+});

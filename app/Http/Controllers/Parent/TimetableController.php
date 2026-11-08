@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
 use App\Models\Student;
 use App\Models\Timetable;
+use App\Services\ParentAccess\ParentAccessContext;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,19 +20,24 @@ use Inertia\Response;
  */
 class TimetableController extends Controller
 {
+    public function __construct(private readonly ParentAccessContext $context) {}
+
     public function __invoke(Request $request, Student $student): Response
     {
-        $guardian = $request->user()->parentGuardian;
-
-        abort_if(! $guardian, 403, "Aucun espace parent n'est associé à ce compte.");
+        $guardian = $this->context->parent($request);
+        $school = $this->context->school($request);
 
         abort_unless(
-            $guardian->students()->whereKey($student->id)->exists(),
+            (int) $student->school_id === (int) $school->id
+            && $guardian->students()->whereKey($student->id)->exists(),
             403,
             "Cet élève n'est pas rattaché à votre espace parent."
         );
 
-        $academicYears = AcademicYear::orderByDesc('starts_on')->get(['id', 'name', 'is_current']);
+        $academicYears = AcademicYear::query()
+            ->where('school_id', $school->id)
+            ->orderByDesc('starts_on')
+            ->get(['id', 'name', 'is_current']);
 
         $selectedYearId = $request->integer('academic_year_id')
             ?: $academicYears->firstWhere('is_current', true)?->id
@@ -43,6 +49,7 @@ class TimetableController extends Controller
             'teacher.user:id,name',
             'room:id,name',
         ])
+            ->where('school_id', $school->id)
             ->where('class_id', $student->class_id)
             ->when($selectedYearId, fn ($q) => $q->where('academic_year_id', $selectedYearId))
             ->orderBy('day_of_week')
@@ -80,6 +87,7 @@ class TimetableController extends Controller
                 'is_current' => $year->is_current,
             ])->values(),
             'selectedAcademicYearId' => $selectedYearId,
+            'space' => $this->context->space($request),
         ]);
     }
 }

@@ -3,6 +3,8 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft, CalendarDays, Clock3, FileCheck2, Send, UserX } from 'lucide-react';
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ParentAccessLayout from '@/Layouts/ParentAccessLayout';
+import { parentRoute } from '@/Utils/parentSpace';
 import Badge from '@/Components/UI/Badge';
 import Button from '@/Components/UI/Button';
 import Card from '@/Components/UI/Card';
@@ -14,13 +16,14 @@ const statusLabels = { present: 'Présent', absent: 'Absence', late: 'Retard', p
 const statusTones = { present: 'green', absent: 'red', late: 'amber', permission: 'blue' };
 const justificationLabels = { pending: 'En attente', approved: 'Justifiée', rejected: 'Refusée' };
 
-export default function Attendance({ student, records, stats }) {
+export default function Attendance({ student, records, stats, space = 'parent' }) {
+    const Layout = space === 'parent-access' ? ParentAccessLayout : AuthenticatedLayout;
     const [justifying, setJustifying] = useState(null);
     const form = useForm({ reason: '' });
 
     function submitJustification(event) {
         event.preventDefault();
-        form.post(route('parent.attendance.justify', justifying.id), {
+        form.post(parentRoute(space, 'attendance.justify', justifying.id), {
             preserveScroll: true,
             onSuccess: () => {
                 setJustifying(null);
@@ -36,10 +39,10 @@ export default function Attendance({ student, records, stats }) {
     }
 
     return (
-        <AuthenticatedLayout title={`Assiduité · ${student.name}`}>
+        <Layout title={`Assiduité · ${student.name}`}>
             <Head title={`Assiduité · ${student.name}`} />
             <div className="space-y-6">
-                <Link href={route('parent.children.show', student.id)} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-teal-700"><ArrowLeft className="h-4 w-4" />Retour au dossier</Link>
+                <Link href={parentRoute(space, 'children.show', student.id)} className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-teal-700"><ArrowLeft className="h-4 w-4" />Retour au dossier</Link>
                 <div>
                     <p className="text-xs font-semibold uppercase text-teal-700">Espace parent · {student.class_name || 'Classe non définie'}</p>
                     <h1 className="mt-1 text-2xl font-bold text-slate-950">Absences & retards</h1>
@@ -104,7 +107,7 @@ export default function Attendance({ student, records, stats }) {
                     {form.errors.reason && <p className="text-sm text-red-600">{form.errors.reason}</p>}
                 </form>
             </Modal>
-        </AuthenticatedLayout>
+        </Layout>
     );
 }
 
