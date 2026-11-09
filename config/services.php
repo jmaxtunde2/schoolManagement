@@ -81,6 +81,12 @@ return [
         'country_code' => env('SMS_COUNTRY_CODE', '228'),
     ],
 
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+        'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'),
+    ],
+
     /*
     | WhatsApp Business Cloud API (Meta). Activée via SMS_PROVIDER=whatsapp.
     | https://developers.facebook.com/docs/whatsapp/cloud-api
