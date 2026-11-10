@@ -99,6 +99,9 @@ return [
             'corischool_evaluation' => [
                 'content_sid' => env('TWILIO_EVALUATION_CONTENT_SID'),
             ],
+            'corischool_evaluation_v2' => [
+                'content_sid' => env('TWILIO_EVALUATION_V2_CONTENT_SID'),
+            ],
         ],
     ],
 
