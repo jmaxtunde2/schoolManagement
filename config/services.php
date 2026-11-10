@@ -85,6 +85,21 @@ return [
         'account_sid' => env('TWILIO_ACCOUNT_SID'),
         'auth_token' => env('TWILIO_AUTH_TOKEN'),
         'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'),
+        'timeout' => (int) env('TWILIO_TIMEOUT', 15),
+
+        'templates' => [
+            'verification_code_parent' => [
+                'content_sid' => env('TWILIO_PARENT_ACCESS_CODE_CONTENT_SID'),
+            ],
+
+            'espace_parent' => [
+                'content_sid' => env('TWILIO_PARENT_ACCESS_SPACE_CONTENT_SID'),
+            ],
+
+            'corischool_evaluation' => [
+                'content_sid' => env('TWILIO_EVALUATION_CONTENT_SID'),
+            ],
+        ],
     ],
 
     /*
