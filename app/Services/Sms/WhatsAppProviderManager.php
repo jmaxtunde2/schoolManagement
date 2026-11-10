@@ -6,31 +6,45 @@ class WhatsAppProviderManager
 {
     public function provider(): WhatsAppProviderInterface
     {
-        return $this->driver() === 'wati'
-            ? app(WatiWhatsAppProvider::class)
-            : app(MetaWhatsAppProvider::class);
+        return match ($this->driver()) {
+            'wati' => app(WatiWhatsAppProvider::class),
+            'twilio' => app(TwilioWhatsAppProvider::class),
+            default => app(MetaWhatsAppProvider::class),
+        };
     }
 
     public function driver(): string
     {
-        $provider = strtolower(trim((string) config('services.whatsapp.provider', 'meta')));
+        $provider = strtolower(
+            trim(
+                (string) config('services.whatsapp.provider', 'meta')
+            )
+        );
 
-        return $provider === 'wati' ? 'wati' : 'meta';
+        return match ($provider) {
+            'wati' => 'wati',
+            'twilio' => 'twilio',
+            default => 'meta',
+        };
     }
 
     public function configured(): bool
     {
-        if ($this->driver() === 'wati') {
-            return (bool) config('services.whatsapp.wati.enabled', false)
-                && filled(config('services.whatsapp.wati.api_key'));
-        }
+        return match ($this->driver()) {
+            'wati' => (bool) config('services.whatsapp.wati.enabled', false)
+                && filled(config('services.whatsapp.wati.api_key')),
 
-        return filled(config('services.whatsapp.token'))
-            && filled(config('services.whatsapp.phone_number_id'));
+            'twilio' => filled(config('services.twilio.account_sid'))
+                && filled(config('services.twilio.auth_token'))
+                && filled(config('services.twilio.whatsapp_from')),
+
+            default => filled(config('services.whatsapp.token'))
+                && filled(config('services.whatsapp.phone_number_id')),
+        };
     }
 
     public function name(): string
     {
-        return $this->driver() === 'wati' ? 'wati' : 'whatsapp';
+        return $this->driver();
     }
 }
