@@ -185,4 +185,24 @@ class EMcSmsProviderTest extends TestCase
 
         Http::assertSentCount(1);
     }
+
+    public function test_the_artisan_command_uses_the_configured_test_recipient(): void
+    {
+        $this->configureProvider([
+            'services.sms.emc.test_to' => '+22997000000',
+        ]);
+
+        Http::fake([
+            'https://api.e-mc.co/v3/sms' => Http::response([
+                'data' => ['success' => true, 'messageId' => 'cmd-env-123'],
+            ], 200),
+        ]);
+
+        $this->artisan('corischool:test-emc-sms')
+            ->expectsOutputToContain('Numéro : +229******00')
+            ->expectsOutputToContain('Succès (message ID: cmd-env-123)')
+            ->assertSuccessful();
+
+        Http::assertSent(fn (HttpRequest $request) => $request['to'] === '2290197000000');
+    }
 }

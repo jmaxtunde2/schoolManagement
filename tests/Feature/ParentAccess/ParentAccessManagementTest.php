@@ -4,19 +4,24 @@ namespace Tests\Feature\ParentAccess;
 
 use App\Enums\ReportCardStatus;
 use App\Enums\Role;
+use App\Jobs\SendParentAccessCodeJob;
 use App\Models\AcademicPeriod;
 use App\Models\AcademicYear;
 use App\Models\AttendanceRecord;
 use App\Models\ClassRoom;
+use App\Models\ParentAccessCode;
+use App\Models\ParentAccessSession;
 use App\Models\ParentGuardian;
 use App\Models\ReportCard;
 use App\Models\School;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\ParentAccess\ParentAccessCodeService;
+use App\Services\ParentAccess\ParentAccessNotificationService;
 use App\Services\ParentAccess\ParentAccessSessionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -31,6 +36,38 @@ class ParentAccessManagementTest extends TestCase
         return $this->withSession([
             'two_factor_verified_at' => now()->timestamp,
         ])->actingAs($user);
+    }
+
+    private function configureTwilio(): void
+    {
+        config([
+            'corischool.parent_access.channel' => 'whatsapp',
+            'services.whatsapp.provider' => 'twilio',
+            'corischool.parent_access.whatsapp_provider' => 'twilio',
+            'services.twilio.account_sid' => 'ACtest',
+            'services.twilio.auth_token' => 'test-token',
+            'services.twilio.whatsapp_from' => 'whatsapp:+14155238886',
+            'services.twilio.templates.verification_code_parent.content_sid' => 'HXcode',
+            'services.twilio.templates.espace_parent.content_sid' => 'HXspace',
+        ]);
+    }
+
+    private function configureSms(): void
+    {
+        config([
+            'corischool.parent_access.channel' => 'sms',
+            'corischool.parent_access.sms_message' => 'CoriSchool : votre accès parent : {code}. Visitez votre espace ici : {url}.',
+            'corischool.parent_access.sms_url' => 'https://corischool.com/ecole/{slug}',
+            'services.sms.provider' => 'emc',
+            'services.sms.emc.enabled' => true,
+            'services.sms.emc.api_url' => 'https://api.e-mc.co/v3',
+            'services.sms.emc.api_key' => null,
+            'services.sms.emc.username' => 'corisch',
+            'services.sms.emc.password' => 'secret',
+            'services.sms.emc.sender' => 'CoriSchool',
+            'services.sms.emc.timeout' => 15,
+            'services.sms.emc.country_code' => '229',
+        ]);
     }
 
     public function test_admin_can_manage_parent_access(): void
@@ -84,6 +121,8 @@ class ParentAccessManagementTest extends TestCase
 
     public function test_platform_admin_can_generate_a_code_for_a_school_parent(): void
     {
+        Queue::fake();
+
         $school = School::factory()->create();
         $parent = ParentGuardian::factory()->create(['school_id' => $school->id]);
         $student = Student::factory()->create(['school_id' => $school->id]);
@@ -117,19 +156,10 @@ class ParentAccessManagementTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_admin_can_generate_codes_for_all_parents_and_send_them_by_whatsapp(): void
+    public function test_admin_can_generate_and_queue_codes_for_all_parents(): void
     {
-        Http::fake([
-            'graph.facebook.com/*' => Http::response(['messages' => [['id' => 'wamid.test']]], 200),
-        ]);
-
-        config([
-            'services.whatsapp.provider' => 'meta',
-            'services.whatsapp.token' => 'test-token',
-            'services.whatsapp.phone_number_id' => '123456789',
-            'services.whatsapp.api_url' => 'https://graph.facebook.com',
-            'services.whatsapp.graph_version' => 'v21.0',
-        ]);
+        Queue::fake();
+        $this->configureSms();
 
         $school = School::factory()->create();
         $admin = User::factory()->forSchool($school)->admin()->create();
@@ -145,31 +175,11 @@ class ParentAccessManagementTest extends TestCase
 
         $this->actingAsVerified($admin)
             ->post('/admin/parents/access/generate-all')
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHas('success', fn ($message) => str_contains($message, 'Envoi SMS programmé par lots'));
 
         $this->assertDatabaseCount('parent_access_codes', 2);
-        // Deux modèles distincts par parent : le code seul puis l'invitation.
-        Http::assertSentCount(4);
-
-        Http::assertSent(function ($request) {
-            return $request['type'] === 'template'
-                && $request['template']['name'] === 'verification_code_parent'
-                && count($request['template']['components'][0]['parameters']) === 1
-                && str_starts_with($request['template']['components'][0]['parameters'][0]['text'], 'CS-');
-        });
-
-        Http::assertSent(function ($request) use ($school) {
-            $components = collect($request['template']['components'] ?? []);
-
-            $body = $components->firstWhere('type', 'body');
-            $button = $components->firstWhere('type', 'button');
-
-            return $request['type'] === 'template'
-                && $request['template']['name'] === 'espace_parent'
-                && $body['parameters'][0]['text'] !== ''
-                && $body['parameters'][1]['text'] === $school->name
-                && $button['parameters'][0]['text'] === $school->slug;
-        });
+        Queue::assertPushed(SendParentAccessCodeJob::class, 2);
 
         $this->actingAsVerified($admin)
             ->get('/admin/parents/access')
@@ -178,19 +188,10 @@ class ParentAccessManagementTest extends TestCase
                 ->where('parents.data.0.latest_code.plain_code', fn ($code) => is_string($code) && str_starts_with($code, 'CS-')));
     }
 
-    public function test_generating_a_code_sends_the_verification_and_parent_space_templates(): void
+    public function test_generating_a_code_queues_sms_and_returns_the_code(): void
     {
-        Http::fake([
-            'graph.facebook.com/*' => Http::response(['messages' => [['id' => 'wamid.test']]], 200),
-        ]);
-
-        config([
-            'services.whatsapp.provider' => 'meta',
-            'services.whatsapp.token' => 'test-token',
-            'services.whatsapp.phone_number_id' => '123456789',
-            'services.whatsapp.api_url' => 'https://graph.facebook.com',
-            'services.whatsapp.graph_version' => 'v21.0',
-        ]);
+        Queue::fake();
+        $this->configureSms();
 
         $school = School::factory()->create();
         $parent = ParentGuardian::factory()->create([
@@ -204,81 +205,132 @@ class ParentAccessManagementTest extends TestCase
         $this->actingAsVerified($admin)
             ->post("/admin/parents/access/{$parent->id}/generate")
             ->assertRedirect()
-            ->assertSessionHas('success', fn ($message) => str_contains($message, 'deux messages WhatsApp'));
+            ->assertSessionHas('success', fn ($message) => str_contains($message, 'Envoi SMS programmé'))
+            ->assertSessionHas('generated_code', fn ($code) => is_string($code) && str_starts_with($code, 'CS-'))
+            ->assertSessionHas('parent_name', $parent->name);
 
-        Http::assertSentCount(2);
+        $code = ParentAccessCode::query()->firstOrFail();
 
-        Http::assertSent(function ($request) use ($parent, $school) {
-            return $request['template']['name'] === 'espace_parent'
-                && $request['template']['components'][0]['parameters'][0]['text'] === $parent->name
-                && $request['template']['components'][0]['parameters'][1]['text'] === $school->name;
-        });
+        Queue::assertPushed(SendParentAccessCodeJob::class, fn ($job) => $job->parentAccessCodeId === $code->id);
+
+        $this->assertDatabaseHas('parent_access_codes', [
+            'parent_id' => $parent->id,
+            'school_id' => $school->id,
+        ]);
     }
 
-    public function test_generating_a_code_sends_both_templates_through_wati(): void
+    public function test_access_code_job_sends_both_twilio_templates(): void
     {
-        Http::fake(function ($request) {
-            $recipient = $request->data()['recipients'][0] ?? [];
+        $this->configureTwilio();
 
-            return Http::response([
-                'success' => true,
-                'recipients' => [[
-                    'local_message_id' => $recipient['local_message_id'] ?? null,
-                    'errors' => [],
-                ]],
-            ], 200);
-        });
-
-        config([
-            'services.whatsapp.provider' => 'wati',
-            'services.whatsapp.wati.enabled' => true,
-            'services.whatsapp.wati.api_key' => 'fake-wati-key',
-            'services.whatsapp.wati.api_url' => 'https://wati.test',
-            'services.whatsapp.wati.channel_number' => '22969422974',
-            'services.whatsapp.wati.template_cache_ttl' => 0,
-            'services.whatsapp.wati.templates.verification_code_parent.body_parameter_names' => ['1'],
-            'services.whatsapp.wati.templates.espace_parent.body_parameter_names' => ['1', '2'],
-            'services.whatsapp.wati.templates.espace_parent.url_parameter_name' => '3',
+        Http::fake([
+            'api.twilio.com/*' => Http::response(['sid' => 'SM123', 'status' => 'queued'], 201),
         ]);
 
-        $school = School::factory()->create();
+        $school = School::factory()->create(['name' => 'École Les Palmiers']);
         $parent = ParentGuardian::factory()->create([
             'school_id' => $school->id,
+            'name' => 'Ibrahim TRAORE',
             'phone' => '+22990000001',
         ]);
         $student = Student::factory()->create(['school_id' => $school->id]);
         $parent->students()->attach($student->id, ['relationship' => 'père']);
-        $admin = User::factory()->forSchool($school)->admin()->create();
 
-        $this->actingAsVerified($admin)
-            ->post("/admin/parents/access/{$parent->id}/generate")
-            ->assertRedirect();
+        $result = app(ParentAccessCodeService::class)->generateCode($parent, $school);
+
+        (new SendParentAccessCodeJob($result['code']->id))
+            ->handle(app(ParentAccessNotificationService::class));
 
         Http::assertSentCount(2);
 
-        Http::assertSent(function ($request) {
-            $params = collect($request->data()['recipients'][0]['custom_params'] ?? [])
-                ->pluck('value', 'name')
-                ->all();
+        Http::assertSent(function ($request) use ($result) {
+            $variables = json_decode($request['ContentVariables'], true);
 
-            return $request['template_name'] === 'verification_code_parent'
-                && str_starts_with($params['1'], 'CS-');
+            return $request['ContentSid'] === 'HXcode'
+                && $request['To'] === 'whatsapp:+22990000001'
+                && $variables['1'] === $result['plain_code'];
         });
 
         Http::assertSent(function ($request) use ($parent, $school) {
-            $params = collect($request->data()['recipients'][0]['custom_params'] ?? [])
-                ->pluck('value', 'name')
-                ->all();
+            $variables = json_decode($request['ContentVariables'], true);
 
-            return $request['template_name'] === 'espace_parent'
-                && $params['1'] === $parent->name
-                && $params['2'] === $school->name
-                && $params['3'] === $school->slug;
+            return $request['ContentSid'] === 'HXspace'
+                && $variables['1'] === $parent->name
+                && $variables['2'] === $school->name
+                && $variables['3'] === $school->slug;
         });
+    }
+
+    public function test_access_code_job_sends_an_emc_sms_with_code_and_school_link(): void
+    {
+        $this->configureSms();
+
+        Http::fake([
+            'https://api.e-mc.co/v3/sms' => Http::response([
+                'data' => ['success' => true, 'messageId' => 'emc-123'],
+            ], 200),
+        ]);
+
+        $school = School::factory()->create([
+            'name' => 'École Les Palmiers',
+            'slug' => 'les-palmiers',
+        ]);
+        $parent = ParentGuardian::factory()->create([
+            'school_id' => $school->id,
+            'name' => 'Ibrahim TRAORE',
+            'phone' => '+22997000000',
+        ]);
+        $student = Student::factory()->create(['school_id' => $school->id]);
+        $parent->students()->attach($student->id, ['relationship' => 'père']);
+
+        $result = app(ParentAccessCodeService::class)->generateCode($parent, $school);
+
+        (new SendParentAccessCodeJob($result['code']->id))
+            ->handle(app(ParentAccessNotificationService::class));
+
+        Http::assertSentCount(1);
+
+        Http::assertSent(function ($request) use ($result) {
+            return $request->url() === 'https://api.e-mc.co/v3/sms'
+                && $request['from'] === 'CoriSchool'
+                && $request['to'] === '2290197000000'
+                && $request['content'] === "CoriSchool : votre accès parent : {$result['plain_code']}. Visitez votre espace ici : https://corischool.com/ecole/les-palmiers.";
+        });
+    }
+
+    public function test_new_login_revokes_previous_parent_sessions_when_only_one_device_is_allowed(): void
+    {
+        config(['corischool.parent_access.max_devices' => 1]);
+
+        $school = School::factory()->create();
+        $parent = ParentGuardian::factory()->create(['school_id' => $school->id]);
+        $student = Student::factory()->create(['school_id' => $school->id]);
+        $parent->students()->attach($student->id, ['relationship' => 'père']);
+
+        $firstSession = app(ParentAccessSessionService::class)
+            ->createSession($parent, $school, null, request());
+
+        $result = app(ParentAccessCodeService::class)->generateCode($parent, $school);
+
+        $this->post("/{$school->slug}/parent/login", ['code' => $result['plain_code']])
+            ->assertRedirect("/{$school->slug}/parent-access/dashboard");
+
+        $sessions = ParentAccessSession::query()->orderBy('id')->get();
+
+        $this->assertCount(2, $sessions);
+        $this->assertNotNull($sessions[0]->revoked_at, 'L\'ancienne session doit être révoquée.');
+        $this->assertNull($sessions[1]->revoked_at, 'La nouvelle session doit rester active.');
+
+        $this->withCookie('parent_access_token', $firstSession['plain_token'])
+            ->get("/{$school->slug}/parent-access/dashboard")
+            ->assertRedirect("/{$school->slug}/parent/login")
+            ->assertSessionHasErrors('code');
     }
 
     public function test_print_page_shows_the_latest_valid_code(): void
     {
+        Queue::fake();
+
         $school = School::factory()->create();
         $parent = ParentGuardian::factory()->create(['school_id' => $school->id]);
         $student = Student::factory()->create(['school_id' => $school->id]);
@@ -317,7 +369,99 @@ class ParentAccessManagementTest extends TestCase
         $this->assertNotNull($result['code']->fresh()->used_at);
     }
 
-    public function test_access_code_expires_after_one_hour(): void
+    public function test_parent_login_creates_session_and_cookie_until_end_of_academic_year(): void
+    {
+        $school = School::factory()->create();
+        $parent = ParentGuardian::factory()->create(['school_id' => $school->id]);
+        $student = Student::factory()->create(['school_id' => $school->id]);
+        $parent->students()->attach($student->id, ['relationship' => 'père']);
+        $year = AcademicYear::factory()->forSchool($school)->create([
+            'starts_on' => now()->startOfYear(),
+            'ends_on' => now()->addMonths(6)->toDateString(),
+            'is_current' => true,
+        ]);
+
+        $result = app(ParentAccessCodeService::class)->generateCode($parent, $school, $year);
+
+        $response = $this->post("/{$school->slug}/parent/login", ['code' => $result['plain_code']])
+            ->assertRedirect("/{$school->slug}/parent-access/dashboard")
+            ->assertCookie('parent_access_token');
+
+        $session = ParentAccessSession::query()->firstOrFail();
+
+        $this->assertSame(
+            $year->ends_on->copy()->endOfDay()->toDateTimeString(),
+            $session->expires_at->toDateTimeString(),
+            'La session doit expirer à la fin de l\'année scolaire.'
+        );
+
+        $cookie = collect($response->baseResponse->headers->getCookies())
+            ->first(fn ($cookie) => $cookie->getName() === 'parent_access_token');
+
+        $this->assertNotNull($cookie);
+        $this->assertGreaterThan(
+            now()->addMonths(5)->timestamp,
+            $cookie->getExpiresTime(),
+            'Le cookie doit rester valide jusqu\'à la fin de l\'année scolaire.'
+        );
+    }
+
+    public function test_parent_session_remains_valid_after_the_access_code_expires(): void
+    {
+        $school = School::factory()->create();
+        $parent = ParentGuardian::factory()->create(['school_id' => $school->id]);
+        $student = Student::factory()->create(['school_id' => $school->id]);
+        $parent->students()->attach($student->id, ['relationship' => 'père']);
+        $year = AcademicYear::factory()->forSchool($school)->create([
+            'starts_on' => now()->startOfYear(),
+            'ends_on' => now()->addMonths(6)->toDateString(),
+            'is_current' => true,
+        ]);
+
+        $session = app(ParentAccessSessionService::class)
+            ->createSession($parent, $school, $year, request());
+
+        $this->travel(1441)->minutes();
+
+        $this->withCookie('parent_access_token', $session['plain_token'])
+            ->get("/{$school->slug}/parent-access/dashboard")
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Parent/Dashboard')
+                ->where('space', 'parent-access'));
+    }
+
+    public function test_parent_space_redirects_to_login_when_session_cookie_is_missing(): void
+    {
+        $school = School::factory()->create();
+
+        $this->get("/{$school->slug}/parent-access/dashboard")
+            ->assertRedirect("/{$school->slug}/parent/login");
+    }
+
+    public function test_admin_sees_activated_status_after_parent_login(): void
+    {
+        $school = School::factory()->create();
+        $parent = ParentGuardian::factory()->create(['school_id' => $school->id]);
+        $student = Student::factory()->create(['school_id' => $school->id]);
+        $parent->students()->attach($student->id, ['relationship' => 'père']);
+        $admin = User::factory()->forSchool($school)->admin()->create();
+
+        $result = app(ParentAccessCodeService::class)->generateCode($parent, $school);
+
+        $this->post("/{$school->slug}/parent/login", ['code' => $result['plain_code']])
+            ->assertRedirect("/{$school->slug}/parent-access/dashboard");
+
+        $this->actingAsVerified($admin)
+            ->get('/admin/parents/access')
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('parents.data', 1)
+                ->where('parents.data.0.status', 'activated')
+                ->where('parents.data.0.active_sessions_count', 1)
+                ->where('parents.data.0.latest_session.is_active', true));
+    }
+
+    public function test_access_code_expires_after_one_day(): void
     {
         $school = School::factory()->create();
         $parent = ParentGuardian::factory()->create(['school_id' => $school->id]);
@@ -327,11 +471,11 @@ class ParentAccessManagementTest extends TestCase
         $result = app(ParentAccessCodeService::class)->generateCode($parent, $school);
 
         $this->assertTrue(
-            $result['code']->expires_at->between(now()->addMinutes(59), now()->addMinutes(61)),
-            'Le code doit expirer une heure après sa génération.'
+            $result['code']->expires_at->between(now()->addMinutes(1439), now()->addMinutes(1441)),
+            'Le code doit expirer un jour après sa génération.'
         );
 
-        $this->travel(61)->minutes();
+        $this->travel(1441)->minutes();
 
         $this->post("/{$school->slug}/parent/login", ['code' => $result['plain_code']])
             ->assertSessionHasErrors('code');

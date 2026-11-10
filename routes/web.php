@@ -2308,26 +2308,22 @@ Route::middleware(['web'])->group(function () {
     Route::get('/{slug}/parent/login', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'create'])
         ->name('parent-access.login.slug');
     Route::post('/{slug}/parent/login', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'store'])
-        ->middleware('throttle:5,1')
         ->name('parent-access.login.slug.store');
 
     // Also add routes accessible from school domain
     Route::get('/parent/login', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'create'])
         ->name('parent-access.login');
     Route::post('/parent/login', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'store'])
-        ->middleware('throttle:5,1')
         ->name('parent-access.login.store');
 
     // Alternative access code entry points
     Route::get('/parent/access-code', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'create'])
         ->name('parent-access.access-code');
     Route::post('/parent/access-code', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'store'])
-        ->middleware('throttle:5,1')
         ->name('parent-access.access-code.store');
     Route::get('/{slug}/parent/access-code', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'create'])
         ->name('parent-access.access-code.slug');
     Route::post('/{slug}/parent/access-code', [App\Http\Controllers\ParentAccess\ParentAccessController::class, 'store'])
-        ->middleware('throttle:5,1')
         ->name('parent-access.access-code.slug.store');
 });
 

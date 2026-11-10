@@ -44,7 +44,7 @@ export default function AccessPrint({ school, parent, generated_code }) {
                         <li>Vous pourrez consulter les informations de votre enfant</li>
                     </ol>
                     <p className="mt-4 text-xs text-gray-600">
-                        Ce code est valable 1 heure à compter de sa génération et ne peut être utilisé qu'une seule fois.
+                        Ce code est valable 1 jour à compter de sa génération et ne peut être utilisé qu'une seule fois.
                         Une fois activé, vous n'aurez plus besoin de le ressaisir jusqu'à la fin de l'année scolaire.
                     </p>
                 </div>

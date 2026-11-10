@@ -6,7 +6,12 @@ class WhatsAppProviderManager
 {
     public function provider(): WhatsAppProviderInterface
     {
-        return match ($this->driver()) {
+        return $this->providerFor();
+    }
+
+    public function providerFor(?string $driver = null): WhatsAppProviderInterface
+    {
+        return match ($this->normalizeDriver($driver)) {
             'wati' => app(WatiWhatsAppProvider::class),
             'twilio' => app(TwilioWhatsAppProvider::class),
             default => app(MetaWhatsAppProvider::class),
@@ -30,7 +35,12 @@ class WhatsAppProviderManager
 
     public function configured(): bool
     {
-        return match ($this->driver()) {
+        return $this->configuredFor();
+    }
+
+    public function configuredFor(?string $driver = null): bool
+    {
+        return match ($this->normalizeDriver($driver)) {
             'wati' => (bool) config('services.whatsapp.wati.enabled', false)
                 && filled(config('services.whatsapp.wati.api_key')),
 
@@ -40,6 +50,17 @@ class WhatsAppProviderManager
 
             default => filled(config('services.whatsapp.token'))
                 && filled(config('services.whatsapp.phone_number_id')),
+        };
+    }
+
+    private function normalizeDriver(?string $driver = null): string
+    {
+        $driver = strtolower(trim((string) ($driver ?? $this->driver())));
+
+        return match ($driver) {
+            'wati' => 'wati',
+            'twilio' => 'twilio',
+            default => 'meta',
         };
     }
 

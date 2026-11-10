@@ -72,6 +72,7 @@ return [
             'sender' => env('EMC_SMS_SENDER', 'CoriSchool'),
             'timeout' => (int) env('EMC_SMS_TIMEOUT', 15),
             'country_code' => env('EMC_SMS_COUNTRY_CODE', '229'),
+            'test_to' => env('EMC_SMS_TEST_TO'),
         ],
         // Endpoint facultatif de consultation du solde fournisseur. Si absent,
         // le solde local (school_communication_settings.sms_balance) fait foi.

@@ -125,7 +125,7 @@ class ParentAccessController extends Controller
 
         // Set cookie
         $expiresMinutes = $academicYear && $academicYear->ends_on ?
-            now()->diffInMinutes($academicYear->ends_on->copy()->endOfDay()) :
+            (int) ceil(now()->diffInMinutes($academicYear->ends_on->copy()->endOfDay())) :
             60 * 24 * 365 * 2;
         if ($expiresMinutes < 60) {
             $expiresMinutes = 60 * 24 * 365;

@@ -25,7 +25,7 @@ class ParentAccessCodeService
         $plainCode = $this->generateUniqueCode();
         $codeHash = hash('sha256', $plainCode);
 
-        $validityMinutes = max(1, (int) config('corischool.parent_access.code_validity_minutes', 60));
+        $validityMinutes = max(1, (int) config('corischool.parent_access.code_validity_minutes', 1440));
         $expiresAt = now()->addMinutes($validityMinutes);
 
         $code = ParentAccessCode::create([

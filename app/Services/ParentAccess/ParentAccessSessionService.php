@@ -26,8 +26,9 @@ class ParentAccessSessionService
         $plainToken = Str::random(64);
         $tokenHash = hash('sha256', $plainToken);
 
-        // Limit number of devices if configured (default to reasonable limit)
-        $maxDevices = (int) config('corischool.parent_access.max_devices', 5);
+        // Un seul appareil actif par défaut : toute nouvelle connexion révoque
+        // les sessions existantes du parent pour cet établissement.
+        $maxDevices = (int) config('corischool.parent_access.max_devices', 1);
         if ($maxDevices > 0) {
             $activeSessions = ParentAccessSession::query()
                 ->where('parent_id', $parent->id)
@@ -35,19 +36,24 @@ class ParentAccessSessionService
                 ->whereNull('revoked_at')
                 ->where('expires_at', '>', now())
                 ->count();
-            
+
             if ($activeSessions >= $maxDevices) {
-                // Revoke oldest session
-                $oldest = ParentAccessSession::query()
+                $excess = $activeSessions - $maxDevices + 1;
+
+                $oldestIds = ParentAccessSession::query()
                     ->where('parent_id', $parent->id)
                     ->where('school_id', $school->id)
                     ->whereNull('revoked_at')
                     ->where('expires_at', '>', now())
                     ->orderBy('last_activity_at')
                     ->orderBy('created_at')
-                    ->first();
-                if ($oldest) {
-                    $oldest->update(['revoked_at' => now()]);
+                    ->limit($excess)
+                    ->pluck('id');
+
+                if ($oldestIds->isNotEmpty()) {
+                    ParentAccessSession::query()
+                        ->whereIn('id', $oldestIds)
+                        ->update(['revoked_at' => now()]);
                 }
             }
         }
@@ -73,6 +79,7 @@ class ParentAccessSessionService
     public function findByPlainToken(string $plainToken): ?ParentAccessSession
     {
         $hash = hash('sha256', $plainToken);
+
         return ParentAccessSession::query()->where('token_hash', $hash)->first();
     }
 }

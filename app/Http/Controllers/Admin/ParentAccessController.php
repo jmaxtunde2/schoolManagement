@@ -8,8 +8,8 @@ use App\Models\ParentAccessCode;
 use App\Models\ParentAccessSession;
 use App\Models\ParentGuardian;
 use App\Models\School;
+use App\Services\ParentAccess\ParentAccessCodeBatchService;
 use App\Services\ParentAccess\ParentAccessCodeService;
-use App\Services\ParentAccess\ParentAccessNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -59,12 +59,22 @@ class ParentAccessController extends Controller
                 ->where('expires_at', '>', now())
                 ->count();
 
+            $latestSession = ParentAccessSession::query()
+                ->where('parent_id', $parent->id)
+                ->where('school_id', $school->id)
+                ->latest('created_at')
+                ->first();
+
+            // Le statut reflète la session réellement active, pas seulement le
+            // fait que le dernier code a été utilisé.
             $status = 'non_activated';
-            if ($latestCode) {
+            if ($activeSessions > 0) {
+                $status = 'activated';
+            } elseif ($latestCode) {
                 if ($latestCode->isRevoked()) {
                     $status = 'revoked';
                 } elseif ($latestCode->isUsed()) {
-                    $status = 'activated';
+                    $status = 'session_expired';
                 } elseif ($latestCode->isExpired()) {
                     $status = 'expired';
                 } elseif ($latestCode->isValid()) {
@@ -89,6 +99,13 @@ class ParentAccessController extends Controller
                     'used_at' => $latestCode->used_at?->format('d/m/Y H:i'),
                     'is_revoked' => $latestCode->isRevoked(),
                 ] : null,
+                'latest_session' => $latestSession ? [
+                    'id' => $latestSession->id,
+                    'expires_at' => $latestSession->expires_at?->format('d/m/Y H:i'),
+                    'last_activity_at' => $latestSession->last_activity_at?->format('d/m/Y H:i'),
+                    'revoked_at' => $latestSession->revoked_at?->format('d/m/Y H:i'),
+                    'is_active' => ! $latestSession->isRevoked() && ! $latestSession->isExpired(),
+                ] : null,
                 'active_sessions_count' => $activeSessions,
             ];
         });
@@ -104,6 +121,7 @@ class ParentAccessController extends Controller
             'filters' => $request->only(['search']),
             'routePrefix' => $routePrefix,
             'schoolId' => $school->id,
+            'codeChannelLabel' => config('corischool.parent_access.channel') === 'whatsapp' ? 'WhatsApp' : 'SMS',
         ]);
     }
 
@@ -112,7 +130,7 @@ class ParentAccessController extends Controller
         School $school,
         ParentGuardian $parent,
         ParentAccessCodeService $codeService,
-        ParentAccessNotificationService $notifications
+        ParentAccessCodeBatchService $batch
     ): RedirectResponse {
         $school = $this->resolveSchool($request, $school);
         if ((int) $parent->school_id !== (int) $school->id) {
@@ -129,29 +147,18 @@ class ParentAccessController extends Controller
             ->first();
 
         $result = $codeService->generateCode($parent, $school, $academicYear, $request->user()->id);
-        $notification = $notifications->sendAccessCode($parent, $school, $result['plain_code']);
 
-        $message = 'Code généré avec succès.';
-        if (! $notifications->configured()) {
-            $message .= " Envoi WhatsApp non configuré : le code n'a pas été envoyé.";
-        } elseif ($notification['sent']) {
-            $message .= ' Les deux messages WhatsApp (code de vérification et espace parent) ont été envoyés.';
-        } else {
-            $message .= " {$notification['sent_count']}/2 message(s) WhatsApp envoyé(s).";
-        }
+        $queued = $batch->configured() ? $batch->queue([$result['code']->id]) : 0;
+        $channel = $batch->label();
 
-        $redirect = back()->with('success', $message)
+        $message = $queued > 0
+            ? "Code généré avec succès. Envoi {$channel} programmé au parent."
+            : "Code généré avec succès. {$channel} non configuré : distribuez-le manuellement au parent.";
+
+        return back()
+            ->with('success', $message)
             ->with('generated_code', $result['plain_code'])
             ->with('parent_name', $parent->name);
-
-        if ($notifications->configured() && $notification['errors'] !== []) {
-            $redirect->with('parent_access_bulk_errors', array_map(
-                fn (string $error) => "{$parent->name} : {$error}",
-                $notification['errors']
-            ));
-        }
-
-        return $redirect;
     }
 
     public function regenerate(
@@ -159,21 +166,20 @@ class ParentAccessController extends Controller
         School $school,
         ParentGuardian $parent,
         ParentAccessCodeService $codeService,
-        ParentAccessNotificationService $notifications
+        ParentAccessCodeBatchService $batch
     ): RedirectResponse {
-        return $this->generate($request, $school, $parent, $codeService, $notifications);
+        return $this->generate($request, $school, $parent, $codeService, $batch);
     }
 
     /**
-     * Génère un code pour tous les parents actifs de l'établissement et envoie
-     * à chacun les deux modèles WhatsApp (code de vérification + espace parent)
-     * lorsqu'un fournisseur est configuré.
+     * Génère un code pour tous les parents actifs de l'établissement puis
+     * programme les envois SMS (ou WhatsApp) par lots.
      */
     public function generateAll(
         Request $request,
         School $school,
         ParentAccessCodeService $codeService,
-        ParentAccessNotificationService $notifications
+        ParentAccessCodeBatchService $batch
     ): RedirectResponse {
         $school = $this->resolveSchool($request, $school);
 
@@ -195,48 +201,22 @@ class ParentAccessController extends Controller
             return back()->with('error', 'Aucun parent actif avec enfant dans cet établissement.');
         }
 
-        $canSend = $notifications->configured();
-
-        $generated = 0;
-        $sent = 0;
-        $failed = 0;
-        $bulkErrors = [];
+        $codeIds = [];
 
         foreach ($parents as $parent) {
             $result = $codeService->generateCode($parent, $school, $academicYear, $request->user()->id);
-            $generated++;
-
-            if (! $canSend) {
-                continue;
-            }
-
-            $notification = $notifications->sendAccessCode($parent, $school, $result['plain_code']);
-
-            if ($notification['sent']) {
-                $sent++;
-
-                continue;
-            }
-
-            $failed++;
-
-            foreach ($notification['errors'] as $error) {
-                $bulkErrors[] = "{$parent->name} : {$error}";
-            }
+            $codeIds[] = $result['code']->id;
         }
 
-        if (! $canSend) {
-            return back()
-                ->with('success', "{$generated} code(s) généré(s). Les codes sont affichés dans le tableau.")
-                ->with('error', "Envoi WhatsApp non configuré : les codes n'ont pas été envoyés aux parents.");
-        }
+        $generated = count($codeIds);
+        $queued = $batch->configured() ? $batch->queue($codeIds) : 0;
+        $channel = $batch->label();
 
-        $summary = "{$generated} code(s) généré(s), {$sent} parent(s) notifié(s) par WhatsApp"
-            .($failed > 0 ? ", {$failed} échec(s)" : '').'.';
+        $message = $queued > 0
+            ? "{$generated} code(s) généré(s). Envoi {$channel} programmé par lots."
+            : "{$generated} code(s) généré(s). {$channel} non configuré : distribution manuelle requise.";
 
-        return back()
-            ->with('success', $summary)
-            ->with('parent_access_bulk_errors', array_slice($bulkErrors, 0, 30));
+        return back()->with('success', $message);
     }
 
     public function revokeCode(Request $request, School $school, ParentAccessCode $code): RedirectResponse

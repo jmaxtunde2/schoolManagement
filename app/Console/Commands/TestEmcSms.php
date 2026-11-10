@@ -8,15 +8,21 @@ use Illuminate\Console\Command;
 class TestEmcSms extends Command
 {
     protected $signature = 'corischool:test-emc-sms
-        {to : Numéro de test destinataire}
+        {to? : Numéro de test destinataire (défaut : EMC_SMS_TEST_TO)}
         {--message= : Message personnalisé}';
 
     protected $description = 'Envoie un SMS de test unique via le fournisseur e-MC';
 
     public function handle(EMcSmsProvider $provider): int
     {
-        $to = trim((string) $this->argument('to'));
+        $to = trim((string) ($this->argument('to') ?: config('services.sms.emc.test_to')));
         $message = trim((string) $this->option('message'));
+
+        if ($to === '') {
+            $this->error('Aucun numéro de test. Passez-le en argument ou renseignez EMC_SMS_TEST_TO.');
+
+            return self::FAILURE;
+        }
 
         if ($message === '') {
             $message = 'Test CoriSchool : ce message confirme que le fournisseur e-MC fonctionne.';
