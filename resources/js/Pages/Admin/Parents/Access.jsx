@@ -3,9 +3,12 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Search, UserPlus, RefreshCw, X, Printer, Send } from 'lucide-react';
 
-export default function Access({ auth, parents, filters, routePrefix = 'admin', schoolId, codeChannelLabel = 'SMS' }) {
+import Pagination from '@/Components/UI/Pagination';
+
+export default function Access({ auth, parents, filters, classes = [], routePrefix = 'admin', schoolId, codeChannelLabel = 'SMS' }) {
     const { flash } = usePage().props;
     const [search, setSearch] = useState(filters?.search || '');
+    const [classId, setClassId] = useState(filters?.class_id || '');
     const [dismissedCode, setDismissedCode] = useState(false);
     const [busyAction, setBusyAction] = useState(null);
 
@@ -20,9 +23,19 @@ export default function Access({ auth, parents, filters, routePrefix = 'admin', 
         return route(`${routePrefix}.parents.access.${action}`, params);
     };
 
+    const applyFilters = (overrides = {}) => {
+        const params = Object.fromEntries(
+            Object.entries({ search, class_id: classId, ...overrides }).filter(
+                ([, value]) => value !== '' && value !== null && value !== undefined
+            )
+        );
+
+        router.get(accessRoute('index'), params, { preserveState: true });
+    };
+
     const handleSearch = (e) => {
         e.preventDefault();
-        router.get(accessRoute('index'), { search }, { preserveState: true });
+        applyFilters();
     };
 
     const generateCode = (parentId) => {
@@ -140,7 +153,7 @@ export default function Access({ auth, parents, filters, routePrefix = 'admin', 
 
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                         <div className="p-6">
-                            <form onSubmit={handleSearch} className="flex gap-4">
+                            <form onSubmit={handleSearch} className="flex flex-col gap-3 lg:flex-row lg:items-center">
                                 <div className="flex-1 relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                                     <input
@@ -151,6 +164,21 @@ export default function Access({ auth, parents, filters, routePrefix = 'admin', 
                                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                                     />
                                 </div>
+                                <select
+                                    value={classId}
+                                    onChange={(e) => {
+                                        setClassId(e.target.value);
+                                        applyFilters({ class_id: e.target.value });
+                                    }}
+                                    className="px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-500"
+                                >
+                                    <option value="">Toutes les classes</option>
+                                    {classes.map((classRoom) => (
+                                        <option key={classRoom.id} value={classRoom.id}>
+                                            {classRoom.name}
+                                        </option>
+                                    ))}
+                                </select>
                                 <button type="submit" className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
                                     Rechercher
                                 </button>
@@ -284,11 +312,9 @@ export default function Access({ auth, parents, filters, routePrefix = 'admin', 
                         </div>
                     </div>
 
-                    {parents.links && (
-                        <div className="mt-6">
-                            {/* Pagination */}
-                        </div>
-                    )}
+                    <div className="mt-6">
+                        <Pagination meta={parents} />
+                    </div>
                 </div>
             </div>
         </AuthenticatedLayout>

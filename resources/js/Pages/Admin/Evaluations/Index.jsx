@@ -56,6 +56,9 @@ const formatCreatedAt = (value) => value
 export default function EvaluationsIndex({
     evaluations,
     filters,
+    classes = [],
+    subjects = [],
+    periods = [],
     routePrefix = 'admin',
 }) {
     const [evaluationToReturn, setEvaluationToReturn] = useState(null);
@@ -65,6 +68,18 @@ export default function EvaluationsIndex({
 
     const [status, setStatus] = useState(
         filters.status ?? ''
+    );
+
+    const [classId, setClassId] = useState(
+        filters.class_id ?? ''
+    );
+
+    const [subjectId, setSubjectId] = useState(
+        filters.subject_id ?? ''
+    );
+
+    const [periodId, setPeriodId] = useState(
+        filters.academic_period_id ?? ''
     );
 
     const [search, setSearch] = useState('');
@@ -124,16 +139,34 @@ export default function EvaluationsIndex({
         });
     }, [evaluations.data, search]);
 
-    function applyFilter(value) {
-        setStatus(value);
+    const hasActiveFilters = Boolean(
+        search || status || classId || subjectId || periodId
+    );
+
+    function applyFilters(next = {}) {
+        const values = {
+            status,
+            class_id: classId,
+            subject_id: subjectId,
+            academic_period_id: periodId,
+            ...next,
+        };
+
+        setStatus(values.status ?? '');
+        setClassId(values.class_id ?? '');
+        setSubjectId(values.subject_id ?? '');
+        setPeriodId(values.academic_period_id ?? '');
+
+        const params = Object.fromEntries(
+            Object.entries(values).filter(
+                ([, value]) =>
+                    value !== '' && value !== null && value !== undefined
+            )
+        );
 
         router.get(
-            route(
-                `${routePrefix}.evaluations.index`
-            ),
-            {
-                status: value,
-            },
+            route(`${routePrefix}.evaluations.index`),
+            params,
             {
                 preserveState: true,
                 replace: true,
@@ -143,7 +176,12 @@ export default function EvaluationsIndex({
 
     function resetFilters() {
         setSearch('');
-        applyFilter('');
+        applyFilters({
+            status: '',
+            class_id: '',
+            subject_id: '',
+            academic_period_id: '',
+        });
     }
 
     function submitReturn() {
@@ -262,24 +300,36 @@ export default function EvaluationsIndex({
                         title="Liste des évaluations"
                         description={`${evaluations.total} évaluation(s) enregistrée(s)`}
                         actions={
-                            <div className="flex items-center gap-2">
-                                {(routePrefix === 'censeur' || routePrefix === 'admin') && (
-                                    <Button
-                                        onClick={() => router.visit(`/${routePrefix}/evaluations/create`)}
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                        Ajouter une évaluation
-                                    </Button>
-                                )}
-                                <Filter className="hidden h-4 w-4 text-slate-400 sm:block" />
+                            (routePrefix === 'censeur' || routePrefix === 'admin') && (
+                                <Button
+                                    onClick={() => router.visit(`/${routePrefix}/evaluations/create`)}
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    Ajouter une évaluation
+                                </Button>
+                            )
+                        }
+                    />
+
+                    <Card.Body>
+                        {/* Filtres */}
+                        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <div>
+                                <label
+                                    htmlFor="filter-status"
+                                    className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                >
+                                    <Filter className="h-3.5 w-3.5" />
+                                    Statut
+                                </label>
 
                                 <Select
-                                    className="w-full sm:w-56"
+                                    id="filter-status"
                                     value={status}
                                     onChange={(e) =>
-                                        applyFilter(
-                                            e.target.value
-                                        )
+                                        applyFilters({
+                                            status: e.target.value,
+                                        })
                                     }
                                 >
                                     <option value="">
@@ -303,10 +353,105 @@ export default function EvaluationsIndex({
                                     </option>
                                 </Select>
                             </div>
-                        }
-                    />
 
-                    <Card.Body>
+                            <div>
+                                <label
+                                    htmlFor="filter-class"
+                                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                >
+                                    Classe
+                                </label>
+
+                                <Select
+                                    id="filter-class"
+                                    value={classId}
+                                    onChange={(e) =>
+                                        applyFilters({
+                                            class_id: e.target.value,
+                                        })
+                                    }
+                                >
+                                    <option value="">
+                                        Toutes les classes
+                                    </option>
+
+                                    {classes.map((classRoom) => (
+                                        <option
+                                            key={classRoom.id}
+                                            value={classRoom.id}
+                                        >
+                                            {classRoom.name}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="filter-subject"
+                                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                >
+                                    Matière
+                                </label>
+
+                                <Select
+                                    id="filter-subject"
+                                    value={subjectId}
+                                    onChange={(e) =>
+                                        applyFilters({
+                                            subject_id: e.target.value,
+                                        })
+                                    }
+                                >
+                                    <option value="">
+                                        Toutes les matières
+                                    </option>
+
+                                    {subjects.map((subject) => (
+                                        <option
+                                            key={subject.id}
+                                            value={subject.id}
+                                        >
+                                            {subject.name}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="filter-period"
+                                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                >
+                                    Période
+                                </label>
+
+                                <Select
+                                    id="filter-period"
+                                    value={periodId}
+                                    onChange={(e) =>
+                                        applyFilters({
+                                            academic_period_id:
+                                                e.target.value,
+                                        })
+                                    }
+                                >
+                                    <option value="">
+                                        Toutes les périodes
+                                    </option>
+
+                                    {periods.map((period) => (
+                                        <option
+                                            key={period.id}
+                                            value={period.id}
+                                        >
+                                            {period.name}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </div>
+                        </div>
+
                         {/* Recherche */}
                         <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
                             <div className="relative">
@@ -324,7 +469,7 @@ export default function EvaluationsIndex({
                                 />
                             </div>
 
-                            {(search || status) && (
+                            {(hasActiveFilters) && (
                                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3">
                                     <p className="text-sm text-slate-500">
                                         <span className="font-semibold text-slate-700">
@@ -357,7 +502,7 @@ export default function EvaluationsIndex({
                         <Table
                             rows={filteredEvaluations}
                             emptyState={
-                                search || status ? (
+                                hasActiveFilters ? (
                                     <EmptyState
                                         icon={Search}
                                         title="Aucun résultat"

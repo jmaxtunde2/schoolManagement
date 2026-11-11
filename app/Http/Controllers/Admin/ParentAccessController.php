@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
+use App\Models\ClassRoom;
 use App\Models\ParentAccessCode;
 use App\Models\ParentAccessSession;
 use App\Models\ParentGuardian;
@@ -29,7 +30,7 @@ class ParentAccessController extends Controller
         $query = ParentGuardian::query()
             ->where('school_id', $school->id)
             ->with(['students' => function ($q) {
-                $q->where('students.is_active', true);
+                $q->where('students.is_active', true)->with('classRoom:id,name');
             }])
             ->with(['user']);
 
@@ -39,6 +40,14 @@ class ParentAccessController extends Controller
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('class_id')) {
+            $classId = $request->integer('class_id');
+            $query->whereHas('students', function ($q) use ($classId) {
+                $q->where('students.is_active', true)
+                    ->where('students.class_id', $classId);
             });
         }
 
@@ -118,7 +127,11 @@ class ParentAccessController extends Controller
 
         return Inertia::render('Admin/Parents/Access', [
             'parents' => $parents,
-            'filters' => $request->only(['search']),
+            'filters' => $request->only(['search', 'class_id']),
+            'classes' => ClassRoom::query()
+                ->where('school_id', $school->id)
+                ->orderBy('name')
+                ->get(['id', 'name']),
             'routePrefix' => $routePrefix,
             'schoolId' => $school->id,
             'codeChannelLabel' => config('corischool.parent_access.channel') === 'whatsapp' ? 'WhatsApp' : 'SMS',
