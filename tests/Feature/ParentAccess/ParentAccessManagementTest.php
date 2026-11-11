@@ -176,10 +176,10 @@ class ParentAccessManagementTest extends TestCase
         $this->actingAsVerified($admin)
             ->post('/admin/parents/access/generate-all')
             ->assertRedirect()
-            ->assertSessionHas('success', fn ($message) => str_contains($message, 'Envoi SMS programmé par lots'));
+            ->assertSessionHas('success', fn ($message) => str_contains($message, 'Distribution manuelle requise'));
 
         $this->assertDatabaseCount('parent_access_codes', 2);
-        Queue::assertPushed(SendParentAccessCodeJob::class, 2);
+        Queue::assertNothingPushed();
 
         $this->actingAsVerified($admin)
             ->get('/admin/parents/access')
@@ -205,13 +205,11 @@ class ParentAccessManagementTest extends TestCase
         $this->actingAsVerified($admin)
             ->post("/admin/parents/access/{$parent->id}/generate")
             ->assertRedirect()
-            ->assertSessionHas('success', fn ($message) => str_contains($message, 'Envoi SMS programmé'))
+            ->assertSessionHas('success', fn ($message) => str_contains($message, 'Distribuez-le manuellement'))
             ->assertSessionHas('generated_code', fn ($code) => is_string($code) && str_starts_with($code, 'CS-'))
             ->assertSessionHas('parent_name', $parent->name);
 
-        $code = ParentAccessCode::query()->firstOrFail();
-
-        Queue::assertPushed(SendParentAccessCodeJob::class, fn ($job) => $job->parentAccessCodeId === $code->id);
+        Queue::assertNothingPushed();
 
         $this->assertDatabaseHas('parent_access_codes', [
             'parent_id' => $parent->id,

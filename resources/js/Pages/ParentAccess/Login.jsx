@@ -22,8 +22,21 @@ export default function Login({ school }) {
                 <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                     <div className="px-8 py-10">
                         <div className="text-center mb-8">
-                            {school?.logo_url && (
-                                <img src={school.logo_url} alt={school.name} className="h-16 mx-auto mb-4" />
+                            {school?.logo_url ? (
+                                <img
+                                    src={school.logo_url}
+                                    alt={school.name}
+                                    className="mx-auto mb-4 h-20 w-20 rounded-2xl object-contain"
+                                />
+                            ) : (
+                                school?.name && (
+                                    <div
+                                        className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl text-2xl font-bold text-white shadow-sm"
+                                        style={{ backgroundColor: primaryColor }}
+                                    >
+                                        {school.name.charAt(0).toUpperCase()}
+                                    </div>
+                                )
                             )}
                             <h1 className="text-2xl font-bold text-gray-900 mb-2">
                                 Bienvenue dans votre espace parent

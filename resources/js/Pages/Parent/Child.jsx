@@ -1,4 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 import {
     ArrowRight,
     Award,
@@ -6,6 +7,7 @@ import {
     CalendarDays,
     ClipboardList,
     GraduationCap,
+    RotateCcw,
     UserRound,
     CalendarRange,
 } from 'lucide-react';
@@ -14,10 +16,58 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ParentAccessLayout from '@/Layouts/ParentAccessLayout';
 import { parentRoute } from '@/Utils/parentSpace';
 import Badge from '@/Components/UI/Badge';
+import Button from '@/Components/UI/Button';
 import Card from '@/Components/UI/Card';
+import Select from '@/Components/UI/Select';
 
 export default function Child({ student, results = [], space = 'parent' }) {
     const Layout = space === 'parent-access' ? ParentAccessLayout : AuthenticatedLayout;
+
+    const [subjectFilter, setSubjectFilter] = useState('');
+    const [evaluationFilter, setEvaluationFilter] = useState('');
+    const [periodFilter, setPeriodFilter] = useState('');
+
+    const subjects = useMemo(
+        () =>
+            [...new Set(results.map((result) => result.subject).filter(Boolean))].sort(
+                (a, b) => a.localeCompare(b)
+            ),
+        [results]
+    );
+
+    const evaluations = useMemo(
+        () =>
+            [...new Set(results.map((result) => result.title).filter(Boolean))].sort(
+                (a, b) => a.localeCompare(b)
+            ),
+        [results]
+    );
+
+    const periods = useMemo(
+        () => [...new Set(results.map((result) => result.period).filter(Boolean))],
+        [results]
+    );
+
+    const filteredResults = useMemo(
+        () =>
+            results.filter(
+                (result) =>
+                    (!subjectFilter || result.subject === subjectFilter) &&
+                    (!evaluationFilter || result.title === evaluationFilter) &&
+                    (!periodFilter || result.period === periodFilter)
+            ),
+        [results, subjectFilter, evaluationFilter, periodFilter]
+    );
+
+    const hasActiveFilters =
+        subjectFilter !== '' || evaluationFilter !== '' || periodFilter !== '';
+
+    const resetFilters = () => {
+        setSubjectFilter('');
+        setEvaluationFilter('');
+        setPeriodFilter('');
+    };
+
     return (
         <Layout title={student.name}>
             <Head title={student.name} />
@@ -126,6 +176,80 @@ export default function Child({ student, results = [], space = 'parent' }) {
                     />
                 </div>
 
+                {/* Filters */}
+                <Card className="border-0 shadow-sm ring-1 ring-slate-200">
+                    <Card.Body className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <div>
+                            <label
+                                htmlFor="filter-subject"
+                                className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                            >
+                                Matière
+                            </label>
+
+                            <Select
+                                id="filter-subject"
+                                value={subjectFilter}
+                                onChange={(e) => setSubjectFilter(e.target.value)}
+                            >
+                                <option value="">Toutes les matières</option>
+
+                                {subjects.map((subject) => (
+                                    <option key={subject} value={subject}>
+                                        {subject}
+                                    </option>
+                                ))}
+                            </Select>
+                        </div>
+
+                        <div>
+                            <label
+                                htmlFor="filter-evaluation"
+                                className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                            >
+                                Évaluation
+                            </label>
+
+                            <Select
+                                id="filter-evaluation"
+                                value={evaluationFilter}
+                                onChange={(e) => setEvaluationFilter(e.target.value)}
+                            >
+                                <option value="">Toutes les évaluations</option>
+
+                                {evaluations.map((evaluation) => (
+                                    <option key={evaluation} value={evaluation}>
+                                        {evaluation}
+                                    </option>
+                                ))}
+                            </Select>
+                        </div>
+
+                        <div>
+                            <label
+                                htmlFor="filter-period"
+                                className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                            >
+                                Période
+                            </label>
+
+                            <Select
+                                id="filter-period"
+                                value={periodFilter}
+                                onChange={(e) => setPeriodFilter(e.target.value)}
+                            >
+                                <option value="">Toutes les périodes</option>
+
+                                {periods.map((period) => (
+                                    <option key={period} value={period}>
+                                        {period}
+                                    </option>
+                                ))}
+                            </Select>
+                        </div>
+                    </Card.Body>
+                </Card>
+
                 {/* Results */}
                 <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-slate-200">
                     <Card.Header
@@ -134,11 +258,23 @@ export default function Child({ student, results = [], space = 'parent' }) {
                                 <span>Résultats scolaires</span>
 
                                 <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">
-                                    {results.length} résultat(s)
+                                    {filteredResults.length} résultat(s)
                                 </span>
                             </div>
                         }
                         description="Consultez les notes obtenues aux différentes évaluations."
+                        actions={
+                            hasActiveFilters ? (
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={resetFilters}
+                                >
+                                    <RotateCcw className="h-4 w-4" />
+                                    Réinitialiser
+                                </Button>
+                            ) : null
+                        }
                     />
 
                     <Card.Body className="p-0">
@@ -156,6 +292,30 @@ export default function Child({ student, results = [], space = 'parent' }) {
                                     Les résultats de cet élève apparaîtront
                                     ici lorsqu’ils seront disponibles.
                                 </p>
+                            </div>
+                        ) : filteredResults.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+                                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                                    <BookOpenCheck className="h-8 w-8" />
+                                </div>
+
+                                <h3 className="mt-5 text-lg font-bold text-slate-900">
+                                    Aucun résultat ne correspond aux filtres
+                                </h3>
+
+                                <p className="mt-2 max-w-md text-sm text-slate-500">
+                                    Modifiez ou réinitialisez les filtres pour
+                                    afficher d’autres notes.
+                                </p>
+
+                                <Button
+                                    variant="secondary"
+                                    className="mt-5"
+                                    onClick={resetFilters}
+                                >
+                                    <RotateCcw className="h-4 w-4" />
+                                    Réinitialiser les filtres
+                                </Button>
                             </div>
                         ) : (
                             <>
@@ -183,7 +343,7 @@ export default function Child({ student, results = [], space = 'parent' }) {
                                         </thead>
 
                                         <tbody className="divide-y divide-slate-100">
-                                            {results.map((result) => (
+                                            {filteredResults.map((result) => (
                                                 <tr
                                                     key={result.id}
                                                     className="group transition hover:bg-slate-50/70"
@@ -254,7 +414,7 @@ export default function Child({ student, results = [], space = 'parent' }) {
 
                                 {/* Mobile cards */}
                                 <div className="divide-y divide-slate-100 md:hidden">
-                                    {results.map((result) => (
+                                    {filteredResults.map((result) => (
                                         <div
                                             key={result.id}
                                             className="p-4 transition hover:bg-slate-50/70"

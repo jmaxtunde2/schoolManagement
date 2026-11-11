@@ -148,12 +148,14 @@ class ParentAccessController extends Controller
 
         $result = $codeService->generateCode($parent, $school, $academicYear, $request->user()->id);
 
-        $queued = $batch->configured() ? $batch->queue([$result['code']->id]) : 0;
+        // Envoi SMS/WhatsApp temporairement désactivé : le code est distribué manuellement.
+        // $queued = $batch->configured() ? $batch->queue([$result['code']->id]) : 0;
+        $queued = 0;
         $channel = $batch->label();
 
         $message = $queued > 0
             ? "Code généré avec succès. Envoi {$channel} programmé au parent."
-            : "Code généré avec succès. {$channel} non configuré : distribuez-le manuellement au parent.";
+            : 'Code généré avec succès. Distribuez-le manuellement au parent.';
 
         return back()
             ->with('success', $message)
@@ -209,12 +211,14 @@ class ParentAccessController extends Controller
         }
 
         $generated = count($codeIds);
-        $queued = $batch->configured() ? $batch->queue($codeIds) : 0;
+        // Envoi SMS/WhatsApp temporairement désactivé : distribution manuelle requise.
+        // $queued = $batch->configured() ? $batch->queue($codeIds) : 0;
+        $queued = 0;
         $channel = $batch->label();
 
         $message = $queued > 0
             ? "{$generated} code(s) généré(s). Envoi {$channel} programmé par lots."
-            : "{$generated} code(s) généré(s). {$channel} non configuré : distribution manuelle requise.";
+            : "{$generated} code(s) généré(s). Distribution manuelle requise.";
 
         return back()->with('success', $message);
     }
