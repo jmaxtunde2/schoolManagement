@@ -35,6 +35,9 @@ return [
     'support' => [
         'whatsapp' => env('CORI_SUPPORT_WHATSAPP'),
 
+        // Adresse e-mail publique du service clientèle.
+        'email' => env('CORI_SUPPORT_EMAIL', 'support@coriyase.com'),
+
         // Message d'accueil pré-rempli proposé au visiteur lors de l'ouverture
         // de la conversation WhatsApp.
         'whatsapp_message' => env(

@@ -1,15 +1,20 @@
 import { useState } from 'react';
 import { Link } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Menu, School, X } from 'lucide-react';
+import { ChevronDown, Menu, School, X } from 'lucide-react';
 
 const NAV = [
     { label: 'Accueil', href: '/', inertia: true },
     { label: 'Fonctionnalités', href: '/#fonctionnalites' },
-    { label: 'Banque d\'épreuves', href: '/banque-epreuves', match: 'public.banque-epreuves', inertia: true },
-    { label: 'Jeu éducatif', href: '/jeu-educatif', match: 'public.jeu-educatif', inertia: true },
-    { label: 'Compétitions', href: '/competitions', match: 'public.competitions', inertia: true },
+    { label: 'Solution', href: '/#solution' },
     { label: 'Tarifs', href: '/#tarifs' },
+    { label: 'FAQ', href: '/#faq' },
+];
+
+const RESOURCES = [
+    { label: 'Banque d’épreuves', href: '/banque-epreuves', match: 'public.banque-epreuves' },
+    { label: 'Jeu éducatif', href: '/jeu-educatif', match: 'public.jeu-educatif' },
+    { label: 'Compétitions', href: '/competitions', match: 'public.competitions' },
 ];
 
 export default function ResourceHeader() {
@@ -54,6 +59,32 @@ export default function ResourceHeader() {
                                     </a>
                                 ),
                             )}
+
+                            <div className="group relative">
+                                <button
+                                    type="button"
+                                    className="flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-emerald-600"
+                                >
+                                    Ressources
+                                    <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" />
+                                </button>
+
+                                <div className="invisible absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3 opacity-0 transition duration-150 group-hover:visible group-hover:opacity-100">
+                                    <div className="w-60 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-900/10">
+                                        {RESOURCES.map((item) => (
+                                            <Link
+                                                key={item.label}
+                                                href={route(item.match)}
+                                                className={`block rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-emerald-50 hover:text-emerald-700 ${
+                                                    isActive(item) ? 'text-emerald-700' : 'text-slate-600'
+                                                }`}
+                                            >
+                                                {item.label}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
                         </nav>
 
                         <div className="hidden items-center gap-3 sm:flex">
@@ -110,6 +141,24 @@ export default function ResourceHeader() {
                                             ),
                                         )}
                                     </nav>
+
+                                    <div className="mt-3 border-t border-slate-100 pt-3">
+                                        <p className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                                            Ressources pédagogiques
+                                        </p>
+                                        {RESOURCES.map((item) => (
+                                            <Link
+                                                key={item.label}
+                                                href={route(item.match)}
+                                                onClick={() => setOpen(false)}
+                                                className={`block rounded-xl px-3 py-3 text-sm font-semibold hover:bg-emerald-50 hover:text-emerald-700 ${
+                                                    isActive(item) ? 'text-emerald-700' : 'text-slate-600'
+                                                }`}
+                                            >
+                                                {item.label}
+                                            </Link>
+                                        ))}
+                                    </div>
 
                                     <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">
                                         <Link href={route('login')} className="rounded-xl border border-slate-200 px-3 py-3 text-center text-sm font-bold text-slate-700">

@@ -137,6 +137,27 @@ Route::get('/plateforme', [
 
 /*
 |--------------------------------------------------------------------------
+| Pages d'information CoriSchool
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/contact', [
+    CoriSchoolLandingController::class,
+    'contact',
+])->name('public.contact');
+
+Route::get('/conditions-utilisation', [
+    CoriSchoolLandingController::class,
+    'terms',
+])->name('public.terms');
+
+Route::get('/confidentialite', [
+    CoriSchoolLandingController::class,
+    'privacy',
+])->name('public.privacy');
+
+/*
+|--------------------------------------------------------------------------
 | Landing CoriSchool (plateforme)
 |--------------------------------------------------------------------------
 |

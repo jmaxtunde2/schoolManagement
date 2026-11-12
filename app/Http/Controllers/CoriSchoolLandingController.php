@@ -21,40 +21,63 @@ class CoriSchoolLandingController extends Controller
             'plans' => PricingPlan::plans(),
             'smsNote' => PricingPlan::smsNote(),
             'faq' => PricingPlan::faq(),
-            'support' => [
-                'whatsapp' => config('cori.support.whatsapp'),
-                'whatsapp_message' => config('cori.support.whatsapp_message'),
-            ],
+            'support' => $this->support(),
+        ]);
+    }
+
+    public function contact(): Response
+    {
+        return Inertia::render('Public/Contact', [
+            'support' => $this->support(),
+        ]);
+    }
+
+    public function terms(): Response
+    {
+        return Inertia::render('Public/Terms', [
+            'support' => $this->support(),
+        ]);
+    }
+
+    public function privacy(): Response
+    {
+        return Inertia::render('Public/Privacy', [
+            'support' => $this->support(),
         ]);
     }
 
     public function banqueEpreuves(): Response
     {
         return Inertia::render('Public/BanqueEpreuvesLanding', [
-            'support' => [
-                'whatsapp' => config('cori.support.whatsapp'),
-                'whatsapp_message' => config('cori.support.whatsapp_message'),
-            ],
+            'support' => $this->support(),
         ]);
     }
 
     public function jeuEducatif(): Response
     {
         return Inertia::render('Public/JeuEducatifLanding', [
-            'support' => [
-                'whatsapp' => config('cori.support.whatsapp'),
-                'whatsapp_message' => config('cori.support.whatsapp_message'),
-            ],
+            'support' => $this->support(),
         ]);
     }
 
     public function competitions(): Response
     {
         return Inertia::render('Public/CompetitionsLanding', [
-            'support' => [
-                'whatsapp' => config('cori.support.whatsapp'),
-                'whatsapp_message' => config('cori.support.whatsapp_message'),
-            ],
+            'support' => $this->support(),
         ]);
+    }
+
+    /**
+     * Coordonnées publiques du service clientèle.
+     *
+     * @return array{whatsapp: string|null, email: string|null, whatsapp_message: string}
+     */
+    private function support(): array
+    {
+        return [
+            'whatsapp' => config('cori.support.whatsapp'),
+            'email' => config('cori.support.email'),
+            'whatsapp_message' => config('cori.support.whatsapp_message'),
+        ];
     }
 }

@@ -2277,7 +2277,7 @@ function SiteFooter() {
     return (
         <footer className="border-t border-slate-100 bg-slate-950 text-white">
             <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-                <div className="grid gap-10 md:grid-cols-4">
+                <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
                     <div className="md:col-span-2">
                         <div className="flex items-center gap-2.5">
                             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600">
@@ -2344,6 +2344,33 @@ function SiteFooter() {
                                 className="block text-sm text-slate-400 transition hover:text-white"
                             >
                                 Demander une démo
+                            </Link>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 className="text-sm font-black">Informations</h4>
+
+                        <div className="mt-4 space-y-3">
+                            <Link
+                                href={route('public.contact')}
+                                className="block text-sm text-slate-400 transition hover:text-white"
+                            >
+                                Contact
+                            </Link>
+
+                            <Link
+                                href={route('public.terms')}
+                                className="block text-sm text-slate-400 transition hover:text-white"
+                            >
+                                Conditions d’utilisation
+                            </Link>
+
+                            <Link
+                                href={route('public.privacy')}
+                                className="block text-sm text-slate-400 transition hover:text-white"
+                            >
+                                Confidentialité
                             </Link>
                         </div>
                     </div>
