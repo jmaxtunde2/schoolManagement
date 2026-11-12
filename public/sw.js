@@ -8,7 +8,7 @@
  *    JAMAIS mis en cache afin de ne pas exposer de données personnelles.
  */
 
-const VERSION = 'corischool-v3';
+const VERSION = 'corischool-v4';
 const OFFLINE_URL = '/offline.html';
 const STATIC_PATHS = [
     '/favicon.ico',
@@ -118,11 +118,8 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Ressources statiques publiques : cache-first.
-    if (
-        url.pathname.startsWith('/icons/')
-        || STATIC_PATHS.includes(url.pathname)
-    ) {
+    // Ressources statiques publiques racine (/public) : cache-first.
+    if (STATIC_PATHS.includes(url.pathname)) {
         event.respondWith(cacheFirst(request));
 
         return;

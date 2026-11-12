@@ -9,6 +9,18 @@ import { route } from 'ziggy-js';
 // avant que ce bundle ne s'exécute ; route() est donc utilisable partout dans l'app.
 window.route = (name, params, absolute) => route(name, params, absolute, window.Ziggy);
 
+// Les anciennes installations de la PWA pouvaient encore démarrer sur `/`.
+// En mode application installée, on redirige vers le bootstrap parent `/app`.
+if (typeof window !== 'undefined') {
+    const standalone = window.matchMedia?.('(display-mode: standalone)')?.matches === true
+        || window.navigator.standalone === true;
+    const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+
+    if (standalone && currentPath === '/') {
+        window.location.replace(window.route('public.pwa.start'));
+    }
+}
+
 const appName = import.meta.env.VITE_APP_NAME || 'Gestion des Notes';
 
 createInertiaApp({
