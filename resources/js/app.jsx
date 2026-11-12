@@ -35,7 +35,10 @@ createInertiaApp({
 // interférer avec le serveur de développement Vite).
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {
+        navigator.serviceWorker.register('/sw.js', {
+            scope: '/',
+            updateViaCache: 'none',
+        }).catch(() => {
             // L'application reste pleinement fonctionnelle sans service worker.
         });
     });

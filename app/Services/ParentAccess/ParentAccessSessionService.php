@@ -80,6 +80,50 @@ class ParentAccessSessionService
     {
         $hash = hash('sha256', $plainToken);
 
-        return ParentAccessSession::query()->where('token_hash', $hash)->first();
+        return ParentAccessSession::query()
+            ->with(['parent', 'school'])
+            ->where('token_hash', $hash)
+            ->first();
+    }
+
+    /**
+     * Session encore exploitable : ni expirée, ni révoquée, avec un parent
+     * actif. Le jeton en clair n'est jamais stocké en base.
+     */
+    public function findValidByPlainToken(?string $plainToken): ?ParentAccessSession
+    {
+        if (! $plainToken) {
+            return null;
+        }
+
+        $session = $this->findByPlainToken($plainToken);
+
+        if (! $session || ! $session->isValid()) {
+            return null;
+        }
+
+        $parent = $session->parent;
+
+        if (! $parent || ! $parent->is_active) {
+            return null;
+        }
+
+        return $session;
+    }
+
+    /**
+     * Session valide rattachée à un établissement précis. Point de contrôle
+     * utilisé par le mini-site et le bootstrap PWA pour ne jamais exposer le
+     * contexte d'une autre école.
+     */
+    public function findValidForSchool(?string $plainToken, int $schoolId): ?ParentAccessSession
+    {
+        $session = $this->findValidByPlainToken($plainToken);
+
+        if (! $session || (int) $session->school_id !== $schoolId) {
+            return null;
+        }
+
+        return $session;
     }
 }

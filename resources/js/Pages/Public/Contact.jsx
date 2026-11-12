@@ -30,7 +30,7 @@ export default function Contact({ support = {} }) {
     const whatsappHref = phone
         ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
         : null;
-    const email = support.email || 'support@coriyase.com';
+    const email = support.email || 'contact@coriyase.com';
 
     const channels = [
         {

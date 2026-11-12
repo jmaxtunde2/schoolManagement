@@ -85,8 +85,8 @@ class WebPushService
             'body' => $payload['body'] ?? '',
             'url' => $this->relativeUrl($payload['url'] ?? null) ?? $this->defaultUrl($user),
             'tag' => $payload['tag'] ?? null,
-            'icon' => $payload['icon'] ?? '/icons/icon-192.png',
-            'badge' => '/icons/favicon-32.png',
+            'icon' => $payload['icon'] ?? '/web-app-manifest-192x192.png',
+            'badge' => '/favicon-96x96.png',
         ];
     }
 

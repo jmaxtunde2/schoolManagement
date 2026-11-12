@@ -36,6 +36,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicPreinscriptionController;
 use App\Http\Controllers\PublicSchoolController;
 use App\Http\Controllers\PushSubscriptionController;
+use App\Http\Controllers\PwaController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SmsAccessController;
@@ -134,6 +135,19 @@ Route::get('/plateforme', [
     CoriSchoolLandingController::class,
     '__invoke',
 ])->name('public.platform.landing');
+
+/*
+|--------------------------------------------------------------------------
+| Entrée de la PWA CoriSchool
+|--------------------------------------------------------------------------
+|
+| Le manifest installé démarre sur `/app`. Cette route unique retrouve
+| l'établissement du parent depuis sa session parent, quel que soit le nombre
+| d'écoles hébergées, puis ouvre son espace.
+|
+*/
+
+Route::get('/app', PwaController::class)->name('public.pwa.start');
 
 /*
 |--------------------------------------------------------------------------

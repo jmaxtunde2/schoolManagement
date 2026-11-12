@@ -4,7 +4,6 @@ namespace App\Http\Controllers\ParentAccess;
 
 use App\Http\Controllers\Controller;
 use App\Models\AcademicYear;
-use App\Models\ParentAccessSession;
 use App\Models\School;
 use App\Services\ParentAccess\ParentAccessCodeService;
 use App\Services\ParentAccess\ParentAccessSessionService;
@@ -18,7 +17,7 @@ use Inertia\Response;
 
 class ParentAccessController extends Controller
 {
-    public function create(Request $request, TenantResolver $resolver): Response|RedirectResponse
+    public function create(Request $request, TenantResolver $resolver, ParentAccessSessionService $sessionService): Response|RedirectResponse
     {
         $school = $resolver->resolve($request);
         $slug = $request->route('slug');
@@ -32,17 +31,8 @@ class ParentAccessController extends Controller
 
         // If already has valid parent access session, redirect to parent space
         $token = $request->cookie('parent_access_token') ?? $request->session()->get('parent_access_token');
-        if ($token) {
-            $tokenHash = hash('sha256', $token);
-            $session = ParentAccessSession::query()
-                ->where('token_hash', $tokenHash)
-                ->where('school_id', $school->id)
-                ->whereNull('revoked_at')
-                ->where('expires_at', '>', now())
-                ->first();
-            if ($session) {
-                return redirect()->route('parent-access.dashboard.slug', ['slug' => $school->slug]);
-            }
+        if ($sessionService->findValidForSchool($token, $school->id)) {
+            return redirect()->route('parent-access.dashboard.slug', ['slug' => $school->slug]);
         }
 
         return Inertia::render('ParentAccess/Login', [

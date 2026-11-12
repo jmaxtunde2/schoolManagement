@@ -88,6 +88,7 @@ export default function SchoolLanding({
     preview = false,
     preview_dashboard_url = null,
     preinscription_url = null,
+    parentAccess = null,
 }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [lightboxItem, setLightboxItem] = useState(null);
@@ -343,7 +344,7 @@ export default function SchoolLanding({
                         )}
                     </nav>
                     <div className="hidden xl:block">
-                        <ParentLink color={primary} schoolSlug={school?.slug} />
+                        <ParentLink color={primary} schoolSlug={school?.slug} parentAccess={parentAccess} />
                     </div>
                     {preinscription_url && (
                         <div className="hidden xl:block">
@@ -404,7 +405,7 @@ export default function SchoolLanding({
                                     )
                                 )}
                                 <div className="px-3 py-2 sm:col-span-2">
-                                    <ParentLink color={primary} schoolSlug={school?.slug} />
+                                    <ParentLink color={primary} schoolSlug={school?.slug} parentAccess={parentAccess} />
                                 </div>
                                 {preinscription_url && (
                                     <div className="px-3 py-2 sm:col-span-2">
@@ -534,7 +535,7 @@ export default function SchoolLanding({
                                         <ExternalLink className="h-4 w-4" /> {link.label}
                                     </a>
                                 ))}
-                                <ParentLink color={withAlpha('#ffffff', 0.16)} light schoolSlug={school?.slug} />
+                                <ParentLink color={withAlpha('#ffffff', 0.16)} light schoolSlug={school?.slug} parentAccess={parentAccess} />
                             </motion.div>
                         </div>
                     </motion.div>
@@ -1209,15 +1210,24 @@ export default function SchoolLanding({
 /* Sous-composants                                                            */
 /* -------------------------------------------------------------------------- */
 
-function ParentLink({ color, light = false, schoolSlug }) {
-    const href = schoolSlug ? route('parent-access.login.slug', { slug: schoolSlug }) : route('parent-access.login');
+function ParentLink({ color, light = false, schoolSlug, parentAccess = null }) {
+    const href = parentAccess?.dashboard_url
+        ?? (schoolSlug ? route('parent-access.login.slug', { slug: schoolSlug }) : route('parent-access.login'));
+    const firstName = parentAccess?.parent_name?.split(' ')[0];
+
     return (
         <Link
             href={href}
+            title={parentAccess?.parent_name ? `Bonjour ${parentAccess.parent_name}, votre espace est disponible.` : undefined}
             className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:brightness-110 ${light ? 'border border-white/35 backdrop-blur' : 'shadow-sm'}`}
             style={{ backgroundColor: color }}
         >
-            <GraduationCap className="h-4 w-4" /> ESPACE PARENT
+            <GraduationCap className="h-4 w-4" />
+            {firstName ? (
+                <span className="max-w-[10rem] truncate">BONJOUR {firstName.toUpperCase()}</span>
+            ) : (
+                'ESPACE PARENT'
+            )}
         </Link>
     );
 }

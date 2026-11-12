@@ -9,6 +9,7 @@ use App\Models\SchoolPublicTestimonial;
 use App\Models\SchoolSetting;
 use App\Models\Student;
 use App\Models\Teacher;
+use App\Services\ParentAccess\ParentAccessSessionService;
 use App\Services\Tenancy\TenantResolver;
 use App\Support\PublicSiteResults;
 use App\Support\SchoolBranding;
@@ -21,6 +22,8 @@ use Inertia\Response;
 
 class PublicSchoolController extends Controller
 {
+    public function __construct(private readonly ParentAccessSessionService $parentSessions) {}
+
     public function __invoke(Request $request, TenantResolver $resolver): Response|RedirectResponse
     {
         $school = $resolver->resolve($request);
@@ -255,6 +258,10 @@ class PublicSchoolController extends Controller
         }
 
         abort_unless($school->is_active, 404);
+
+        $parentToken = $request->cookie('parent_access_token')
+            ?? $request->session()->get('parent_access_token');
+        $parentSession = $this->parentSessions->findValidForSchool($parentToken, $school->id);
 
         $preview = $request->boolean('preview');
         $previewDashboardUrl = $preview && $request->user()
@@ -516,6 +523,10 @@ class PublicSchoolController extends Controller
                 'intro' => $calendarIntro,
                 'items' => $calendar,
             ],
+            'parentAccess' => $parentSession ? [
+                'parent_name' => $parentSession->parent?->name,
+                'dashboard_url' => route('parent-access.dashboard.slug', ['slug' => $school->slug]),
+            ] : null,
             'preview' => $preview,
             'preview_dashboard_url' => $previewDashboardUrl,
             'preinscription_url' => route('public.school.preinscription', $school->slug),

@@ -2,21 +2,32 @@
  *
  * Stratégie volontairement prudente :
  *  - les assets Vite hachés (/build/...) sont immutables -> cache-first ;
+ *  - les ressources statiques publiques (icônes, manifest) -> cache-first ;
  *  - les navigations (HTML) sont network-first avec page hors-ligne en secours ;
- *  - tout le reste (JSON Inertia, endpoints authentifiés) n'est JAMAIS mis en
- *    cache afin de ne pas exposer de données personnelles.
+ *  - tout le reste (JSON Inertia, endpoints authentifiés, pages privées) n'est
+ *    JAMAIS mis en cache afin de ne pas exposer de données personnelles.
  */
 
-const VERSION = 'corischool-v1';
+const VERSION = 'corischool-v3';
 const OFFLINE_URL = '/offline.html';
+const STATIC_PATHS = [
+    '/favicon.ico',
+    '/favicon.svg',
+    '/favicon-96x96.png',
+    '/apple-touch-icon.png',
+    '/web-app-manifest-192x192.png',
+    '/web-app-manifest-512x512.png',
+];
 
 const PRECACHE = [
     OFFLINE_URL,
     '/manifest.webmanifest',
-    '/icons/icon-192.png',
-    '/icons/icon-512.png',
-    '/icons/icon-maskable-512.png',
-    '/icons/apple-touch-icon-180.png',
+    '/favicon.ico',
+    '/favicon.svg',
+    '/favicon-96x96.png',
+    '/apple-touch-icon.png',
+    '/web-app-manifest-192x192.png',
+    '/web-app-manifest-512x512.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -45,6 +56,40 @@ self.addEventListener('message', (event) => {
     }
 });
 
+function cacheFirst(request) {
+    return caches.match(request).then((cached) => {
+        if (cached) {
+            return cached;
+        }
+
+        return fetch(request).then((response) => {
+            if (response.ok) {
+                const copy = response.clone();
+                caches.open(VERSION).then((cache) => cache.put(request, copy));
+            }
+
+            return response;
+        });
+    });
+}
+
+function staleWhileRevalidate(request) {
+    return caches.match(request).then((cached) => {
+        const network = fetch(request)
+            .then((response) => {
+                if (response.ok) {
+                    const copy = response.clone();
+                    caches.open(VERSION).then((cache) => cache.put(request, copy));
+                }
+
+                return response;
+            })
+            .catch(() => cached);
+
+        return cached || network;
+    });
+}
+
 self.addEventListener('fetch', (event) => {
     const { request } = event;
 
@@ -61,22 +106,24 @@ self.addEventListener('fetch', (event) => {
 
     // Assets hachés de Vite : cache-first (immutables).
     if (url.pathname.startsWith('/build/')) {
-        event.respondWith(
-            caches.match(request).then((cached) => {
-                if (cached) {
-                    return cached;
-                }
+        event.respondWith(cacheFirst(request));
 
-                return fetch(request).then((response) => {
-                    if (response.ok) {
-                        const copy = response.clone();
-                        caches.open(VERSION).then((cache) => cache.put(request, copy));
-                    }
+        return;
+    }
 
-                    return response;
-                });
-            }),
-        );
+    // Le manifest doit pouvoir être mis à jour sans attendre un nouveau SW.
+    if (url.pathname === '/manifest.webmanifest') {
+        event.respondWith(staleWhileRevalidate(request));
+
+        return;
+    }
+
+    // Ressources statiques publiques : cache-first.
+    if (
+        url.pathname.startsWith('/icons/')
+        || STATIC_PATHS.includes(url.pathname)
+    ) {
+        event.respondWith(cacheFirst(request));
 
         return;
     }
@@ -103,8 +150,8 @@ self.addEventListener('push', (event) => {
     const title = payload.title || 'CoriSchool';
     const options = {
         body: payload.body || '',
-        icon: payload.icon || '/icons/icon-192.png',
-        badge: payload.badge || '/icons/favicon-32.png',
+        icon: payload.icon || '/web-app-manifest-192x192.png',
+        badge: payload.badge || '/favicon-96x96.png',
         tag: payload.tag || undefined,
         renotify: Boolean(payload.tag),
         data: { url: payload.url || '/' },

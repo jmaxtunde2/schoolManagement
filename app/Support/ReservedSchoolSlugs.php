@@ -13,6 +13,7 @@ class ReservedSchoolSlugs
      */
     public const LIST = [
         'admin',
+        'app',
         'auth',
         'censeur',
         'comptabilite',

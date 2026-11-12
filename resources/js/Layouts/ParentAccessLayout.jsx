@@ -1,9 +1,12 @@
+import { useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import { GraduationCap, HandCoins, LayoutDashboard, LogOut, MessageSquarePlus } from 'lucide-react';
 
+import InstallPwaButton from '@/Components/PWA/InstallPwaButton';
 import Toast from '@/Components/UI/Toast';
 import { useFlash } from '@/Hooks/useFlash';
 import { cn } from '@/Utils/cn';
+import { rememberParentSchool } from '@/Utils/pwa';
 
 const navigation = [
     { name: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
@@ -17,6 +20,10 @@ export default function ParentAccessLayout({ children }) {
 
     const school = parentAccess?.school;
     const parent = parentAccess?.parent;
+
+    useEffect(() => {
+        rememberParentSchool(school);
+    }, [school?.slug, school?.name]);
 
     return (
         <div className="min-h-screen bg-slate-50">
@@ -72,6 +79,8 @@ export default function ParentAccessLayout({ children }) {
                                 </Link>
                             );
                         })}
+
+                        <InstallPwaButton />
                     </nav>
                 </div>
             </header>

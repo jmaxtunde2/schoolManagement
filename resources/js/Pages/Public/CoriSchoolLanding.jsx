@@ -2423,14 +2423,14 @@ export default function CoriSchoolLanding({
                 <meta property="og:title" content={title} />
                 <meta property="og:description" content={description} />
                 <meta property="og:url" content={url} />
-                <meta property="og:image" content="/icons/icon-512.png" />
+                <meta property="og:image" content="/web-app-manifest-512x512.png" />
                 <meta property="og:image:width" content="512" />
                 <meta property="og:image:height" content="512" />
                 <meta property="og:image:alt" content="CoriSchool - Plateforme scolaire numérique tout-en-un" />
                 <meta name="twitter:card" content="summary_large_image" />
                 <meta name="twitter:title" content={title} />
                 <meta name="twitter:description" content={description} />
-                <meta name="twitter:image" content="/icons/icon-512.png" />
+                <meta name="twitter:image" content="/web-app-manifest-512x512.png" />
                 <meta name="twitter:image:alt" content="CoriSchool - Plateforme scolaire numérique tout-en-un" />
                 <link rel="canonical" href={url} />
             </Head>

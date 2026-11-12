@@ -35,11 +35,11 @@ export default function InfoPageLayout({
                 <meta property="og:locale" content="fr_FR" />
                 <meta property="og:title" content={metaTitle} />
                 <meta property="og:description" content={metaDescription} />
-                <meta property="og:image" content="/icons/icon-512.png" />
+                <meta property="og:image" content="/web-app-manifest-512x512.png" />
                 <meta name="twitter:card" content="summary_large_image" />
                 <meta name="twitter:title" content={metaTitle} />
                 <meta name="twitter:description" content={metaDescription} />
-                <meta name="twitter:image" content="/icons/icon-512.png" />
+                <meta name="twitter:image" content="/web-app-manifest-512x512.png" />
             </Head>
 
             <ResourceHeader />
